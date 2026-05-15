@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "preview:prod": "npm run build && npm run start",
+    "production:sync-supabase-auth": "node --env-file=.env.local scripts/sync-supabase-production-url.mjs",
     "lint": "eslint",
     "security:check": "node --env-file=.env.local scripts/validate-security.mjs",
     "security:apply-rls": "node --env-file=.env.local scripts/apply-rls.mjs",
