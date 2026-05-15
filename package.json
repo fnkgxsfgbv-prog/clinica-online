@@ -12,7 +12,7 @@
     "preview:prod": "npm run build && npm run start",
     "production:sync-supabase-auth": "node --env-file=.env.local scripts/sync-supabase-production-url.mjs",
     "github:init-push": "bash scripts/github-init-push.sh",
-    "push:github": "bash scripts/push-with-github-token.sh",
+    "push:github": "node scripts/push-github.mjs",
     "lint": "eslint",
     "security:check": "node --env-file=.env.local scripts/validate-security.mjs",
     "security:apply-rls": "node --env-file=.env.local scripts/apply-rls.mjs",

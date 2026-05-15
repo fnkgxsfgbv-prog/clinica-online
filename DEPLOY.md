@@ -4,14 +4,21 @@
 
 O código já aponta para **`fnkgxsfgbv-prog/clinica-online`**. Faltam **só 2 coisas**:
 
-**A) Enviar os commits do Mac para o GitHub** (uma vez; o Cursor não tem sua senha):
+**A) Enviar os commits do Mac para o GitHub**
+
+1. Crie um [token GitHub](https://github.com/settings/tokens) (classic, escopo **repo**).
+2. Coloque no `.env.local` (uma linha, não commite):
+
+   `GITHUB_TOKEN=ghp_...`
+
+3. Rode:
 
 ```bash
 cd /Users/jpcoutinho/clinica-online
-GITHUB_TOKEN=ghp_SEU_TOKEN_AQUI npm run push:github
+npm run push:github
 ```
 
-([Criar token](https://github.com/settings/tokens) → classic → marcar **repo**.)
+(Alternativa sem arquivo: `GITHUB_TOKEN=ghp_... npm run push:github` — o script `push-github.mjs` lê `.env.local` se existir.)
 
 **B) Na Vercel** → **Add New → Project** → **Add GitHub Account** / autorize a conta **`fnkgxsfgbv-prog`** → importe **`fnkgxsfgbv-prog/clinica-online`** → nas variáveis de ambiente coloque `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` → **Deploy**.
 
