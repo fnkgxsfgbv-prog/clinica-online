@@ -25,7 +25,15 @@ esac
 # https://github.com/OWNER/REPO.git → OWNER/REPO
 path="${REMOTE_URL#*github.com/}"
 path="${path%.git}"
-path="${path#*/}"
+# git@github.com:OWNER/REPO.git
+if [[ "$REMOTE_URL" == git@github.com:* ]]; then
+  path="${REMOTE_URL#git@github.com:}"
+  path="${path%.git}"
+fi
+if [[ "$path" != */* ]]; then
+  echo "Não consegui extrair OWNER/REPO de: $REMOTE_URL"
+  exit 1
+fi
 
 echo "→ git push para github.com/${path} …"
 git push "https://oauth2:${TOKEN}@github.com/${path}.git" HEAD:main
