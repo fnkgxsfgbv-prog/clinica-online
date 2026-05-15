@@ -1,15 +1,26 @@
 ## Colocar no ar (Vercel)
 
-### 1. Enviar código para o GitHub
+### 1. Repositório no GitHub (primeira vez)
 
-No seu Mac, no projeto:
+Se o repo **ainda não existe** na conta que a Vercel usa (`joaopcvoliveira-sudo`):
+
+1. Crie um [Personal Access Token](https://github.com/settings/tokens) com permissão **repo** (classic) ou fine-grained com escrita no repositório.
+2. No projeto:
 
 ```bash
 cd /Users/jpcoutinho/clinica-online
-git push origin main
+GITHUB_TOKEN=ghp_SEU_TOKEN \
+GITHUB_OWNER=joaopcvoliveira-sudo \
+  npm run github:init-push
 ```
 
-(Se pedir login, use Personal Access Token ou `gh auth login`.)
+Isso cria `joaopcvoliveira-sudo/clinica-online` (privado), ajusta `origin` e faz `git push`.
+
+Se o repo **já existir** e só faltar enviar commits:
+
+```bash
+git push -u origin main
+```
 
 ### 2. Vercel — forma mais simples
 
