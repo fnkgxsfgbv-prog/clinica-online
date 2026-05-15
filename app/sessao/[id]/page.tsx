@@ -4,15 +4,28 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import jsPDF from "jspdf";
 
-import supabase from "../../lib/supabase";
+import { getCurrentUser } from "../../lib/auth";
+import {
+  deleteFrequenciaPorSessao,
+  insertFrequencia,
+} from "../../lib/db/frequencia";
+import {
+  getSessaoById,
+  updateSessao,
+} from "../../lib/db/sessoes";
+import {
+  insertEvolucao,
+  listEvolucoesPorPacientePorId,
+} from "../../lib/db/evolucoes";
 import Janela from "../../components/Janela";
+import type { Evolucao, Sessao } from "../../types";
 
 export default function SessaoPage() {
   const params = useParams();
   const id = params.id;
 
-  const [sessao, setSessao] = useState<any>(null);
-  const [evolucoes, setEvolucoes] = useState<any[]>([]);
+  const [sessao, setSessao] = useState<Sessao | null>(null);
+  const [evolucoes, setEvolucoes] = useState<Evolucao[]>([]);
 
   const [queixa, setQueixa] = useState("");
   const [objetivo, setObjetivo] = useState("");
@@ -21,7 +34,9 @@ export default function SessaoPage() {
   const [plano, setPlano] = useState("");
   const [encaminhamentos, setEncaminhamentos] = useState("");
   const [mensagem, setMensagem] = useState("");
-
+const [abrirReagendar, setAbrirReagendar] = useState(false);
+const [novaData, setNovaData] = useState("");
+const [novaHora, setNovaHora] = useState("");
   useEffect(() => {
     carregarSessao();
   }, []);
@@ -38,35 +53,36 @@ export default function SessaoPage() {
   }
 
   async function carregarSessao() {
-    const { data, error } = await supabase
-      .from("sessoes")
-      .select("*")
-      .eq("id", id)
-      .single();
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    const { data, error } = await getSessaoById(user.id, id as string);
 
     if (error) {
       mostrarMensagem("Erro ao carregar sessão: " + error.message);
       return;
     }
 
-    setSessao(data);
+    setSessao(data as Sessao);
   }
 
   async function carregarEvolucoes() {
     if (!sessao?.paciente_id) return;
 
-    const { data, error } = await supabase
-      .from("evolucoes")
-      .select("*")
-      .eq("paciente_id", Number(sessao.paciente_id))
-      .order("id", { ascending: false });
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    const { data, error } = await listEvolucoesPorPacientePorId(
+      user.id,
+      Number(sessao.paciente_id)
+    );
 
     if (error) {
       mostrarMensagem("Erro ao carregar evoluções: " + error.message);
       return;
     }
 
-    setEvolucoes(data || []);
+    setEvolucoes((data || []) as Evolucao[]);
   }
 
   function formatarDataBR(data: string) {
@@ -78,39 +94,50 @@ export default function SessaoPage() {
     return `${dia}/${mes}/${ano}`;
   }
 
-  async function atualizarStatus(novoStatus: string) {
-    if (!sessao) return;
+ async function atualizarStatus(novoStatus: string) {
+  if (!sessao) return;
 
-    const { error } = await supabase
-      .from("sessoes")
-      .update({ status: novoStatus })
-      .eq("id", id);
+  const user = await getCurrentUser();
+  if (!user) return;
 
-    if (error) {
-      mostrarMensagem("Erro ao atualizar status: " + error.message);
-      return;
-    }
+  const { error } = await updateSessao(user.id, Number(sessao.id), {
+    status: novoStatus,
+  });
 
-    if (novoStatus === "Presente" || novoStatus === "Faltou") {
-      const { error: freqError } = await supabase.from("frequência").insert([
-        {
-          user_id: sessao.user_id,
-          paciente_id: Number(sessao.paciente_id),
-          paciente_nome: sessao.paciente_nome,
-          data: formatarDataBR(sessao.data),
-          status: novoStatus,
-        },
-      ]);
-
-      if (freqError) {
-        mostrarMensagem("Status salvo, mas erro na frequência: " + freqError.message);
-        return;
-      }
-    }
-
-    mostrarMensagem(`Sessão marcada como ${novoStatus}.`);
-    carregarSessao();
+  if (error) {
+    mostrarMensagem(
+      "Erro ao atualizar status: " + error.message
+    );
+    return;
   }
+
+  if (
+    novoStatus === "Presente" ||
+    novoStatus === "Faltou"
+  ) {
+    await deleteFrequenciaPorSessao(user.id, Number(sessao.id));
+
+    await insertFrequencia({
+      user_id: user.id,
+      sessao_id: Number(sessao.id),
+      paciente_id: Number(sessao.paciente_id),
+      paciente_nome: sessao.paciente_nome,
+      data: sessao.data,
+      status: novoStatus,
+    });
+  }
+
+  if (novoStatus === "Cancelada") {
+    window.location.href = "/agenda";
+    return;
+  }
+
+  mostrarMensagem(
+    `Sessão marcada como ${novoStatus}.`
+  );
+
+  carregarSessao();
+}
 
   function gerarReciboPDF() {
     if (!sessao) return;
@@ -139,35 +166,54 @@ export default function SessaoPage() {
 
     doc.save(`recibo-${sessao.paciente_nome || "sessao"}.pdf`);
   }
+async function reagendarSessao() {
+  if (!sessao || !novaData || !novaHora) {
+    mostrarMensagem("Informe a nova data e o novo horário.");
+    return;
+  }
 
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  const { error } = await updateSessao(user.id, Number(id), {
+    data: novaData,
+    hora: novaHora,
+    status: "Agendada",
+  });
+
+  if (error) {
+    mostrarMensagem("Erro ao reagendar: " + error.message);
+    return;
+  }
+
+  setAbrirReagendar(false);
+
+  mostrarMensagem("Sessão reagendada com sucesso.");
+
+  carregarSessao();
+}
   async function salvarEvolucao() {
     if (!sessao) return;
 
-    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
 
-    if (userError) {
-      mostrarMensagem("Erro ao buscar usuário: " + userError.message);
+    if (!user) {
+      mostrarMensagem("Faça login novamente.");
       return;
     }
 
-    const user = userData.user;
-
-    const { error } = await supabase.from("evolucoes").insert([
-      {
-        user_id: user?.id,
-        sessao_id: Number(sessao.id),
-        paciente_id: Number(sessao.paciente_id),
-
-        data: new Date().toISOString().split("T")[0],
-
-        queixa,
-        objetivo,
-        intervencao,
-        observacoes,
-        plano,
-        encaminhamentos,
-      },
-    ]);
+    const { error } = await insertEvolucao({
+      user_id: user.id,
+      sessao_id: Number(sessao.id),
+      paciente_id: Number(sessao.paciente_id),
+      data: new Date().toISOString().split("T")[0],
+      queixa,
+      objetivo,
+      intervencao,
+      observacoes,
+      plano,
+      encaminhamentos,
+    });
 
     if (error) {
       mostrarMensagem("Erro ao salvar evolução: " + error.message);
@@ -223,18 +269,51 @@ export default function SessaoPage() {
             Faltou
           </button>
 
-          <button
-            className="btn btn-outline"
-            onClick={() => atualizarStatus("Cancelada")}
-          >
-            Cancelar
-          </button>
+         <button
+  className="btn btn-outline"
+  onClick={() => atualizarStatus("Cancelada")}
+>
+  Cancelar
+</button>
 
-          <button className="btn btn-outline" onClick={gerarReciboPDF}>
-            Gerar recibo
-          </button>
+<button
+  className="btn btn-outline"
+  onClick={() => setAbrirReagendar(!abrirReagendar)}
+>
+  Reagendar
+</button>
+
+<button className="btn btn-outline" onClick={gerarReciboPDF}>
+  Gerar recibo
+</button>
         </div>
+{abrirReagendar && (
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr auto",
+      gap: "12px",
+      marginTop: "18px",
+      alignItems: "center",
+    }}
+  >
+    <input
+      type="date"
+      value={novaData}
+      onChange={(e) => setNovaData(e.target.value)}
+    />
 
+    <input
+      type="time"
+      value={novaHora}
+      onChange={(e) => setNovaHora(e.target.value)}
+    />
+
+    <button className="btn btn-green" onClick={reagendarSessao}>
+      Salvar
+    </button>
+  </div>
+)}
         {mensagem && (
           <div
             style={{
@@ -402,7 +481,13 @@ function CardEvolucao({
   );
 }
 
-function Campo({ titulo, valor }: { titulo: string; valor?: string }) {
+function Campo({
+  titulo,
+  valor,
+}: {
+  titulo: string;
+  valor?: string | null;
+}) {
   if (!valor) return null;
 
   return (

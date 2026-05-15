@@ -2,17 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import supabase from "../../lib/supabase";
+import { getCurrentUser } from "../../lib/auth";
+import { getPacienteById } from "../../lib/db/pacientes";
+import { listEvolucoesPorPacientePorId } from "../../lib/db/evolucoes";
+import { listSessoesPorPaciente } from "../../lib/db/sessoes";
 import Janela from "../../components/Janela";
+import type { Evolucao, Paciente, Sessao } from "../../types";
 
 export default function PacientePage() {
   const router = useRouter();
   const params = useParams();
   const id = Number(params.id);
 
-  const [paciente, setPaciente] = useState<any>(null);
-  const [sessoes, setSessoes] = useState<any[]>([]);
-  const [evolucoes, setEvolucoes] = useState<any[]>([]);
+  const [paciente, setPaciente] = useState<Paciente | null>(null);
+  const [sessoes, setSessoes] = useState<Sessao[]>([]);
+  const [evolucoes, setEvolucoes] = useState<Evolucao[]>([]);
   const [aba, setAba] = useState("sessoes");
 
   useEffect(() => {
@@ -20,42 +24,38 @@ export default function PacientePage() {
   }, []);
 
   async function carregarDados() {
-    const { data: pacienteData, error: pacienteError } = await supabase
-      .from("pacientes")
-      .select("*")
-      .eq("id", id)
-      .single();
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    const { data: pacienteData, error: pacienteError } = await getPacienteById(
+      user.id,
+      id
+    );
 
     if (pacienteError) {
       alert("Erro ao carregar paciente: " + pacienteError.message);
       return;
     }
 
-    const { data: sessoesData, error: sessoesError } = await supabase
-      .from("sessoes")
-      .select("*")
-      .eq("paciente_id", id)
-      .order("id", { ascending: false });
+    const { data: sessoesData, error: sessoesError } =
+      await listSessoesPorPaciente(user.id, id);
 
     if (sessoesError) {
       alert("Erro ao carregar sessões: " + sessoesError.message);
       return;
     }
 
-    const { data: evolucoesData, error: evolucoesError } = await supabase
-      .from("evolucoes")
-      .select("*")
-      .eq("paciente_id", id)
-      .order("id", { ascending: false });
+    const { data: evolucoesData, error: evolucoesError } =
+      await listEvolucoesPorPacientePorId(user.id, id);
 
     if (evolucoesError) {
       alert("Erro ao carregar evoluções: " + evolucoesError.message);
       return;
     }
 
-    setPaciente(pacienteData);
-    setSessoes(sessoesData || []);
-    setEvolucoes(evolucoesData || []);
+    setPaciente(pacienteData as Paciente);
+    setSessoes((sessoesData || []) as Sessao[]);
+    setEvolucoes((evolucoesData || []) as Evolucao[]);
   }
 
   if (!paciente) {
@@ -63,15 +63,19 @@ export default function PacientePage() {
   }
 
   return (
-    <div>
+    <div className="patient-record-page">
       <Janela titulo="Prontuário do Paciente">
-        <h1 style={{ color: "#f8fafc", fontSize: "28px" }}>
+        <h1 className="patient-record-title">
           {paciente.nome}
         </h1>
 
-        <p style={texto}>Telefone: {paciente.telefone || "Não informado"}</p>
-        <p style={texto}>CID: {paciente.cid || "Não informado"}</p>
-        <p style={texto}>
+        <p className="patient-muted">
+          Telefone: {paciente.telefone || "Não informado"}
+        </p>
+        <p className="patient-muted">
+          CID: {paciente.cid || "Não informado"}
+        </p>
+        <p className="patient-muted">
           Valor da sessão:{" "}
           {paciente.valor_sessao
             ? `R$ ${paciente.valor_sessao}`
@@ -135,8 +139,8 @@ export default function PacientePage() {
               <p className="empty-text">Nenhuma evolução registrada.</p>
             ) : (
               evolucoes.map((e) => (
-                <div key={e.id} className="psico-card">
-                  <p style={texto}>{e.data || "Sem data"}</p>
+                <div key={e.id} className="psico-card patient-evolution-card">
+                  <p className="patient-evolution-date">{e.data || "Sem data"}</p>
 
                   <Campo titulo="Queixa" valor={e.queixa} />
                   <Campo titulo="Objetivo" valor={e.objetivo} />
@@ -154,20 +158,21 @@ export default function PacientePage() {
   );
 }
 
-function Campo({ titulo, valor }: { titulo: string; valor?: string }) {
+function Campo({
+  titulo,
+  valor,
+}: {
+  titulo: string;
+  valor?: string | null;
+}) {
   if (!valor) return null;
 
   return (
-    <div style={{ marginTop: "12px" }}>
-      <strong style={{ color: "#3ecf8e" }}>{titulo}</strong>
-      <p style={{ color: "#e2e8f0", marginTop: "4px", lineHeight: "1.7" }}>
+    <div className="patient-field">
+      <strong className="patient-field-title">{titulo}</strong>
+      <p className="patient-field-text">
         {valor}
       </p>
     </div>
   );
 }
-
-const texto = {
-  color: "#94a3b8",
-  marginTop: "6px",
-};

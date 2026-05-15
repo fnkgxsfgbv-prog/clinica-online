@@ -1,133 +1,161 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import supabase from "../lib/supabase";
+import { useCallback, useEffect, useState } from "react";
+
+import { getCurrentUser } from "../lib/auth";
+import { carregarFrequenciasCompleto } from "../lib/db/frequencia";
+import {
+  calcularResumoFinanceiro,
+  type ResumoFinanceiro,
+} from "../lib/financeiro";
+import { isStatusPresente } from "../lib/status";
 import Janela from "../components/Janela";
 
+function formatarMoeda(valor: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(valor);
+}
+
 export default function FinanceiroPage() {
-  const [dados, setDados] = useState<any[]>([]);
+  const [dados, setDados] = useState<ResumoFinanceiro[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
 
-  useEffect(() => {
-    carregar();
-  }, []);
+  const carregar = useCallback(async () => {
+    setCarregando(true);
+    setErro("");
 
-  async function carregar() {
-    const { data: pacientes } = await supabase
-      .from("pacientes")
-      .select("*");
+    const user = await getCurrentUser();
 
-    const { data: frequencias } = await supabase
-      .from("frequência")
-      .select("*")
-      .eq("status", "presente");
+    if (!user) {
+      setErro("Sessão expirada. Faça login novamente.");
+      setDados([]);
+      setCarregando(false);
+      return;
+    }
 
-    if (!pacientes || !frequencias) return;
+    const {
+      pacientes,
+      sessoes,
+      frequencias,
+      error: loadError,
+    } = await carregarFrequenciasCompleto(user.id);
 
-    const resumo = pacientes.map((p: any) => {
-      const presencas = frequencias.filter(
-        (f: any) => f.paciente_id === p.id
-      ).length;
+    if (loadError) {
+      setErro(loadError.message);
+      setDados([]);
+      setCarregando(false);
+      return;
+    }
 
-      const valor = Number(p.valor_sessao || 0);
+    const resumo = calcularResumoFinanceiro(
+      pacientes,
+      frequencias,
+      sessoes
+    );
 
-      return {
-        nome: p.nome,
-        presencas,
-        valor,
-        total: presencas * valor,
-      };
-    });
+    if (
+      resumo.length === 0 &&
+      (frequencias || []).some((f) => isStatusPresente(f.status))
+    ) {
+      setErro(
+        "Há presenças na frequência, mas sem vínculo com pacientes. Tente sair e entrar de novo; se persistir, confira se está na conta correta."
+      );
+    }
 
     setDados(resumo);
-  }
+    setCarregando(false);
+  }, []);
 
-  const totalGeral = dados.reduce(
-    (acc, item) => acc + item.total,
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+
+  const totalGeral = dados.reduce((acc, item) => acc + item.total, 0);
+  const totalPresencas = dados.reduce(
+    (acc, item) => acc + item.presencas,
     0
   );
 
   return (
-    <div>
+    <div className="financeiro-page">
       <Janela titulo="Financeiro">
-        <h1
-          style={{
-            fontSize: "28px",
-            marginBottom: "24px",
-            color: "#f8fafc",
-          }}
-        >
-          Resumo Financeiro
-        </h1>
+        <div className="financeiro-header">
+          <div>
+            <h1 className="financeiro-title">Resumo Financeiro</h1>
+            <p className="financeiro-subtitle">
+              Valores com base em presenças registradas na frequência.
+            </p>
+          </div>
 
-        <div
-          style={{
-            marginBottom: "24px",
-            color: "#3ecf8e",
-            fontSize: "20px",
-            fontWeight: "700",
-          }}
-        >
-          Total Geral: R$ {totalGeral}
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => void carregar()}
+            disabled={carregando}
+          >
+            Atualizar
+          </button>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "14px",
-          }}
-        >
-          {dados.map((p: any) => (
-            <div
-              key={p.nome}
-              className="psico-row"
-            >
-              <div>
-                <strong
-                  style={{
-                    color: "#f8fafc",
-                    fontSize: "16px",
-                  }}
-                >
-                  {p.nome}
-                </strong>
+        {erro && <p className="financeiro-erro">{erro}</p>}
 
-                <p
-                  style={{
-                    color: "#94a3b8",
-                    marginTop: "6px",
-                  }}
-                >
-                  {p.presencas} presença(s)
-                </p>
-              </div>
+        <div className="financeiro-totais">
+          <div className="financeiro-total-card">
+            <span className="financeiro-total-label">Total geral</span>
+            <strong className="financeiro-total-valor">
+              {formatarMoeda(totalGeral)}
+            </strong>
+          </div>
 
-              <div
-                style={{
-                  textAlign: "right",
-                }}
-              >
-                <div
-                  style={{
-                    color: "#94a3b8",
-                    fontSize: "14px",
-                  }}
-                >
-                  R$ {p.valor} / sessão
+          <div className="financeiro-total-card">
+            <span className="financeiro-total-label">Presenças</span>
+            <strong className="financeiro-total-valor">
+              {totalPresencas}
+            </strong>
+          </div>
+
+          <div className="financeiro-total-card">
+            <span className="financeiro-total-label">Pacientes</span>
+            <strong className="financeiro-total-valor">{dados.length}</strong>
+          </div>
+        </div>
+
+        {carregando ? (
+          <p className="empty-text">Carregando resumo...</p>
+        ) : dados.length === 0 && !erro ? (
+          <p className="empty-text">
+            Nenhuma presença registrada ainda. Marque sessões como
+            &quot;Presente&quot; na agenda ou na tela da sessão para gerar o
+            resumo financeiro.
+          </p>
+        ) : (
+          <div className="financeiro-lista">
+            {dados.map((p) => (
+              <div key={p.id} className="psico-row financeiro-row">
+                <div>
+                  <strong className="financeiro-paciente-nome">
+                    {p.nome}
+                  </strong>
+                  <p className="financeiro-paciente-meta">
+                    {p.presencas} presença(s)
+                  </p>
                 </div>
 
-                <strong
-                  style={{
-                    color: "#3ecf8e",
-                    fontSize: "18px",
-                  }}
-                >
-                  R$ {p.total}
-                </strong>
+                <div className="financeiro-valores">
+                  <span className="financeiro-valor-sessao">
+                    {formatarMoeda(p.valor)} / sessão
+                  </span>
+                  <strong className="financeiro-valor-total">
+                    {formatarMoeda(p.total)}
+                  </strong>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </Janela>
     </div>
   );

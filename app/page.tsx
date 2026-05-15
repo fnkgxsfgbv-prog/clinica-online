@@ -1,61 +1,108 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import supabase from "./lib/supabase";
+import { getCurrentUser } from "./lib/auth";
+import { listFrequencias } from "./lib/db/frequencia";
+import { isStatusFaltou, isStatusPresente } from "./lib/status";
+import { listPacientes } from "./lib/db/pacientes";
+import { listSessoesAgendadasFuturas } from "./lib/db/sessoes";
 import Janela from "./components/Janela";
+import type { Frequencia, Paciente, Sessao } from "./types";
+
+function formatarDataISO(data: Date) {
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  const dia = String(data.getDate()).padStart(2, "0");
+
+  return `${ano}-${mes}-${dia}`;
+}
+
+function criarDataLocal(dataSessao: string) {
+  const [ano, mes, dia] = dataSessao.split("-").map(Number);
+
+  return new Date(ano, mes - 1, dia);
+}
+
+function formatarDataCompleta(dataSessao: string) {
+  if (!dataSessao) return "Data não informada";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+  }).format(criarDataLocal(dataSessao));
+}
+
+function rotuloDia(dataSessao: string, hoje: string) {
+  if (!dataSessao) return "Sem data";
+
+  const data = criarDataLocal(dataSessao);
+  const dataHoje = criarDataLocal(hoje);
+  const diferenca = Math.round(
+    (data.getTime() - dataHoje.getTime()) / 86400000
+  );
+
+  if (diferenca === 0) return "Hoje";
+  if (diferenca === 1) return "Amanhã";
+  if (diferenca > 1 && diferenca <= 6) return "Esta semana";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+  }).format(data);
+}
+
+function formatarHorario(hora?: string | null) {
+  return hora ? hora.slice(0, 5) : "--:--";
+}
+
+function formatarMoeda(valor: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(valor);
+}
 
 export default function Home() {
   const router = useRouter();
 
-  const [pacientes, setPacientes] = useState<any[]>([]);
-  const [sessoes, setSessoes] = useState<any[]>([]);
-  const [frequencias, setFrequencias] = useState<any[]>([]);
+  const [pacientes, setPacientes] = useState<Paciente[]>([]);
+  const [sessoes, setSessoes] = useState<Sessao[]>([]);
+  const [frequencias, setFrequencias] = useState<Frequencia[]>([]);
 
-  useEffect(() => {
-    carregarDados();
-  }, []);
-
-  async function carregarDados() {
-    const { data: userData } = await supabase.auth.getUser();
-
-    const user = userData.user;
+  const carregarDados = useCallback(async () => {
+    const user = await getCurrentUser();
 
     if (!user) {
       router.push("/login");
       return;
     }
 
-    const { data: pacientesData } = await supabase
-      .from("pacientes")
-      .select("*")
-      .eq("user_id", user.id);
+    const agora = new Date();
+    const hoje = formatarDataISO(agora);
+    const horaAtual = agora.toTimeString().slice(0, 5);
 
-  const agora = new Date();
-const hoje = agora.toISOString().split("T")[0];
-const horaAtual = agora.toTimeString().slice(0, 5);
+    const [
+      { data: pacientesData },
+      { data: sessoesData },
+      { data: frequenciasData },
+    ] = await Promise.all([
+      listPacientes(user.id),
+      listSessoesAgendadasFuturas(user.id, hoje, horaAtual),
+      listFrequencias(user.id),
+    ]);
 
-const { data: sessoesData } = await supabase
-  .from("sessoes")
-  .select("*")
-  .eq("user_id", user.id)
-  .eq("status", "Agendada")
-  .or(`data.gt.${hoje},and(data.eq.${hoje},hora.gte.${horaAtual})`)
-  .order("data", { ascending: true })
-  .order("hora", { ascending: true })
-  .limit(5);
+    setPacientes((pacientesData || []) as Paciente[]);
+    setSessoes((sessoesData || []) as Sessao[]);
+    setFrequencias((frequenciasData || []) as Frequencia[]);
+  }, [router]);
 
-    const { data: frequenciasData } = await supabase
-      .from("frequência")
-      .select("*")
-      .eq("user_id", user.id);
+  useEffect(() => {
+    void carregarDados();
+  }, [carregarDados]);
 
-    setPacientes(pacientesData || []);
-    setSessoes(sessoesData || []);
-    setFrequencias(frequenciasData || []);
-  }
-
-  const hoje = new Date().toISOString().split("T")[0];
+  const hoje = formatarDataISO(new Date());
 
   const pacientesAtivos = pacientes.filter(
     (p) => !p.status || p.status === "ativo"
@@ -65,13 +112,9 @@ const { data: sessoesData } = await supabase
     (s) => s.data === hoje
   );
 
-  const presencas = frequencias.filter(
-    (f) => f.status === "Presente"
-  ).length;
+  const presencas = frequencias.filter((f) => isStatusPresente(f.status)).length;
 
-  const faltas = frequencias.filter(
-    (f) => f.status === "Faltou"
-  ).length;
+  const faltas = frequencias.filter((f) => isStatusFaltou(f.status)).length;
 
   const receitaPrevista = sessoes.reduce(
     (total, sessao) => {
@@ -80,62 +123,83 @@ const { data: sessoesData } = await supabase
     0
   );
 
+  const totalFrequencias = presencas + faltas;
+  const taxaComparecimento =
+    totalFrequencias > 0
+      ? Math.round((presencas / totalFrequencias) * 100)
+      : 0;
+
+  const proximaSessao = sessoes[0];
+
   return (
-    <div>
+    <div className="dashboard-page">
       <Janela titulo="Dashboard">
         <p className="dashboard-subtitle">
           Visão geral da clínica
         </p>
 
-        <div className="dashboard-grid compact">
-          <div className="dashboard-card">
-            <p className="dashboard-label">
-              Pacientes ativos
-            </p>
+        <div className="dashboard-overview">
+          <div className="dashboard-next-card">
+            <span className="dashboard-eyebrow">
+              Próxima sessão
+            </span>
 
-            <h2 className="dashboard-value">
-              {pacientesAtivos}
-            </h2>
+            {proximaSessao ? (
+              <>
+                <strong>
+                  {proximaSessao.paciente_nome || "Paciente"}
+                </strong>
+
+                <p>
+                  {rotuloDia(proximaSessao.data, hoje)} às{" "}
+                  {formatarHorario(proximaSessao.hora)}
+                </p>
+
+                <button
+                  className="btn btn-green"
+                  onClick={() =>
+                    router.push(`/sessao/${proximaSessao.id}`)
+                  }
+                >
+                  Abrir sessão
+                </button>
+              </>
+            ) : (
+              <>
+                <strong>Nenhuma sessão agendada</strong>
+                <p>Quando houver agenda, ela aparecerá aqui.</p>
+              </>
+            )}
           </div>
 
-          <div className="dashboard-card">
-            <p className="dashboard-label">
-              Sessões hoje
-            </p>
+          <div className="dashboard-metrics-grid">
+            <DashboardMetric
+              label="Pacientes ativos"
+              value={pacientesAtivos}
+              detail={`${pacientes.length} cadastrados`}
+              variant="patients"
+            />
 
-            <h2 className="dashboard-value">
-              {sessoesHoje.length}
-            </h2>
-          </div>
+            <DashboardMetric
+              label="Sessões hoje"
+              value={sessoesHoje.length}
+              detail={`${sessoes.length} próximas`}
+              variant="sessions"
+            />
 
-          <div className="dashboard-card">
-            <p className="dashboard-label">
-              Presenças
-            </p>
+            <DashboardMetric
+              label="Comparecimento"
+              value={`${taxaComparecimento}%`}
+              detail={`${presencas} presenças / ${faltas} faltas`}
+              variant="attendance"
+            />
 
-            <h2 className="dashboard-value">
-              {presencas}
-            </h2>
-          </div>
-
-          <div className="dashboard-card">
-            <p className="dashboard-label">
-              Faltas
-            </p>
-
-            <h2 className="dashboard-value">
-              {faltas}
-            </h2>
-          </div>
-
-          <div className="dashboard-card">
-            <p className="dashboard-label">
-              Receita prevista
-            </p>
-
-            <h2 className="dashboard-value">
-              R$ {receitaPrevista.toFixed(2)}
-            </h2>
+            <DashboardMetric
+              label="Receita próximas"
+              value={formatarMoeda(receitaPrevista)}
+              detail={`${sessoes.length} sessões agendadas`}
+              variant="revenue"
+            />
           </div>
         </div>
       </Janela>
@@ -146,20 +210,37 @@ const { data: sessoesData } = await supabase
             Nenhuma sessão agendada.
           </p>
         ) : (
-          <div className="session-list">
+          <div className="next-session-list">
             {sessoes.slice(0, 5).map((s) => (
               <div
                 key={s.id}
-                className="lista-card"
+                className={`next-session-item ${
+                  s.data === hoje ? "is-today" : ""
+                }`}
               >
-                <div>
+                <div className="next-session-time">
+                  <strong>{formatarHorario(s.hora)}</strong>
+                  <span>{rotuloDia(s.data, hoje)}</span>
+                </div>
+
+                <div className="next-session-info">
                   <strong>
                     {s.paciente_nome || "Paciente"}
                   </strong>
 
                   <p>
-                    {s.data} às {s.hora}
+                    {formatarDataCompleta(s.data)}
                   </p>
+                </div>
+
+                <div className="next-session-meta">
+                  <span className="next-session-status">
+                    {s.status || "Agendada"}
+                  </span>
+
+                  <span>
+                    {formatarMoeda(Number(s.valor || 0))}
+                  </span>
                 </div>
 
                 <button
@@ -175,6 +256,42 @@ const { data: sessoesData } = await supabase
           </div>
         )}
       </Janela>
+    </div>
+  );
+}
+
+function DashboardMetric({
+  label,
+  value,
+  detail,
+  variant,
+}: {
+  label: string;
+  value: ReactNode;
+  detail: string;
+  variant: "patients" | "sessions" | "attendance" | "revenue";
+}) {
+  return (
+    <div className={`dashboard-metric-card dashboard-metric-${variant}`}>
+      <div className="dashboard-metric-heading">
+        <span className="dashboard-metric-icon">
+          {variant === "patients"
+            ? "P"
+            : variant === "sessions"
+            ? "S"
+            : variant === "attendance"
+            ? "%"
+            : "R$"}
+        </span>
+
+        <span>{label}</span>
+      </div>
+
+      <strong className="dashboard-metric-value">
+        {value}
+      </strong>
+
+      <p>{detail}</p>
     </div>
   );
 }

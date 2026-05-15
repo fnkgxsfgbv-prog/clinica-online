@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import supabase from "../lib/supabase";
+import { getCurrentUser } from "../lib/auth";
+import { createPaciente } from "../lib/db/pacientes";
 import Janela from "../components/Janela";
 
 export default function NovoPaciente() {
@@ -31,24 +32,19 @@ export default function NovoPaciente() {
   async function salvarPaciente(e: React.FormEvent) {
     e.preventDefault();
 
-    const { data: userData } = await supabase.auth.getUser();
-
-    const user = userData.user;
+    const user = await getCurrentUser();
 
     if (!user) {
       mostrarMensagem("Usuário não logado.", "erro");
       return;
     }
 
-    const { error } = await supabase.from("pacientes").insert([
-      {
-        nome,
-        data_nascimento: dataNascimento,
-        telefone,
-        valor_sessao: valorSessao,
-        user_id: user.id,
-      },
-    ]);
+    const { error } = await createPaciente(user.id, {
+      nome,
+      data_nascimento: dataNascimento,
+      telefone,
+      valor_sessao: valorSessao,
+    });
 
     if (error) {
       mostrarMensagem(

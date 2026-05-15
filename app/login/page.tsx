@@ -1,49 +1,64 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { supabase } from "../lib/supabase"
-import { useRouter } from "next/navigation"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+import supabase from "../lib/supabase";
 
 export default function Login() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const router = useRouter()
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [erro, setErro] = useState("");
+  const router = useRouter();
 
-  async function handleLogin() {
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setErro("");
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
-    })
+    });
 
     if (error) {
-      alert("Erro ao entrar")
-    } else {
-      router.push("/")
+      setErro("Email ou senha inválidos.");
+      return;
     }
+
+    router.push("/");
+    router.refresh();
   }
 
   return (
-    <div style={{ padding: 40 }}>
-      <h1>PsicoDesk Login</h1>
+    <div className="login-page">
+      <form className="login-card" onSubmit={handleLogin}>
+        <h1>PsicoDesk</h1>
+        <p className="login-subtitle">Acesse sua conta</p>
 
-      <input
-        placeholder="Email"
-        onChange={(e) => setEmail(e.target.value)}
-      />
+        {erro && <p className="login-error">{erro}</p>}
 
-      <br /><br />
+        <input
+          className="psico-input"
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
 
-      <input
-        type="password"
-        placeholder="Senha"
-        onChange={(e) => setPassword(e.target.value)}
-      />
+        <input
+          className="psico-input"
+          type="password"
+          placeholder="Senha"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
 
-      <br /><br />
-
-      <button onClick={handleLogin}>
-        Entrar
-      </button>
+        <button className="btn btn-green" type="submit">
+          Entrar
+        </button>
+      </form>
     </div>
-  )
+  );
 }

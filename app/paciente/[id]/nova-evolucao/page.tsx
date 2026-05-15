@@ -1,13 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import supabase from "../../../lib/supabase";
+import { useParams } from "next/navigation";
+import { getCurrentUser } from "../../../lib/auth";
+import {
+  insertEvolucao,
+  listEvolucoesPorPaciente,
+} from "../../../lib/db/evolucoes";
+import { getPacienteById } from "../../../lib/db/pacientes";
 import Janela from "../../../components/Janela";
+import type { Evolucao } from "../../../types";
 
 export default function NovaEvolucao() {
   const params = useParams();
-  const router = useRouter();
 
   const paciente_id = params.id;
 
@@ -22,75 +27,59 @@ export default function NovaEvolucao() {
   const [statusSessao, setStatusSessao] =
     useState("Realizada");
 
-  const [evolucoes, setEvolucoes] = useState<any[]>([]);
+  const [evolucoes, setEvolucoes] = useState<Evolucao[]>([]);
 
   useEffect(() => {
     carregarEvolucoes();
   }, []);
 
   async function carregarEvolucoes() {
-    const { data, error } = await supabase
-      .from("evolucoes")
-      .select("*")
-      .eq("paciente_id", Number(paciente_id))
-      .order("data", { ascending: false });
+    const user = await getCurrentUser();
+    if (!user) return;
 
+    const { error } = await getPacienteById(user.id, paciente_id as string);
     if (error) {
+      alert("Paciente não encontrado ou sem permissão.");
+      return;
+    }
+
+    const { data, error: evolucoesError } = await listEvolucoesPorPaciente(
+      user.id,
+      Number(paciente_id)
+    );
+
+    if (evolucoesError) {
       alert(
         "Erro ao carregar evoluções: " +
-          error.message
+          evolucoesError.message
       );
       return;
     }
 
-    setEvolucoes(data || []);
+    setEvolucoes((data || []) as Evolucao[]);
   }
 
   async function salvarEvolucao() {
-    const {
-      data: userData,
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError) {
-      alert(
-        "Erro ao buscar usuário: " +
-          userError.message
-      );
-      return;
-    }
-
-    const user = userData.user;
+    const user = await getCurrentUser();
 
     if (!user) {
-      alert(
-        "Usuário não encontrado. Faça login novamente."
-      );
+      alert("Usuário não encontrado. Faça login novamente.");
       return;
     }
 
-    const { error } = await supabase
-      .from("evolucoes")
-      .insert([
-        {
-          user_id: user.id,
-          paciente_id: Number(paciente_id),
-
-          data: new Date()
-            .toISOString()
-            .split("T")[0],
-
-          humor,
-          status_sessao: statusSessao,
-
-          queixa,
-          objetivo,
-          intervencao,
-          observacoes,
-          plano,
-          encaminhamentos,
-        },
-      ]);
+    const { error } = await insertEvolucao({
+      user_id: user.id,
+      paciente_id: Number(paciente_id),
+      data: new Date().toISOString().split("T")[0],
+      humor,
+      status_sessao: statusSessao,
+      queixa,
+      objetivo,
+      intervencao,
+      observacoes,
+      plano,
+      encaminhamentos,
+    });
 
     if (error) {
       alert(
@@ -119,29 +108,17 @@ export default function NovaEvolucao() {
     valor,
   }: {
     titulo: string;
-    valor: string;
+    valor?: string | null;
   }) {
     if (!valor) return null;
 
     return (
-      <div style={{ marginBottom: "18px" }}>
-        <p
-          style={{
-            color: "#4ade80",
-            fontWeight: 700,
-            marginBottom: "6px",
-          }}
-        >
+      <div className="patient-field">
+        <p className="patient-field-title">
           {titulo}
         </p>
 
-        <p
-          style={{
-            color: "#f8fafc",
-            lineHeight: 1.6,
-            whiteSpace: "pre-wrap",
-          }}
-        >
+        <p className="patient-field-text">
           {valor}
         </p>
       </div>
@@ -308,7 +285,7 @@ export default function NovaEvolucao() {
             {evolucoes.map((e) => (
               <div
                 key={e.id}
-                className="psico-card"
+                className="psico-card patient-evolution-card"
               >
                 <div
                   style={{
@@ -323,10 +300,7 @@ export default function NovaEvolucao() {
                   </strong>
 
                   <span
-                    style={{
-                      color: "#4ade80",
-                      fontWeight: 700,
-                    }}
+                    className="patient-evolution-status"
                   >
                     {e.status_sessao ||
                       "Realizada"}

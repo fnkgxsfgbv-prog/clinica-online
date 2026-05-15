@@ -1,47 +1,47 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import supabase from "../../lib/supabase";
+import { getCurrentUser } from "../../lib/auth";
+import { carregarFrequenciasCompleto } from "../../lib/db/frequencia";
+import { chaveMes } from "../../lib/frequencia-utils";
+import { isStatusFaltou, isStatusPresente } from "../../lib/status";
 import Janela from "../../components/Janela";
+import type { Frequencia } from "../../types";
 
 export default function HistoricoFrequenciaPage() {
-  const [frequencias, setFrequencias] = useState<any[]>([]);
+  const [frequencias, setFrequencias] = useState<Frequencia[]>([]);
   const [mesSelecionado, setMesSelecionado] = useState("");
+  const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
-    carregarFrequencias();
+    void carregarFrequencias();
   }, []);
 
   async function carregarFrequencias() {
-    const { data, error } = await supabase
-      .from("frequência")
-      .select("*")
-      .order("id", { ascending: false });
-
-    if (error) {
-      alert("Erro ao carregar histórico.");
+    setCarregando(true);
+    const user = await getCurrentUser();
+    if (!user) {
+      setCarregando(false);
       return;
     }
 
-    setFrequencias(data || []);
-  }
+    const { frequencias: dados, error } = await carregarFrequenciasCompleto(
+      user.id
+    );
 
-  function chaveMes(data: string) {
-    if (!data) return "Sem data";
-
-    if (data.includes("-")) {
-      const partes = data.split("-");
-      return `${partes[0]}-${partes[1]}`;
+    if (error) {
+      alert("Erro ao carregar histórico: " + error.message);
+      setFrequencias([]);
+      setCarregando(false);
+      return;
     }
 
-    const partes = data.split("/");
-    if (partes.length !== 3) return "Sem data";
-
-    return `${partes[2]}-${partes[1]}`;
+    setFrequencias(dados);
+    setCarregando(false);
   }
 
   function nomeMes(chave: string) {
-    if (chave === "Sem data") return "Sem data";
+    if (chave === "sem-data") return "Sem data";
 
     const [ano, mes] = chave.split("-");
 
@@ -70,14 +70,18 @@ export default function HistoricoFrequenciaPage() {
   }
 
   const mesesDisponiveis = Array.from(
-    new Set(frequencias.map((f) => chaveMes(f.data)))
-  );
+    new Set(
+      frequencias.map((f) => chaveMes(f.data)).filter((m) => m !== "sem-data")
+    )
+  ).sort((a, b) => b.localeCompare(a));
 
   const frequenciasFiltradas = mesSelecionado
     ? frequencias.filter((f) => chaveMes(f.data) === mesSelecionado)
     : frequencias;
 
-  const agrupadoPorMes = frequenciasFiltradas.reduce((acc: any, item) => {
+  const agrupadoPorMes = frequenciasFiltradas.reduce<
+    Record<string, Frequencia[]>
+  >((acc, item) => {
     const mes = chaveMes(item.data);
 
     if (!acc[mes]) acc[mes] = [];
@@ -87,11 +91,20 @@ export default function HistoricoFrequenciaPage() {
     return acc;
   }, {});
 
-  function resumirPorPaciente(itens: any[]) {
-    const resumo: any = {};
+  const mesesOrdenados = Object.keys(agrupadoPorMes).sort((a, b) => {
+    if (a === "sem-data") return 1;
+    if (b === "sem-data") return -1;
+    return b.localeCompare(a);
+  });
+
+  function resumirPorPaciente(itens: Frequencia[]) {
+    const resumo: Record<
+      string,
+      { nome: string; presencas: number; faltas: number; total: number }
+    > = {};
 
     itens.forEach((item) => {
-      const chave = item.paciente_id || item.paciente_nome || "sem-id";
+      const chave = String(item.paciente_id || item.paciente_nome || "sem-id");
       const nome = item.paciente_nome || "Paciente sem nome";
 
       if (!resumo[chave]) {
@@ -103,8 +116,8 @@ export default function HistoricoFrequenciaPage() {
         };
       }
 
-      if (item.status === "Presente") resumo[chave].presencas += 1;
-      if (item.status === "Faltou") resumo[chave].faltas += 1;
+      if (isStatusPresente(item.status)) resumo[chave].presencas += 1;
+      if (isStatusFaltou(item.status)) resumo[chave].faltas += 1;
 
       resumo[chave].total += 1;
     });
@@ -150,20 +163,21 @@ export default function HistoricoFrequenciaPage() {
           </select>
         </div>
 
-        {Object.keys(agrupadoPorMes).length === 0 ? (
+        {carregando ? (
+          <p className="empty-text">Carregando histórico...</p>
+        ) : mesesOrdenados.length === 0 ? (
           <p className="empty-text">Nenhuma frequência encontrada.</p>
         ) : (
           <div style={{ display: "grid", gap: "22px" }}>
-            {Object.keys(agrupadoPorMes).map((mes) => {
+            {mesesOrdenados.map((mes) => {
               const itens = agrupadoPorMes[mes];
 
-              const presencas = itens.filter(
-                (i: any) => i.status === "Presente"
+              const presencas = itens.filter((i) =>
+                isStatusPresente(i.status)
               ).length;
 
-              const faltas = itens.filter(
-                (i: any) => i.status === "Faltou"
-              ).length;
+              const faltas = itens.filter((i) => isStatusFaltou(i.status))
+                .length;
 
               const pacientesResumo = resumirPorPaciente(itens);
 

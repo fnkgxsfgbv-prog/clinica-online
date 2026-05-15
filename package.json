@@ -4,12 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:bg": "bash scripts/dev-server.sh start",
+    "dev:stop": "bash scripts/dev-server.sh stop",
+    "dev:status": "bash scripts/dev-server.sh status",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "preview:prod": "npm run build && npm run start",
+    "lint": "eslint",
+    "security:check": "node --env-file=.env.local scripts/validate-security.mjs",
+    "security:apply-rls": "node --env-file=.env.local scripts/apply-rls.mjs",
+    "db:backfill-frequencia": "node --env-file=.env.local scripts/run-backfill-frequencia.mjs"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.15.0",
+    "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.3",
     "@types/moment": "^2.11.29",
     "@types/react-big-calendar": "^1.16.3",

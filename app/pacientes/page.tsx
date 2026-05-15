@@ -1,34 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import supabase from "../lib/supabase";
+import { getCurrentUser } from "../lib/auth";
+import {
+  deletePacienteComDependencias,
+  listPacientes,
+} from "../lib/db/pacientes";
 import Janela from "../components/Janela";
+import type { Paciente } from "../types";
 
 export default function PacientesPage() {
   const router = useRouter();
 
-  const [pacientes, setPacientes] = useState<any[]>([]);
+  const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState("");
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
 
-  useEffect(() => {
-    carregarPacientes();
-  }, []);
+  const carregarPacientes = useCallback(async () => {
+    setCarregando(true);
+    setErro("");
 
-  async function carregarPacientes() {
-    const { data, error } = await supabase
-      .from("pacientes")
-      .select("*")
-      .order("nome", { ascending: true });
+    const user = await getCurrentUser();
 
-    if (error) {
-      alert("Erro ao carregar pacientes: " + error.message);
+    if (!user) {
+      router.push("/login");
       return;
     }
 
-    setPacientes(data || []);
-  }
+    const { data, error } = await listPacientes(user.id);
+
+    if (error) {
+      setErro("Erro ao carregar pacientes: " + error.message);
+      setPacientes([]);
+      setCarregando(false);
+      return;
+    }
+
+    setPacientes((data || []) as Paciente[]);
+    setCarregando(false);
+  }, [router]);
+
+  useEffect(() => {
+    void carregarPacientes();
+  }, [carregarPacientes]);
 
   function classeStatus(statusPaciente: string) {
     if (statusPaciente === "ativo") return "status-success";
@@ -38,37 +55,43 @@ export default function PacientesPage() {
     return "status-neutral";
   }
 
-  async function excluirPaciente(id: string, nome: string) {
+  async function excluirPaciente(
+    id: string | number,
+    nome: string
+  ) {
     const confirmar = confirm(`Tem certeza que deseja excluir ${nome}?`);
     if (!confirmar) return;
 
-    await supabase.from("frequência").delete().eq("paciente_id", id);
-    await supabase.from("sessoes").delete().eq("paciente_id", id);
-    await supabase.from("evolucoes").delete().eq("paciente_id", id);
+    const user = await getCurrentUser();
+    if (!user) return;
 
-    const { error } = await supabase
-      .from("pacientes")
-      .delete()
-      .eq("id", id);
+    const { error } = await deletePacienteComDependencias(user.id, id);
 
     if (error) {
       alert("Erro ao excluir paciente: " + error.message);
       return;
     }
 
-    carregarPacientes();
+    void carregarPacientes();
   }
 
   const filtrados = pacientes.filter((p) => {
-    const nomeOk = p.nome?.toLowerCase().includes(busca.toLowerCase());
-    const statusOk = status ? p.status === status : true;
+    const nomeOk = (p.nome ?? "")
+      .toLowerCase()
+      .includes(busca.toLowerCase());
+    const statusOk = status
+      ? (p.status ?? "ativo").toLowerCase() === status.toLowerCase()
+      : true;
     return nomeOk && statusOk;
   });
 
   return (
-    <div>
+    <div className="patients-page">
       <Janela titulo="Pacientes">
+        {erro && <p className="financeiro-erro">{erro}</p>}
+
         <div
+          className="patients-toolbar"
           style={{
             display: "flex",
             justifyContent: "space-between",
@@ -105,13 +128,12 @@ export default function PacientesPage() {
           </button>
         </div>
 
-        <div style={{ overflowX: "auto" }}>
-          <table>
+        <div className="patients-table-wrap">
+          <table className="patients-table">
             <thead>
               <tr>
                 <th>Nome</th>
                 <th>Status</th>
-                <th>Telefone</th>
                 <th>Convênio</th>
                 <th>CID</th>
                 <th>Valor</th>
@@ -125,7 +147,7 @@ export default function PacientesPage() {
 
                 return (
                   <tr key={p.id}>
-                    <td>
+                    <td className="patients-name-cell">
                       <strong>{p.nome}</strong>
                     </td>
 
@@ -139,19 +161,12 @@ export default function PacientesPage() {
                       </span>
                     </td>
 
-                    <td>{p.telefone || "-"}</td>
                     <td>{p.convenio || "-"}</td>
                     <td>{p.cid || "-"}</td>
                     <td>{p.valor_sessao ? `R$ ${p.valor_sessao}` : "-"}</td>
 
-                    <td>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "8px",
-                          flexWrap: "wrap",
-                        }}
-                      >
+                    <td className="patients-actions-cell">
+                      <div className="patients-actions">
                         <button
                           className="btn btn-outline"
                           onClick={() => router.push(`/paciente/${p.id}`)}
@@ -182,11 +197,17 @@ export default function PacientesPage() {
             </tbody>
           </table>
 
-          {filtrados.length === 0 && (
+          {carregando ? (
             <p className="empty-text" style={{ marginTop: "16px" }}>
-              Nenhum paciente encontrado.
+              Carregando pacientes...
             </p>
-          )}
+          ) : filtrados.length === 0 ? (
+            <p className="empty-text" style={{ marginTop: "16px" }}>
+              {pacientes.length === 0
+                ? "Nenhum paciente cadastrado."
+                : "Nenhum paciente encontrado com esses filtros."}
+            </p>
+          ) : null}
         </div>
       </Janela>
     </div>

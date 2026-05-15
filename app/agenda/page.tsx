@@ -1,23 +1,56 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Calendar, momentLocalizer, Views } from "react-big-calendar";
+import type { EventProps, View } from "react-big-calendar";
 import moment from "moment";
 import "moment/locale/pt-br.js";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import supabase from "../lib/supabase";
+import { getCurrentUser } from "../lib/auth";
+import { listPacientes } from "../lib/db/pacientes";
+import { insertSessoes, listSessoes } from "../lib/db/sessoes";
+import type { Paciente, Sessao } from "../types";
 
 moment.locale("pt-br");
 
 const localizer = momentLocalizer(moment);
 
+type TipoRecorrencia = "quantidade" | "indeterminado";
+
+type AgendaEvent = {
+  id: Sessao["id"];
+  title: string;
+  start: Date;
+  end: Date;
+  resource: Sessao;
+};
+
+type SessaoParaCriar = {
+  user_id: string;
+  paciente_id: Paciente["id"];
+  paciente_nome: string;
+  data: string;
+  hora: string;
+  valor: number;
+  status: "Agendada";
+  status_pagamento: "pendente";
+};
+
+const STATUS_FORA_DA_AGENDA = [
+  "cancelada",
+  "cancelado",
+  "faltou",
+  "presente",
+];
+
 export default function AgendaPage() {
   const [dataAtual, setDataAtual] = useState(new Date());
-  const [visualizacao, setVisualizacao] = useState<any>(Views.WEEK);
+  const [visualizacao, setVisualizacao] = useState<View>(Views.WEEK);
 
-  const [pacientes, setPacientes] = useState<any[]>([]);
-  const [sessoes, setSessoes] = useState<any[]>([]);
-const [mensagem, setMensagem] = useState("");
+  const [pacientes, setPacientes] = useState<Paciente[]>([]);
+  const [sessoes, setSessoes] = useState<Sessao[]>([]);
+  const [mensagem, setMensagem] = useState("");
+
   const [abrirForm, setAbrirForm] = useState(false);
   const [pacienteId, setPacienteId] = useState("");
   const [data, setData] = useState("");
@@ -25,46 +58,69 @@ const [mensagem, setMensagem] = useState("");
   const [valor, setValor] = useState("");
 
   const [repetir, setRepetir] = useState(false);
-  const [tipoRecorrencia, setTipoRecorrencia] = useState("quantidade");
-  const [quantidadeSemanas, setQuantidadeSemanas] = useState("4");
+  const [tipoRecorrencia, setTipoRecorrencia] =
+    useState<TipoRecorrencia>("quantidade");
+  const [quantidadeSemanas, setQuantidadeSemanas] =
+    useState("4");
 
-  useEffect(() => {
-    carregarDados();
-  }, []);
+  const carregarDados = useCallback(async () => {
+    const user = await getCurrentUser();
 
-  async function carregarDados() {
-    const { data: pacientesData, error: pacientesError } = await supabase
-      .from("pacientes")
-      .select("*")
-      .order("nome", { ascending: true });
+    if (!user) {
+      window.location.href = "/login";
+      return;
+    }
+
+    const { data: pacientesData, error: pacientesError } =
+      await listPacientes(user.id);
 
     if (pacientesError) {
-      alert("Erro ao carregar pacientes: " + pacientesError.message);
+      alert(
+        "Erro ao carregar pacientes: " +
+          pacientesError.message
+      );
       return;
     }
 
-    const { data: sessoesData, error: sessoesError } = await supabase
-  .from("sessoes")
-  .select("*")
-  .not("status", "in", '("Cancelada","cancelada","Cancelado","cancelado")')
-  .order("data", { ascending: true });
+    const { data: sessoesData, error: sessoesError } =
+      await listSessoes(user.id);
 
     if (sessoesError) {
-      alert("Erro ao carregar sessões: " + sessoesError.message);
+      alert(
+        "Erro ao carregar sessões: " +
+          sessoesError.message
+      );
       return;
     }
 
-    setPacientes(pacientesData || []);
-    setSessoes(sessoesData || []);
-  }
+    setPacientes((pacientesData || []) as Paciente[]);
+    setSessoes((sessoesData || []) as Sessao[]);
+  }, []);
 
-  function criarDataHora(dataSessao: string, horaSessao: string) {
+  useEffect(() => {
+    void carregarDados();
+  }, [carregarDados]);
+
+  function criarDataHora(
+    dataSessao: string,
+    horaSessao: string
+  ) {
     if (!dataSessao) return new Date();
 
-    const [ano, mes, dia] = dataSessao.split("-").map(Number);
-    const [h, m] = (horaSessao || "08:00").split(":").map(Number);
+    const [ano, mes, dia] = dataSessao
+      .split("-")
+      .map(Number);
+    const [h, m] = (horaSessao || "08:00")
+      .split(":")
+      .map(Number);
 
-    return new Date(ano, mes - 1, dia, h || 8, m || 0);
+    return new Date(
+      ano,
+      mes - 1,
+      dia,
+      h || 8,
+      m || 0
+    );
   }
 
   function formatarDataISO(dataObj: Date) {
@@ -75,34 +131,43 @@ const [mensagem, setMensagem] = useState("");
     return `${ano}-${mes}-${dia}`;
   }
 
-  const eventos = sessoes
-  .filter((s) => {
-    const statusSessao = String(s.status || "")
+  function sessaoContaComoOcupada(sessao: Sessao) {
+    const statusSessao = String(sessao.status || "")
       .trim()
       .toLowerCase();
 
-    return ![
-      "cancelada",
-      "cancelado",
-      "faltou",
-      "presente",
-    ].includes(statusSessao);
-  })
-  .map((s) => {
-    const inicio = criarDataHora(s.data, s.hora || "08:00");
+    return !STATUS_FORA_DA_AGENDA.includes(statusSessao);
+  }
 
-    const fim = new Date(inicio);
+  const eventos: AgendaEvent[] = sessoes
+    .filter(sessaoContaComoOcupada)
+    .map((s) => {
+      const inicio = criarDataHora(s.data, s.hora || "08:00");
+      const fim = new Date(inicio);
 
-    fim.setHours(fim.getHours() + 1);
+      fim.setHours(fim.getHours() + 1);
 
-    return {
-      id: s.id,
-      title: s.paciente_nome || "Paciente",
-      start: inicio,
-      end: fim,
-      resource: s,
-    };
-  });
+      return {
+        id: s.id,
+        title: s.paciente_nome || "Paciente",
+        start: inicio,
+        end: fim,
+        resource: s,
+      };
+    });
+
+  function horarioJaOcupado(
+    dataTeste: string,
+    horaTeste: string
+  ) {
+    return sessoes.some((s) => {
+      return (
+        s.data === dataTeste &&
+        s.hora === horaTeste &&
+        sessaoContaComoOcupada(s)
+      );
+    });
+  }
 
   async function agendarSessao() {
     if (!pacienteId || !data || !hora) {
@@ -113,53 +178,25 @@ const [mensagem, setMensagem] = useState("");
     const paciente = pacientes.find(
       (p) => String(p.id) === String(pacienteId)
     );
-    const statusIgnorados = ["cancelada", "cancelado", "faltou", "presente"];
 
-function horarioJaOcupado(dataTeste: string, horaTeste: string) {
-  return sessoes.some((s) => {
-    const statusSessao = String(s.status || "")
-      .trim()
-      .toLowerCase();
-
-    return (
-      s.data === dataTeste &&
-      s.hora === horaTeste &&
-      !statusIgnorados.includes(statusSessao)
-    );
-  });
-}
-
-if (!repetir) {
-  if (horarioJaOcupado(data, hora)) {
-    alert("Já existe uma sessão agendada nesse dia e horário.");
-    return;
-  }
-
-
-}
-const horarioOcupado = sessoes.some((s) => {
-  const statusSessao = String(s.status || "")
-    .trim()
-    .toLowerCase();
-
-  return (
-    s.data === data &&
-    s.hora === hora &&
-    !["cancelada", "cancelado", "faltou", "presente"].includes(statusSessao)
-  );
-});
-
-if (horarioOcupado) {
-  alert("Já existe uma sessão agendada nesse dia e horário.");
-  return;
-}
     if (!paciente) {
       alert("Paciente não encontrado.");
       return;
     }
 
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData.user;
+    if (horarioJaOcupado(data, hora)) {
+      alert(
+        "Já existe uma sessão agendada nesse horário."
+      );
+      return;
+    }
+
+    const user = await getCurrentUser();
+
+    if (!user) {
+      window.location.href = "/login";
+      return;
+    }
 
     const semanas = repetir
       ? tipoRecorrencia === "indeterminado"
@@ -167,14 +204,15 @@ if (horarioOcupado) {
         : Math.max(1, Number(quantidadeSemanas || 1))
       : 1;
 
-    const sessoesParaCriar = [];
+    const sessoesParaCriar: SessaoParaCriar[] = [];
 
     for (let i = 0; i < semanas; i++) {
       const dataBase = criarDataHora(data, hora);
+
       dataBase.setDate(dataBase.getDate() + i * 7);
 
       sessoesParaCriar.push({
-        user_id: user?.id,
+        user_id: user.id,
         paciente_id: paciente.id,
         paciente_nome: paciente.nome,
         data: formatarDataISO(dataBase),
@@ -184,29 +222,30 @@ if (horarioOcupado) {
         status_pagamento: "pendente",
       });
     }
-const conflito = sessoesParaCriar.find((sessao: any) =>
-  horarioJaOcupado(sessao.data, sessao.hora)
-);
 
-if (conflito) {
-  alert(
-    `Já existe uma sessão agendada em ${conflito.data} às ${conflito.hora}.`
-  );
-  return;
-}
-    const { error } = await supabase.from("sessoes").insert(sessoesParaCriar);
+    const conflito = sessoesParaCriar.find((sessao) =>
+      horarioJaOcupado(sessao.data, sessao.hora)
+    );
+
+    if (conflito) {
+      alert(
+        `Já existe uma sessão em ${conflito.data} às ${conflito.hora}.`
+      );
+      return;
+    }
+
+    const { error } = await insertSessoes(sessoesParaCriar);
 
     if (error) {
       alert("Erro ao salvar sessão: " + error.message);
       return;
     }
 
-  setMensagem(
-  repetir
-    ? `${semanas} sessões agendadas com sucesso.`
-    : "Sessão agendada com sucesso."
-);
-
+    setMensagem(
+      repetir
+        ? `${semanas} sessões agendadas com sucesso.`
+        : "Sessão agendada com sucesso."
+    );
     setAbrirForm(false);
     setPacienteId("");
     setData("");
@@ -216,78 +255,62 @@ if (conflito) {
     setTipoRecorrencia("quantidade");
     setQuantidadeSemanas("4");
 
-    carregarDados();
+    void carregarDados();
   }
 
-  function clicarEvento(evento: any) {
-    const sessao = evento.resource;
-    window.location.href = `/sessao/${sessao.id}`;
+  function clicarEvento(evento: AgendaEvent) {
+    window.location.href = `/sessao/${evento.id}`;
   }
 
-  function EventoPersonalizado({ event }: any) {
+  function EventoPersonalizado({
+    event,
+  }: EventProps<AgendaEvent>) {
     return (
-      <div
-        style={{
-          whiteSpace: "normal",
-          wordBreak: "break-word",
-          overflow: "hidden",
-          lineHeight: "1.2",
-          fontSize: "12px",
-          fontWeight: 700,
-          padding: "2px",
-        }}
-      >
-        {event.title}
+      <div className="agenda-event-content" title={event.title}>
+        <span className="agenda-event-dot" />
+        <span className="agenda-event-name">{event.title}</span>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        padding: "24px",
-        borderRadius: "24px",
-        background: "rgba(15,23,42,0.75)",
-        border: "1px solid rgba(255,255,255,0.08)",
-      }}
-    >
+    <div className="agenda-page-shell">
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          gap: "16px",
           marginBottom: "24px",
+          flexWrap: "wrap",
         }}
       >
         <div>
-          <h1
-            style={{
-              fontSize: "42px",
-              fontWeight: "800",
-              color: "white",
-            }}
-          >
+          <h1 className="agenda-title">
             Agenda
           </h1>
 
-          <p style={{ color: "#94a3b8" }}>
+          <p className="agenda-description">
             Organize sessões e atendimentos
           </p>
         </div>
 
-        <button
-          className="btn btn-green"
-          onClick={() => setAbrirForm(!abrirForm)}
-        >
-          + Agendar sessão
-        </button>
+        {!abrirForm && (
+          <button
+            className="btn btn-green"
+            onClick={() => setAbrirForm(true)}
+          >
+            + Agendar sessão
+          </button>
+        )}
       </div>
 
       {abrirForm && (
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "2fr 1fr 1fr 1fr auto",
+            gridTemplateColumns:
+              "minmax(220px, 2fr) repeat(3, minmax(120px, 1fr)) auto",
             gap: "12px",
             marginBottom: "22px",
           }}
@@ -296,13 +319,16 @@ if (conflito) {
             value={pacienteId}
             onChange={(e) => {
               const id = e.target.value;
-              setPacienteId(id);
-
               const paciente = pacientes.find(
                 (p) => String(p.id) === String(id)
               );
 
-              setValor(paciente?.valor_sessao || "");
+              setPacienteId(id);
+              setValor(
+                paciente?.valor_sessao
+                  ? String(paciente.valor_sessao)
+                  : ""
+              );
             }}
           >
             <option value="">Selecione o paciente</option>
@@ -332,7 +358,10 @@ if (conflito) {
             onChange={(e) => setValor(e.target.value)}
           />
 
-          <button className="btn btn-green" onClick={agendarSessao}>
+          <button
+            className="btn btn-green"
+            onClick={agendarSessao}
+          >
             Salvar
           </button>
 
@@ -340,9 +369,10 @@ if (conflito) {
             style={{
               gridColumn: "1 / -1",
               display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
+              gridTemplateColumns:
+                "minmax(200px, 1fr) minmax(200px, 1fr) minmax(160px, 1fr) auto",
               gap: "12px",
-              marginTop: "4px",
+              alignItems: "center",
             }}
           >
             <label
@@ -367,9 +397,15 @@ if (conflito) {
               <>
                 <select
                   value={tipoRecorrencia}
-                  onChange={(e) => setTipoRecorrencia(e.target.value)}
+                  onChange={(e) =>
+                    setTipoRecorrencia(
+                      e.target.value as TipoRecorrencia
+                    )
+                  }
                 >
-                  <option value="quantidade">Por quantidade de semanas</option>
+                  <option value="quantidade">
+                    Por quantidade de semanas
+                  </option>
                   <option value="indeterminado">
                     Tempo indeterminado - 6 meses
                   </option>
@@ -380,26 +416,44 @@ if (conflito) {
                     type="number"
                     min="1"
                     max="52"
-                    placeholder="Quantidade de semanas"
+                    placeholder="Semanas"
                     value={quantidadeSemanas}
-                    onChange={(e) => setQuantidadeSemanas(e.target.value)}
+                    onChange={(e) =>
+                      setQuantidadeSemanas(e.target.value)
+                    }
                   />
                 )}
               </>
             )}
+
+            <button
+              className="btn btn-outline"
+              onClick={() => setAbrirForm(false)}
+            >
+              Cancelar
+            </button>
           </div>
         </div>
       )}
 
-      <div
-        style={{
-          height: "75vh",
-          background: "rgba(255,255,255,0.03)",
-          padding: "18px",
-          borderRadius: "20px",
-        }}
-      >
-        <Calendar
+      {mensagem && (
+        <div
+          style={{
+            marginBottom: "18px",
+            background: "rgba(62,207,142,0.12)",
+            border: "1px solid rgba(62,207,142,0.4)",
+            padding: "14px",
+            borderRadius: "14px",
+            color: "#86efac",
+            fontWeight: 700,
+          }}
+        >
+          {mensagem}
+        </div>
+      )}
+
+      <div className="agenda-calendar-frame">
+        <Calendar<AgendaEvent>
           localizer={localizer}
           events={eventos}
           startAccessor="start"
@@ -407,7 +461,9 @@ if (conflito) {
           date={dataAtual}
           view={visualizacao}
           onNavigate={(novaData) => setDataAtual(novaData)}
-          onView={(novaVisualizacao) => setVisualizacao(novaVisualizacao)}
+          onView={(novaVisualizacao) =>
+            setVisualizacao(novaVisualizacao)
+          }
           onSelectEvent={clicarEvento}
           defaultView={Views.WEEK}
           views={[Views.DAY, Views.WEEK, Views.MONTH]}
@@ -418,16 +474,9 @@ if (conflito) {
             event: EventoPersonalizado,
           }}
           eventPropGetter={() => ({
+            className: "agenda-session-event",
             style: {
-              minHeight: "70px",
-              height: "auto",
               whiteSpace: "normal",
-              overflow: "hidden",
-              borderRadius: "10px",
-              padding: "6px",
-              fontSize: "12px",
-              fontWeight: 700,
-              lineHeight: "1.2",
             },
           })}
           messages={{
