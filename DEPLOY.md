@@ -57,8 +57,9 @@ git push -u origin main
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 4. **Deploy**. Anote a URL (ex.: `https://clinica-online-xxx.vercel.app`).
 
-Com isso, cada `git push` na `main` gera um deploy novo (integração Git da Vercel).
-O workflow `.github/workflows/vercel-production.yml` **só roda** se você criar também os secrets `VERCEL_*` lá no GitHub; senão você pode ignorá-lo ou apagar o arquivo para não confusion.
+O workflow opcional de GitHub Actions foi removido do repo: pushes com PAT
+só com escopo **repo** falham em arquivos sob `.github/workflows/` sem escopo **workflow**.
+Para CI na Vercel, use a integração Git da Vercel (Import Repository).
 
 ### 3. Supabase — login na URL de produção
 
