@@ -1,5 +1,24 @@
 ## Colocar no ar (Vercel)
 
+### Caminho mais prático (o seu caso)
+
+O código já aponta para **`fnkgxsfgbv-prog/clinica-online`**. Faltam **só 2 coisas**:
+
+**A) Enviar os commits do Mac para o GitHub** (uma vez; o Cursor não tem sua senha):
+
+```bash
+cd /Users/jpcoutinho/clinica-online
+GITHUB_TOKEN=ghp_SEU_TOKEN_AQUI npm run push:github
+```
+
+([Criar token](https://github.com/settings/tokens) → classic → marcar **repo**.)
+
+**B) Na Vercel** → **Add New → Project** → **Add GitHub Account** / autorize a conta **`fnkgxsfgbv-prog`** → importe **`fnkgxsfgbv-prog/clinica-online`** → nas variáveis de ambiente coloque `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` → **Deploy**.
+
+Depois do deploy: `npm run production:sync-supabase-auth -- https://SUA_URL.vercel.app` (com `SUPABASE_ACCESS_TOKEN` no `.env.local`).
+
+---
+
 ### 1. Repositório no GitHub (primeira vez)
 
 Se o repo **ainda não existe** na conta que a Vercel usa (`joaopcvoliveira-sudo`):
