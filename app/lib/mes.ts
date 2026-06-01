@@ -7,13 +7,24 @@ export function mesAtualChave(): string {
   return m && m !== "sem-data" ? m : "";
 }
 
-const FINANCEIRO_MES_CALENDARIO_KEY = "psicodesk-financeiro-mes-calendario";
+const MES_CALENDARIO_KEY = "psicodesk-mes-calendario";
+const LEGACY_FINANCEIRO_MES_KEY = "psicodesk-financeiro-mes-calendario";
+
+/** Garante que o mês civil atual apareça nas opções do filtro. */
+export function mesesComMesAtual(meses: string[]): string[] {
+  const chaves = new Set(
+    meses.filter((m) => m && m !== "sem-data")
+  );
+  const atual = mesAtualChave();
+  if (atual) chaves.add(atual);
+  return Array.from(chaves);
+}
 
 /**
  * Detecta virada de mês entre visitas (localStorage) e grava o mês civil atual.
  * Retorna `mudou: true` quando o usuário volta após o calendário ter virado.
  */
-export function detectarViradaMesFinanceiro(): {
+export function detectarViradaMesCalendario(): {
   mudou: boolean;
   mesAtual: string;
 } {
@@ -22,15 +33,23 @@ export function detectarViradaMesFinanceiro(): {
     return { mudou: false, mesAtual };
   }
 
-  const gravado = window.localStorage.getItem(FINANCEIRO_MES_CALENDARIO_KEY);
+  const gravado =
+    window.localStorage.getItem(MES_CALENDARIO_KEY) ??
+    window.localStorage.getItem(LEGACY_FINANCEIRO_MES_KEY);
+
   if (mesAtual) {
-    window.localStorage.setItem(FINANCEIRO_MES_CALENDARIO_KEY, mesAtual);
+    window.localStorage.setItem(MES_CALENDARIO_KEY, mesAtual);
   }
 
   return {
     mudou: Boolean(gravado && mesAtual && gravado !== mesAtual),
     mesAtual,
   };
+}
+
+/** @deprecated Use detectarViradaMesCalendario */
+export function detectarViradaMesFinanceiro() {
+  return detectarViradaMesCalendario();
 }
 
 /** Mês numérico `MM` → nome em português (capitalizado). */

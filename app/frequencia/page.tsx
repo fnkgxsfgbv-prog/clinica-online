@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import FlashMessage from "../components/FlashMessage";
 import Janela from "../components/Janela";
@@ -16,7 +16,8 @@ import {
   resolverPaciente,
 } from "../lib/frequencia-utils";
 import { formatarDataPaciente } from "../lib/datas-paciente";
-import { labelMesAno } from "../lib/mes";
+import { labelMesAno, mesesComMesAtual } from "../lib/mes";
+import { useFiltroMesCalendario } from "../lib/use-filtro-mes-calendario";
 import { ordenarChavesMes, ordenarCronologico } from "../lib/ordenar-datas";
 import { parseValorBr } from "../lib/moeda";
 import { requireUserClient } from "../lib/require-user-client";
@@ -33,7 +34,7 @@ export default function FrequenciaPage() {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState("");
-  const [mes, setMes] = useState("");
+  const { mes, setMes, selecionarMesAtual, mesAtual } = useFiltroMesCalendario();
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
 
@@ -78,11 +79,13 @@ export default function FrequenciaPage() {
     setCarregando(false);
   }
 
-  const mesesDisponiveis = ordenarChavesMes(
-    Array.from(
-      new Set(frequencias.map((f) => chaveMes(f.data || "")).filter(Boolean))
-    ),
-    "asc"
+  const mesesDisponiveis = useMemo(
+    () =>
+      ordenarChavesMes(
+        mesesComMesAtual(frequencias.map((f) => chaveMes(f.data || ""))),
+        "asc"
+      ),
+    [frequencias]
   );
 
   const filtradas = ordenarCronologico(
@@ -308,8 +311,13 @@ export default function FrequenciaPage() {
             </h1>
 
             <p className="page-description">
-              Acompanhe presenças, faltas,
-              comparecimento e resumo financeiro.
+              Acompanhe presenças, faltas e comparecimento.
+              {mes ? (
+                <>
+                  {" "}
+                  Período: <strong>{labelMesAno(mes)}</strong>
+                </>
+              ) : null}
             </p>
           </div>
 
@@ -361,7 +369,7 @@ export default function FrequenciaPage() {
           style={{
             display: "grid",
             gridTemplateColumns:
-              "1.5fr 1fr 1fr",
+              "1.5fr 1fr 1fr auto",
             gap: "12px",
             marginBottom: "22px",
           }}
@@ -395,13 +403,9 @@ export default function FrequenciaPage() {
 
           <select
             value={mes}
-            onChange={(e) =>
-              setMes(e.target.value)
-            }
+            onChange={(e) => setMes(e.target.value)}
           >
-            <option value="">
-              Todos os meses
-            </option>
+            <option value="">Todos os meses</option>
 
             {mesesDisponiveis.map((m) => (
               <option key={m} value={m}>
@@ -409,6 +413,15 @@ export default function FrequenciaPage() {
               </option>
             ))}
           </select>
+
+          <button
+            type="button"
+            className="btn btn-outline"
+            disabled={!mesAtual || mes === mesAtual}
+            onClick={selecionarMesAtual}
+          >
+            Este mês
+          </button>
         </div>
 
         <div

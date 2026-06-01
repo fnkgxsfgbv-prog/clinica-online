@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import FlashMessage from "../../components/FlashMessage";
 import Janela from "../../components/Janela";
@@ -11,7 +11,8 @@ import {
 } from "../../lib/db/frequencia";
 import { chaveMes } from "../../lib/frequencia-utils";
 import { formatarDataPaciente } from "../../lib/datas-paciente";
-import { labelMesAno } from "../../lib/mes";
+import { labelMesAno, mesesComMesAtual } from "../../lib/mes";
+import { useFiltroMesCalendario } from "../../lib/use-filtro-mes-calendario";
 import { ordenarChavesMes, ordenarCronologico } from "../../lib/ordenar-datas";
 import { deduplicarFrequenciasPorSessao } from "../../lib/frequencia-utils";
 import { isStatusFaltou, isStatusPresente } from "../../lib/status";
@@ -28,7 +29,8 @@ export default function HistoricoFrequenciaPage() {
   const [totalFrequencias, setTotalFrequencias] = useState<number | null>(
     null
   );
-  const [mesSelecionado, setMesSelecionado] = useState("");
+  const { mes: mesSelecionado, setMes: setMesSelecionado, selecionarMesAtual, mesAtual } =
+    useFiltroMesCalendario();
   const [carregando, setCarregando] = useState(true);
   const [carregandoMais, setCarregandoMais] = useState(false);
   const [erro, setErro] = useState("");
@@ -122,13 +124,15 @@ export default function HistoricoFrequenciaPage() {
     return "status-danger";
   }
 
-  const mesesDisponiveisOrdenados = ordenarChavesMes(
-    Array.from(
-      new Set(
-        frequencias.map((f) => chaveMes(f.data)).filter((m) => m !== "sem-data")
-      )
-    ),
-    "asc"
+  const mesesDisponiveisOrdenados = useMemo(
+    () =>
+      ordenarChavesMes(
+        mesesComMesAtual(
+          frequencias.map((f) => chaveMes(f.data))
+        ),
+        "asc"
+      ),
+    [frequencias]
   );
 
   const frequenciasFiltradas = mesSelecionado
@@ -209,30 +213,58 @@ export default function HistoricoFrequenciaPage() {
             </h1>
 
             <p className="page-description">
-              Frequências agrupadas por mês. Carregue mais registos para ver
-              períodos mais antigos.
+              Por padrão, o mês atual
+              {mesSelecionado ? (
+                <>
+                  {" "}
+                  — <strong>{labelMesAno(mesSelecionado)}</strong>
+                </>
+              ) : null}
+              . Carregue mais registos para ver períodos mais antigos.
             </p>
           </div>
 
-          <select
-            value={mesSelecionado}
-            onChange={(e) => setMesSelecionado(e.target.value)}
-            style={{ maxWidth: "260px" }}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "8px",
+              alignItems: "center",
+            }}
           >
-            <option value="">Todos os meses (carregados)</option>
+            <select
+              value={mesSelecionado}
+              onChange={(e) => setMesSelecionado(e.target.value)}
+              style={{ maxWidth: "260px" }}
+            >
+              <option value="">Todos os meses (carregados)</option>
 
-            {mesesDisponiveisOrdenados.map((mes) => (
-              <option key={mes} value={mes}>
-                {labelMesAno(mes)}
-              </option>
-            ))}
-          </select>
+              {mesesDisponiveisOrdenados.map((m) => (
+                <option key={m} value={m}>
+                  {labelMesAno(m)}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              className="btn btn-outline"
+              disabled={!mesAtual || mesSelecionado === mesAtual}
+              onClick={selecionarMesAtual}
+            >
+              Este mês
+            </button>
+          </div>
         </div>
 
         {carregando ? (
           <p className="empty-text">Carregando histórico...</p>
         ) : mesesOrdenados.length === 0 ? (
-          <p className="empty-text">Nenhuma frequência encontrada.</p>
+          <p className="empty-text">
+            {mesSelecionado
+              ? `Nenhuma frequência em ${labelMesAno(mesSelecionado)} nos registos carregados.`
+              : "Nenhuma frequência encontrada."}
+          </p>
         ) : (
           <>
             <div style={{ display: "grid", gap: "22px" }}>
