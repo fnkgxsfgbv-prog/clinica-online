@@ -1,12 +1,25 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser } from "./lib/auth";
-import { listFrequencias } from "./lib/db/frequencia";
+import {
+  dataIsoAmanhaAPartirDe,
+  listarAniversariantesDoMes,
+  rotuloDistanciaAniversario,
+} from "./lib/datas-paciente";
+import { dataReferenciaISO } from "./lib/financeiro";
+import { requireUserClient } from "./lib/require-user-client";
+import { listFrequenciasResumo } from "./lib/db/frequencia";
+import { deduplicarFrequenciasPorSessao } from "./lib/frequencia-utils";
 import { isStatusFaltou, isStatusPresente } from "./lib/status";
 import { listPacientes } from "./lib/db/pacientes";
-import { listSessoesAgendadasFuturas } from "./lib/db/sessoes";
+import { listSessoesAgendadasFuturas, listSessoesDoDia } from "./lib/db/sessoes";
+import DashboardAgendaHoje, {
+  ordenarSessoesPorHorario,
+} from "./components/DashboardAgendaHoje";
+import FlashMessage from "./components/FlashMessage";
 import Janela from "./components/Janela";
 import type { Frequencia, Paciente, Sessao } from "./types";
 
@@ -69,33 +82,65 @@ export default function Home() {
 
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [sessoes, setSessoes] = useState<Sessao[]>([]);
+  const [sessoesHojeLista, setSessoesHojeLista] = useState<Sessao[]>([]);
+  const [sessoesAmanhaLista, setSessoesAmanhaLista] = useState<Sessao[]>([]);
   const [frequencias, setFrequencias] = useState<Frequencia[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
 
   const carregarDados = useCallback(async () => {
-    const user = await getCurrentUser();
+    setCarregando(true);
+    setErro("");
 
+    const user = await requireUserClient(router, getCurrentUser);
     if (!user) {
-      router.push("/login");
+      setCarregando(false);
       return;
     }
 
     const agora = new Date();
     const hoje = formatarDataISO(agora);
+    const amanha = dataIsoAmanhaAPartirDe(hoje);
     const horaAtual = agora.toTimeString().slice(0, 5);
 
-    const [
-      { data: pacientesData },
-      { data: sessoesData },
-      { data: frequenciasData },
-    ] = await Promise.all([
+    const [pRes, sRes, fRes, hojeRes, amanhaRes] = await Promise.all([
       listPacientes(user.id),
       listSessoesAgendadasFuturas(user.id, hoje, horaAtual),
-      listFrequencias(user.id),
+      listFrequenciasResumo(user.id),
+      listSessoesDoDia(user.id, hoje),
+      listSessoesDoDia(user.id, amanha),
     ]);
 
-    setPacientes((pacientesData || []) as Paciente[]);
-    setSessoes((sessoesData || []) as Sessao[]);
-    setFrequencias((frequenciasData || []) as Frequencia[]);
+    const loadError =
+      pRes.error?.message ||
+      sRes.error?.message ||
+      fRes.error?.message ||
+      hojeRes.error?.message ||
+      amanhaRes.error?.message;
+
+    if (loadError) {
+      setErro("Erro ao carregar o dashboard: " + loadError);
+      setPacientes([]);
+      setSessoes([]);
+      setSessoesHojeLista([]);
+      setSessoesAmanhaLista([]);
+      setFrequencias([]);
+      setCarregando(false);
+      return;
+    }
+
+    setPacientes((pRes.data || []) as Paciente[]);
+    setSessoes((sRes.data || []) as Sessao[]);
+    setSessoesHojeLista(
+      ordenarSessoesPorHorario((hojeRes.data || []) as Sessao[])
+    );
+    setSessoesAmanhaLista(
+      ordenarSessoesPorHorario((amanhaRes.data || []) as Sessao[])
+    );
+    setFrequencias(
+      deduplicarFrequenciasPorSessao((fRes.data || []) as Frequencia[])
+    );
+    setCarregando(false);
   }, [router]);
 
   useEffect(() => {
@@ -108,9 +153,7 @@ export default function Home() {
     (p) => !p.status || p.status === "ativo"
   ).length;
 
-  const sessoesHoje = sessoes.filter(
-    (s) => s.data === hoje
-  );
+  const sessoesHoje = sessoesHojeLista;
 
   const presencas = frequencias.filter((f) => isStatusPresente(f.status)).length;
 
@@ -129,48 +172,28 @@ export default function Home() {
       ? Math.round((presencas / totalFrequencias) * 100)
       : 0;
 
-  const proximaSessao = sessoes[0];
+  const aniversariantesMes = listarAniversariantesDoMes(pacientes);
+  const mesAtual = new Intl.DateTimeFormat("pt-BR", {
+    month: "long",
+  }).format(new Date());
 
   return (
     <div className="dashboard-page">
       <Janela titulo="Dashboard">
+        {erro ? <FlashMessage kind="error">{erro}</FlashMessage> : null}
+
+        {carregando ? (
+          <p className="empty-text" style={{ marginTop: "12px" }}>
+            Carregando dashboard...
+          </p>
+        ) : (
+          <>
         <p className="dashboard-subtitle">
           Visão geral da clínica
         </p>
 
         <div className="dashboard-overview">
-          <div className="dashboard-next-card">
-            <span className="dashboard-eyebrow">
-              Próxima sessão
-            </span>
-
-            {proximaSessao ? (
-              <>
-                <strong>
-                  {proximaSessao.paciente_nome || "Paciente"}
-                </strong>
-
-                <p>
-                  {rotuloDia(proximaSessao.data, hoje)} às{" "}
-                  {formatarHorario(proximaSessao.hora)}
-                </p>
-
-                <button
-                  className="btn btn-green"
-                  onClick={() =>
-                    router.push(`/sessao/${proximaSessao.id}`)
-                  }
-                >
-                  Abrir sessão
-                </button>
-              </>
-            ) : (
-              <>
-                <strong>Nenhuma sessão agendada</strong>
-                <p>Quando houver agenda, ela aparecerá aqui.</p>
-              </>
-            )}
-          </div>
+          <DashboardAgendaHoje dataIso={hoje} sessoes={sessoesHojeLista} />
 
           <div className="dashboard-metrics-grid">
             <DashboardMetric
@@ -183,7 +206,11 @@ export default function Home() {
             <DashboardMetric
               label="Sessões hoje"
               value={sessoesHoje.length}
-              detail={`${sessoes.length} próximas`}
+              detail={
+                sessoes.length > 0
+                  ? `${sessoes.length} futuras agendadas`
+                  : "Nenhuma sessão futura"
+              }
               variant="sessions"
             />
 
@@ -202,10 +229,65 @@ export default function Home() {
             />
           </div>
         </div>
+          </>
+        )}
+      </Janela>
+
+      <Janela titulo="Sessões de amanhã">
+        {carregando ? (
+          <p className="empty-text">Carregando agenda de amanhã...</p>
+        ) : sessoesAmanhaLista.length === 0 ? (
+          <p className="empty-text">Nenhuma sessão agendada para amanhã.</p>
+        ) : (
+          <>
+            <div className="next-session-list">
+              {sessoesAmanhaLista.map((s) => (
+                <div key={s.id} className="next-session-item">
+                  <div className="next-session-time">
+                    <strong>{formatarHorario(s.hora)}</strong>
+                    <span>Amanhã</span>
+                  </div>
+                  <div className="next-session-info">
+                    <strong>{s.paciente_nome || "Paciente"}</strong>
+                    <p>{formatarDataCompleta(s.data)}</p>
+                  </div>
+                  <div className="next-session-meta">
+                    <span className="next-session-status">
+                      {s.status || "Agendada"}
+                    </span>
+                    <span>{formatarMoeda(Number(s.valor || 0))}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => router.push(`/sessao/${s.id}`)}
+                  >
+                    Abrir sessão
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p className="dashboard-amanha-link">
+              <Link className="btn btn-outline" href="/agenda">
+                Ver agenda completa
+              </Link>
+            </p>
+          </>
+        )}
+      </Janela>
+
+      <Janela titulo={`Aniversariantes de ${mesAtual}`}>
+        {carregando ? (
+          <p className="empty-text">Carregando aniversariantes...</p>
+        ) : (
+          <BirthdayReminder aniversariantes={aniversariantesMes} />
+        )}
       </Janela>
 
       <Janela titulo="Próximas Sessões">
-        {sessoes.length === 0 ? (
+        {carregando ? (
+          <p className="empty-text">Carregando sessões...</p>
+        ) : sessoes.length === 0 ? (
           <p className="empty-text">
             Nenhuma sessão agendada.
           </p>
@@ -215,7 +297,7 @@ export default function Home() {
               <div
                 key={s.id}
                 className={`next-session-item ${
-                  s.data === hoje ? "is-today" : ""
+                  dataReferenciaISO(s.data) === hoje ? "is-today" : ""
                 }`}
               >
                 <div className="next-session-time">
@@ -256,6 +338,51 @@ export default function Home() {
           </div>
         )}
       </Janela>
+    </div>
+  );
+}
+
+function BirthdayReminder({
+  aniversariantes,
+}: {
+  aniversariantes: ReturnType<typeof listarAniversariantesDoMes>;
+}) {
+  if (aniversariantes.length === 0) {
+    return (
+      <div className="birthday-empty-card">
+        <strong>Nenhum aniversário cadastrado para este mês</strong>
+        <p>
+          Cadastre a data de nascimento dos pacientes para receber lembretes
+          detalhados aqui.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="birthday-reminder-list">
+      {aniversariantes.map(({ paciente, data, idade, diffDias }) => (
+        <div
+          key={paciente.id}
+          className={`birthday-reminder-item${diffDias === 0 ? " is-today" : ""}`}
+        >
+          <div className="birthday-avatar">
+            {paciente.nome.slice(0, 1).toUpperCase()}
+          </div>
+
+          <div className="birthday-info">
+            <strong>{paciente.nome}</strong>
+            <span>{data}</span>
+            <p>
+              Completa {idade} {idade === 1 ? "ano" : "anos"} este mês.
+            </p>
+          </div>
+
+          <span className="birthday-distance">
+            {rotuloDistanciaAniversario(diffDias)}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

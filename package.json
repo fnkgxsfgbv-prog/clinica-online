@@ -6,6 +6,7 @@
     "dev": "next dev",
     "dev:bg": "bash scripts/dev-server.sh start",
     "dev:stop": "bash scripts/dev-server.sh stop",
+    "dev:restart": "bash scripts/dev-server.sh restart",
     "dev:status": "bash scripts/dev-server.sh status",
     "build": "next build",
     "start": "next start",
@@ -16,7 +17,24 @@
     "lint": "eslint",
     "security:check": "node --env-file=.env.local scripts/validate-security.mjs",
     "security:apply-rls": "node --env-file=.env.local scripts/apply-rls.mjs",
-    "db:backfill-frequencia": "node --env-file=.env.local scripts/run-backfill-frequencia.mjs"
+    "db:backfill-frequencia": "node --env-file=.env.local scripts/run-backfill-frequencia.mjs",
+    "db:backfill-evolucoes-user-id": "node --env-file=.env.local scripts/backfill-evolucoes-user-id.mjs",
+    "db:apply-evolucoes-rls": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/008_evolucoes_rls_via_paciente.sql",
+    "db:fix-evolucoes-supabase": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/009_fix_evolucoes_visibilidade_completo.sql",
+    "db:fix-sessoes-delete": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/016_fix_sessoes_delete_rls.sql",
+    "db:apply-documentos": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/010_paciente_documentos.sql && node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/013_paciente_documentos_storage_update.sql",
+    "db:apply-anamnese": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/011_paciente_anamnese.sql && node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/012_anamnese_campos_json.sql && node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/014_anamnese_nome_formulario.sql",
+    "db:apply-modelos": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/015_modelos_reutilizaveis.sql",
+    "db:check-migrations": "node --env-file=.env.local scripts/check-supabase-migrations.mjs",
+    "vercel:login": "npx --yes vercel@48.8.0 login",
+    "vercel:link": "npx --yes vercel@48.8.0 link",
+    "vercel:deploy": "npx --yes vercel@48.8.0 deploy --prod",
+    "site:deploy": "npm test && npx --yes vercel@48.8.0 deploy --prod --yes",
+    "psicodesk:producao": "bash scripts/install-psicodesk-mac.sh",
+    "site:url": "bash scripts/site-url.sh",
+    "producao:comercial": "node scripts/producao-comercial.mjs",
+    "vercel:bootstrap": "node scripts/vercel-bootstrap.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.15.0",
@@ -24,9 +42,10 @@
     "@supabase/supabase-js": "^2.105.3",
     "@types/moment": "^2.11.29",
     "@types/react-big-calendar": "^1.16.3",
+    "exceljs": "^4.4.0",
     "jspdf": "^4.2.1",
     "moment": "^2.30.1",
-    "next": "16.2.4",
+    "next": "^16.2.6",
     "react": "19.2.4",
     "react-big-calendar": "^1.19.4",
     "react-dom": "19.2.4"
@@ -39,6 +58,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }
