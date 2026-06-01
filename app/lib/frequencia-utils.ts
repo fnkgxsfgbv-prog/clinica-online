@@ -1,4 +1,5 @@
 import type { Frequencia, Paciente, Sessao } from "../types";
+import { dataReferenciaISO } from "./financeiro";
 import { normalizarNome } from "./status";
 
 export function chaveMes(data?: string | null) {
@@ -43,6 +44,44 @@ export function resolverPaciente(
   const nome = normalizarNome(pacienteNome);
   if (nome) return porNome.get(nome);
   return undefined;
+}
+
+/** Uma linha por sessão (id mais alto); entradas sem sessao_id permanecem todas. */
+export function deduplicarFrequenciasPorSessao(
+  frequencias: Frequencia[]
+): Frequencia[] {
+  const porSessao = new Map<string, Frequencia>();
+  const semSessao: Frequencia[] = [];
+
+  for (const f of frequencias) {
+    if (f.sessao_id == null || f.sessao_id === "") {
+      semSessao.push(f);
+      continue;
+    }
+    const sid = String(f.sessao_id);
+    const atual = porSessao.get(sid);
+    if (!atual || Number(f.id) > Number(atual.id)) {
+      porSessao.set(sid, f);
+    }
+  }
+
+  return [...semSessao, ...porSessao.values()];
+}
+
+/** Chave estável paciente + data (para bloquear financeiro duplicado). */
+export function chavePacienteData(
+  pacienteId?: string | number | null,
+  pacienteNome?: string | null,
+  data?: string | null
+): string | null {
+  const iso = dataReferenciaISO(data);
+  if (!iso) return null;
+  if (pacienteId != null && pacienteId !== "") {
+    return `id:${pacienteId}:${iso}`;
+  }
+  const nome = normalizarNome(pacienteNome);
+  if (nome) return `nome:${nome}:${iso}`;
+  return null;
 }
 
 /** Preenche data/nome/id em memória a partir de pacientes e sessões. */
