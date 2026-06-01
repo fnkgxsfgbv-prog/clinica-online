@@ -76,6 +76,8 @@ allow.add(productionUrl);
 allow.add(`${productionUrl}/**`);
 allow.add(`${productionUrl}/login`);
 allow.add(`${productionUrl}/login/**`);
+allow.add(`${productionUrl}/login/redefinir-senha`);
+allow.add(`${productionUrl}/login/esqueci-senha`);
 
 // desenvolvimento local comum (mantém)
 allow.add("http://localhost:3000");
