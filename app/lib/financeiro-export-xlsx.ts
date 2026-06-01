@@ -2,6 +2,8 @@ import type { FechamentoMes } from "./financeiro-fechamento";
 import { rotuloVariacao } from "./financeiro-fechamento";
 import type { ResumoFinanceiro } from "./financeiro";
 
+const COLUNAS = 4;
+
 function formatarMoeda(valor: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -32,31 +34,23 @@ function preencherLinhasResumo(
   const startDataRow = headerRowIdx + 1;
   let totalSessoes = 0;
   let total = 0;
-  let totalRecebido = 0;
-  let totalPendente = 0;
 
   linhas.forEach((p, idx) => {
     const r = ws.getRow(startDataRow + idx);
     const presencas = Number(p.presencas || 0);
     const totalLinha = Number(p.total || 0);
-    const recebidoLinha = Number(p.totalRecebido || 0);
-    const pendenteLinha = Number(p.totalPendente || 0);
     const valorSessao = presencas > 0 ? totalLinha / presencas : Number(p.valor || 0);
 
     r.getCell(1).value = String(p.nome || "Paciente");
     r.getCell(2).value = presencas;
     r.getCell(3).value = valorSessao;
-    r.getCell(4).value = recebidoLinha;
-    r.getCell(5).value = pendenteLinha;
-    r.getCell(6).value = totalLinha;
+    r.getCell(4).value = totalLinha;
 
     totalSessoes += presencas;
     total += totalLinha;
-    totalRecebido += recebidoLinha;
-    totalPendente += pendenteLinha;
 
     const zebra = idx % 2 === 1;
-    for (let c = 1; c <= 6; c++) {
+    for (let c = 1; c <= COLUNAS; c++) {
       const cell = r.getCell(c);
       cell.font = { name: "Calibri", size: 11, color: { argb: "FF0F172A" } };
       cell.alignment = { vertical: "middle", horizontal: c === 1 ? "left" : "right" };
@@ -67,24 +61,19 @@ function preencherLinhasResumo(
     }
 
     r.getCell(2).numFmt = "0";
-    for (let c = 3; c <= 6; c++) {
-      r.getCell(c).numFmt = '"R$" #,##0.00';
-    }
+    r.getCell(3).numFmt = '"R$" #,##0.00';
+    r.getCell(4).numFmt = '"R$" #,##0.00';
   });
 
   const footerRowIdx = startDataRow + linhas.length + 1;
   const footer = ws.getRow(footerRowIdx);
   footer.getCell(1).value = "Total";
   footer.getCell(2).value = totalSessoes;
-  footer.getCell(4).value = totalRecebido;
-  footer.getCell(5).value = totalPendente;
-  footer.getCell(6).value = total;
+  footer.getCell(4).value = total;
   footer.getCell(2).numFmt = "0";
-  for (let c = 4; c <= 6; c++) {
-    footer.getCell(c).numFmt = '"R$" #,##0.00';
-  }
+  footer.getCell(4).numFmt = '"R$" #,##0.00';
   footer.height = 20;
-  for (let c = 1; c <= 6; c++) {
+  for (let c = 1; c <= COLUNAS; c++) {
     const cell = footer.getCell(c);
     cell.font = { name: "Calibri", size: 11, bold: true, color: { argb: "FF0F172A" } };
     cell.alignment = { vertical: "middle", horizontal: c === 1 ? "left" : "right" };
@@ -95,7 +84,7 @@ function preencherLinhasResumo(
     };
   }
 
-  return { totalSessoes, total, totalRecebido, totalPendente };
+  return { totalSessoes, total };
 }
 
 export async function exportarFinanceiroXlsx(
@@ -119,40 +108,36 @@ export async function exportarFinanceiroXlsx(
   }).format(new Date());
 
   const periodo = String(periodoLabel || "").trim() || "Todos os períodos";
+  const col = "D";
 
-  ws.mergeCells("A1:F1");
+  ws.mergeCells(`A1:${col}1`);
   ws.getCell("A1").value = "PsicoDesk — Resumo financeiro";
   ws.getCell("A1").font = { name: "Calibri", size: 16, bold: true, color: { argb: "FF0F172A" } };
   ws.getRow(1).height = 26;
 
-  ws.mergeCells("A2:F2");
+  ws.mergeCells(`A2:${col}2`);
   ws.getCell("A2").value = `Período: ${periodo}`;
-  ws.getCell("A2").font = { name: "Calibri", size: 11, color: { argb: "FF334155" } };
 
-  ws.mergeCells("A3:F3");
+  ws.mergeCells(`A3:${col}3`);
   ws.getCell("A3").value = `Gerado em: ${geradoEm}`;
 
   const headerRowIdx = 7;
   const headerRow = ws.getRow(headerRowIdx);
-  headerRow.values = [
-    "Paciente",
-    "Sessões",
-    "Valor por sessão",
-    "Recebido",
-    "Pendente",
-    "Total",
-  ];
+  headerRow.values = ["Paciente", "Sessões", "Valor por sessão", "Total"];
   headerRow.height = 20;
-  estilizarCabecalhoTabela(headerRow, 6);
+  estilizarCabecalhoTabela(headerRow, COLUNAS);
 
   const totais = preencherLinhasResumo(ws, linhas, headerRowIdx);
 
   const resumoRowIdx = 5;
-  ws.mergeCells(`A${resumoRowIdx}:F${resumoRowIdx}`);
-  const resumoCell = ws.getCell(`A${resumoRowIdx}`);
-  resumoCell.value = `Sessões: ${totais.totalSessoes}  •  Recebido: ${formatarMoeda(totais.totalRecebido)}  •  Pendente: ${formatarMoeda(totais.totalPendente)}  •  Total: ${formatarMoeda(totais.total)}`;
-  resumoCell.font = { name: "Calibri", size: 11, bold: true };
-  resumoCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF1F5F9" } };
+  ws.mergeCells(`A${resumoRowIdx}:${col}${resumoRowIdx}`);
+  ws.getCell(`A${resumoRowIdx}`).value = `Sessões: ${totais.totalSessoes}  •  Total: ${formatarMoeda(totais.total)}`;
+  ws.getCell(`A${resumoRowIdx}`).font = { name: "Calibri", size: 11, bold: true };
+  ws.getCell(`A${resumoRowIdx}`).fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFF1F5F9" },
+  };
 
   ws.views = [{ state: "frozen", ySplit: headerRowIdx }];
 
@@ -176,19 +161,18 @@ export async function exportarFechamentoMesXlsx(fechamento: FechamentoMes) {
   }).format(new Date());
 
   const { totais, totaisAnterior, label, labelMesAnterior, linhas } = fechamento;
+  const col = "D";
 
-  ws.mergeCells("A1:F1");
+  ws.mergeCells(`A1:${col}1`);
   ws.getCell("A1").value = `Fechamento — ${label}`;
   ws.getCell("A1").font = { name: "Calibri", size: 16, bold: true, color: { argb: "FF0F172A" } };
   ws.getRow(1).height = 26;
 
-  ws.mergeCells("A2:F2");
+  ws.mergeCells(`A2:${col}2`);
   ws.getCell("A2").value = `Gerado em: ${geradoEm}`;
 
   const linhasResumo = [
     ["Total faturado", totais.total],
-    ["Recebido", totais.recebido],
-    ["A receber", totais.pendente],
     ["Presenças", totais.presencas],
     ["Pacientes", totais.pacientes],
   ];
@@ -199,7 +183,7 @@ export async function exportarFechamentoMesXlsx(fechamento: FechamentoMes) {
     row.getCell(1).value = rotulo;
     row.getCell(2).value = valor;
     row.getCell(1).font = { bold: true };
-    if (typeof valor === "number" && rotulo !== "Presenças" && rotulo !== "Pacientes") {
+    if (typeof valor === "number" && rotulo === "Total faturado") {
       row.getCell(2).numFmt = '"R$" #,##0.00';
     }
     rowIdx += 1;
@@ -207,14 +191,13 @@ export async function exportarFechamentoMesXlsx(fechamento: FechamentoMes) {
 
   if (totaisAnterior && labelMesAnterior) {
     rowIdx += 1;
-    ws.mergeCells(`A${rowIdx}:F${rowIdx}`);
+    ws.mergeCells(`A${rowIdx}:${col}${rowIdx}`);
     ws.getCell(`A${rowIdx}`).value = `Comparativo com ${labelMesAnterior}`;
     ws.getCell(`A${rowIdx}`).font = { bold: true, size: 12 };
     rowIdx += 1;
 
     const comparativos = [
       ["Total faturado", totais.total, totaisAnterior.total],
-      ["Recebido", totais.recebido, totaisAnterior.recebido],
       ["Presenças", totais.presencas, totaisAnterior.presencas],
     ];
 
@@ -224,7 +207,7 @@ export async function exportarFechamentoMesXlsx(fechamento: FechamentoMes) {
       row.getCell(2).value = atual;
       row.getCell(3).value = anterior;
       row.getCell(4).value = rotuloVariacao(Number(atual), Number(anterior));
-      if (rotulo !== "Presenças") {
+      if (rotulo === "Total faturado") {
         row.getCell(2).numFmt = '"R$" #,##0.00';
         row.getCell(3).numFmt = '"R$" #,##0.00';
       }
@@ -235,15 +218,8 @@ export async function exportarFechamentoMesXlsx(fechamento: FechamentoMes) {
   rowIdx += 2;
   const headerRowIdx = rowIdx;
   const headerRow = ws.getRow(headerRowIdx);
-  headerRow.values = [
-    "Paciente",
-    "Sessões",
-    "Valor por sessão",
-    "Recebido",
-    "Pendente",
-    "Total",
-  ];
-  estilizarCabecalhoTabela(headerRow, 6);
+  headerRow.values = ["Paciente", "Sessões", "Valor por sessão", "Total"];
+  estilizarCabecalhoTabela(headerRow, COLUNAS);
   preencherLinhasResumo(ws, linhas, headerRowIdx);
 
   const slug = fechamento.mes.replace(/[^\d-]/g, "");

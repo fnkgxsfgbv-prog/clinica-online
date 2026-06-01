@@ -22,9 +22,6 @@ describe("financeiro-fechamento", () => {
         presencas: 2,
         valor: 100,
         total: 200,
-        totalRecebido: 100,
-        totalPendente: 100,
-        formasPagamento: [],
       },
     ]);
     expect(t.total).toBe(200);

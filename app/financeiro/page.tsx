@@ -353,14 +353,6 @@ export default function FinanceiroPage() {
   );
 
   const totalGeral = dados.reduce((acc, item) => acc + item.total, 0);
-  const totalRecebidoGeral = dados.reduce(
-    (acc, item) => acc + item.totalRecebido,
-    0
-  );
-  const totalPendenteGeral = dados.reduce(
-    (acc, item) => acc + item.totalPendente,
-    0
-  );
   const totalPresencas = dados.reduce(
     (acc, item) => acc + item.presencas,
     0
@@ -734,7 +726,7 @@ export default function FinanceiroPage() {
             aria-label="Avisos de integração agenda e financeiro"
           >
             <div className="financeiro-alertas-header">
-              <strong>Revisar vínculos e valores</strong>
+              <strong>Revisar vínculos e valores na agenda</strong>
               <span>
                 {alertasFinanceiro.length} ponto(s) para conferir no período
                 {mesSelecionado && !intervaloAtivo && !semanaAtiva
@@ -814,22 +806,6 @@ export default function FinanceiroPage() {
                 ) : null}
               </div>
               <div className="financeiro-fechamento-card">
-                <span>Recebido</span>
-                <strong>{formatarMoeda(fechamento.totais.recebido)}</strong>
-                {fechamento.totaisAnterior ? (
-                  <em>
-                    {rotuloVariacao(
-                      fechamento.totais.recebido,
-                      fechamento.totaisAnterior.recebido
-                    )}
-                  </em>
-                ) : null}
-              </div>
-              <div className="financeiro-fechamento-card">
-                <span>A receber</span>
-                <strong>{formatarMoeda(fechamento.totais.pendente)}</strong>
-              </div>
-              <div className="financeiro-fechamento-card">
                 <span>Presenças</span>
                 <strong>{fechamento.totais.presencas}</strong>
                 {fechamento.totaisAnterior ? (
@@ -869,20 +845,6 @@ export default function FinanceiroPage() {
             <span className="financeiro-total-label">Total faturado</span>
             <strong className="financeiro-total-valor">
               {formatarMoeda(totalGeral)}
-            </strong>
-          </div>
-
-          <div className="financeiro-total-card financeiro-total-recebido">
-            <span className="financeiro-total-label">Recebido</span>
-            <strong className="financeiro-total-valor">
-              {formatarMoeda(totalRecebidoGeral)}
-            </strong>
-          </div>
-
-          <div className="financeiro-total-card financeiro-total-pendente">
-            <span className="financeiro-total-label">A receber</span>
-            <strong className="financeiro-total-valor financeiro-valor-pendente">
-              {formatarMoeda(totalPendenteGeral)}
             </strong>
           </div>
 

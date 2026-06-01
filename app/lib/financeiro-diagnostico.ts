@@ -1,8 +1,4 @@
-import {
-  dataReferenciaISO,
-  filtrarPorMesReferencia,
-  isPagamentoRecebido,
-} from "./financeiro";
+import { dataReferenciaISO, filtrarPorMesReferencia } from "./financeiro";
 import {
   deduplicarFrequenciasPorSessao,
   indicePacientes,
@@ -14,7 +10,7 @@ import type { Frequencia, Paciente, Sessao } from "../types";
 
 export type AlertaFinanceiro = {
   id: string;
-  tipo: "sem_vinculo" | "sem_valor" | "pagamento_pendente";
+  tipo: "sem_vinculo" | "sem_valor";
   titulo: string;
   detalhe: string;
   href?: string;
@@ -115,20 +111,11 @@ export function diagnosticarIntegracaoFinanceiro(
       });
     }
 
-    if (sessao && !isPagamentoRecebido(sessao.status_pagamento) && valor > 0) {
-      add({
-        tipo: "pagamento_pendente",
-        titulo: `${nome} — ${dataLabel}`,
-        detalhe: `Sessão com R$ ${valor.toFixed(2).replace(".", ",")} ainda não marcada como paga.`,
-        href: `/sessao/${sessao.id}`,
-      });
-    }
   }
 
   const ordem: Record<AlertaFinanceiro["tipo"], number> = {
     sem_vinculo: 0,
     sem_valor: 1,
-    pagamento_pendente: 2,
   };
 
   return alertas.sort((a, b) => ordem[a.tipo] - ordem[b.tipo]);

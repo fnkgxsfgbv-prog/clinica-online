@@ -16,26 +16,7 @@ export type ResumoFinanceiro = {
   /** Valor médio por presença no período (útil quando há sessões com valores diferentes). */
   valor: number;
   total: number;
-  totalRecebido: number;
-  totalPendente: number;
-  /** Formas de pagamento distintas registradas nas sessões vinculadas às presenças. */
-  formasPagamento: string[];
 };
-
-/**
- * Considera pagamento recebido com base em `status_pagamento` da sessão.
- * Vazio ou "pendente" (e variações) contam como a receber.
- */
-export function isPagamentoRecebido(status?: string | null): boolean {
-  const s = String(status ?? "")
-    .trim()
-    .toLowerCase();
-  if (!s) return false;
-  if (/pend|aberto|à vencer|a vencer|parcel|credi/.test(s)) return false;
-  if (/^(pago|paga|quitad|recebid)/.test(s)) return true;
-  if (/\bpago\b/.test(s) || /\bquitad/.test(s)) return true;
-  return false;
-}
 
 /** Filtra frequências ou sessões pela chave `AAAA-MM` da data (vazio = sem filtro). */
 export function filtrarPorMesReferencia<
@@ -239,16 +220,8 @@ type ItemResumo = {
   nome: string;
   presencas: number;
   total: number;
-  totalRecebido: number;
-  totalPendente: number;
-  formasPagamento: Set<string>;
   paciente?: Paciente;
 };
-
-function registrarForma(resumo: ItemResumo, sessao?: Sessao) {
-  const f = sessao?.forma_pagamento?.trim();
-  if (f) resumo.formasPagamento.add(f);
-}
 
 export function calcularResumoFinanceiro(
   pacientes: Paciente[],
@@ -291,9 +264,6 @@ export function calcularResumoFinanceiro(
         nome: paciente?.nome ?? nome,
         presencas: 0,
         total: 0,
-        totalRecebido: 0,
-        totalPendente: 0,
-        formasPagamento: new Set(),
         paciente,
       };
       resumos.set(chave, item);
@@ -305,18 +275,8 @@ export function calcularResumoFinanceiro(
     return item;
   }
 
-  function acumularValor(
-    resumo: ItemResumo,
-    valorLinha: number,
-    sessao?: Sessao
-  ) {
+  function acumularValor(resumo: ItemResumo, valorLinha: number) {
     resumo.total += valorLinha;
-    if (sessao && isPagamentoRecebido(sessao.status_pagamento)) {
-      resumo.totalRecebido += valorLinha;
-    } else {
-      resumo.totalPendente += valorLinha;
-    }
-    registrarForma(resumo, sessao);
   }
 
   for (const frequencia of frequenciasUnicas) {
@@ -347,7 +307,7 @@ export function calcularResumoFinanceiro(
     );
 
     const valorLinha = valorPresenca(paciente, sessaoRelacionada);
-    acumularValor(resumo, valorLinha, sessaoRelacionada);
+    acumularValor(resumo, valorLinha);
   }
 
   for (const sessao of sessoes) {
@@ -383,7 +343,7 @@ export function calcularResumoFinanceiro(
     resumo.presencas += 1;
     sessoesContadas.add(sid);
     const valorLinha = valorPresenca(paciente, sessao);
-    acumularValor(resumo, valorLinha, sessao);
+    acumularValor(resumo, valorLinha);
   }
 
   return Array.from(resumos.values())
@@ -396,11 +356,6 @@ export function calcularResumoFinanceiro(
           ? item.total / item.presencas
           : valorSessaoPaciente(item.paciente),
       total: item.total,
-      totalRecebido: item.totalRecebido,
-      totalPendente: item.totalPendente,
-      formasPagamento: Array.from(item.formasPagamento).sort((a, b) =>
-        a.localeCompare(b, "pt-BR")
-      ),
     }))
     .filter((item) => item.presencas > 0)
     .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, "pt-BR"));

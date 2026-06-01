@@ -7,26 +7,9 @@ import {
   filtrarPorSemanaReferencia,
   inicioSemanaISO,
   labelSemana,
-  isPagamentoRecebido,
   semanaIntersectsMes,
 } from "./financeiro";
 import type { Frequencia, Paciente, Sessao } from "../types";
-
-describe("isPagamentoRecebido", () => {
-  it("pendente ou vazio não é recebido", () => {
-    expect(isPagamentoRecebido(null)).toBe(false);
-    expect(isPagamentoRecebido("")).toBe(false);
-    expect(isPagamentoRecebido("pendente")).toBe(false);
-    expect(isPagamentoRecebido("PENDENTE")).toBe(false);
-  });
-
-  it("pago e sinônimos são recebidos", () => {
-    expect(isPagamentoRecebido("pago")).toBe(true);
-    expect(isPagamentoRecebido("Pago")).toBe(true);
-    expect(isPagamentoRecebido("quitado")).toBe(true);
-    expect(isPagamentoRecebido("recebido")).toBe(true);
-  });
-});
 
 describe("filtrarPorMesReferencia", () => {
   it("sem mês retorna tudo", () => {
@@ -100,7 +83,7 @@ describe("calcularResumoFinanceiro", () => {
     valor_sessao: "100",
   };
 
-  it("presença com sessão paga soma em totalRecebido", () => {
+  it("presença com sessão soma no total faturado", () => {
     const sessao: Sessao = {
       id: 10,
       paciente_id: 1,
@@ -108,8 +91,6 @@ describe("calcularResumoFinanceiro", () => {
       data: "2026-05-10",
       status: "Presente",
       valor: 100,
-      status_pagamento: "pago",
-      forma_pagamento: "PIX",
     };
     const freq: Frequencia = {
       id: 1,
@@ -123,34 +104,6 @@ describe("calcularResumoFinanceiro", () => {
     const [r] = calcularResumoFinanceiro([paciente], [freq], [sessao]);
     expect(r.presencas).toBe(1);
     expect(r.total).toBe(100);
-    expect(r.totalRecebido).toBe(100);
-    expect(r.totalPendente).toBe(0);
-    expect(r.formasPagamento).toEqual(["PIX"]);
-  });
-
-  it("presença com sessão pendente soma em totalPendente", () => {
-    const sessao: Sessao = {
-      id: 11,
-      paciente_id: 1,
-      paciente_nome: "Ana",
-      data: "2026-05-11",
-      status: "Presente",
-      valor: 80,
-      status_pagamento: "pendente",
-    };
-    const freq: Frequencia = {
-      id: 2,
-      sessao_id: 11,
-      paciente_id: 1,
-      data: "2026-05-11",
-      status: "Presente",
-    };
-
-    const [r] = calcularResumoFinanceiro([paciente], [freq], [sessao]);
-    expect(r.total).toBe(80);
-    expect(r.totalRecebido).toBe(0);
-    expect(r.totalPendente).toBe(80);
-    expect(r.formasPagamento).toEqual([]);
   });
 
   it("falta na frequência não conta mesmo com sessão ainda como Presente", () => {
@@ -234,20 +187,17 @@ describe("calcularResumoFinanceiro", () => {
     expect(calcularResumoFinanceiro([paciente], [freq], [sessao])).toEqual([]);
   });
 
-  it("sessão presente sem linha na frequência usa status de pagamento", () => {
+  it("sessão presente sem linha na frequência entra no resumo", () => {
     const sessao: Sessao = {
       id: 20,
       paciente_id: 1,
       data: "2026-06-01",
       status: "Presente",
       valor: 120,
-      status_pagamento: "pago",
     };
 
     const [r] = calcularResumoFinanceiro([paciente], [], [sessao]);
     expect(r.presencas).toBe(1);
-    expect(r.totalRecebido).toBe(120);
-    expect(r.totalPendente).toBe(0);
-    expect(r.formasPagamento).toEqual([]);
+    expect(r.total).toBe(120);
   });
 });

@@ -89,7 +89,6 @@ type SessaoParaCriar = {
   hora: string;
   valor: number;
   status: "Agendada";
-  status_pagamento: "pendente";
 };
 
 export default function AgendaClient() {
@@ -347,7 +346,6 @@ export default function AgendaClient() {
         hora,
         valor: Number(valor || paciente.valor_sessao || 0),
         status: "Agendada",
-        status_pagamento: "pendente",
       });
     }
 
@@ -1254,7 +1252,6 @@ function criarEventosSimulacaoGrupo(
         hora: "10:00",
         valor: 0,
         status: "Agendada",
-        status_pagamento: "pendente",
       },
     };
   });

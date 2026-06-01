@@ -8,8 +8,6 @@ import type { Frequencia, Paciente, Sessao } from "../types";
 
 export type TotaisFinanceiros = {
   total: number;
-  recebido: number;
-  pendente: number;
   presencas: number;
   pacientes: number;
 };
@@ -27,8 +25,6 @@ export type FechamentoMes = {
 export function totaisDeResumo(linhas: ResumoFinanceiro[]): TotaisFinanceiros {
   return {
     total: linhas.reduce((acc, p) => acc + (p.total || 0), 0),
-    recebido: linhas.reduce((acc, p) => acc + (p.totalRecebido || 0), 0),
-    pendente: linhas.reduce((acc, p) => acc + (p.totalPendente || 0), 0),
     presencas: linhas.reduce((acc, p) => acc + (p.presencas || 0), 0),
     pacientes: linhas.length,
   };
