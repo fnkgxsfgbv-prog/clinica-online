@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import jsPDF from "jspdf";
+import { useEffect, useRef, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { getCurrentUser } from "../../lib/auth";
+import { requireUserClient } from "../../lib/require-user-client";
 import {
   deleteFrequenciaPorSessao,
-  insertFrequencia,
+  salvarFrequenciaDaSessao,
 } from "../../lib/db/frequencia";
 import {
   getSessaoById,
@@ -16,13 +16,42 @@ import {
 import {
   insertEvolucao,
   listEvolucoesPorPacientePorId,
+  updateEvolucao,
 } from "../../lib/db/evolucoes";
 import Janela from "../../components/Janela";
+import FlashMessage from "../../components/FlashMessage";
+import RichTextEditor, {
+  pareceHtml,
+  sanitizarHtmlBasico,
+} from "../../components/RichTextEditor";
+import {
+  dataIsoHoje,
+  formatarDataHoraSessao,
+  formatarDataPaciente,
+} from "../../lib/datas-paciente";
+import { ordenarCronologico } from "../../lib/ordenar-datas";
+import { toFiniteNumberId } from "../../lib/id";
+import EvolucaoHistoricoCard from "../../components/EvolucaoHistoricoCard";
 import type { Evolucao, Sessao } from "../../types";
+
+type AbaRegistroSessao =
+  | "pre-sessao"
+  | "anotacoes"
+  | "observacoes"
+  | "evolucao-clinica";
 
 export default function SessaoPage() {
   const params = useParams();
-  const id = params.id;
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const modoAnotacoes = searchParams.get("modo") === "anotacoes";
+  const idParam = params.id;
+  const id =
+    typeof idParam === "string"
+      ? idParam
+      : Array.isArray(idParam)
+        ? idParam[0] ?? ""
+        : "";
 
   const [sessao, setSessao] = useState<Sessao | null>(null);
   const [evolucoes, setEvolucoes] = useState<Evolucao[]>([]);
@@ -31,21 +60,201 @@ export default function SessaoPage() {
   const [objetivo, setObjetivo] = useState("");
   const [intervencao, setIntervencao] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [preSessao, setPreSessao] = useState("");
+  const [anotacoesSessao, setAnotacoesSessao] = useState("");
+  const [observacoesSessao, setObservacoesSessao] = useState("");
+  const [abaRegistro, setAbaRegistro] =
+    useState<AbaRegistroSessao>("pre-sessao");
+  const [anotacoesInicializadas, setAnotacoesInicializadas] = useState(false);
+  const [evolucoesCarregadas, setEvolucoesCarregadas] = useState(false);
   const [plano, setPlano] = useState("");
   const [encaminhamentos, setEncaminhamentos] = useState("");
   const [mensagem, setMensagem] = useState("");
-const [abrirReagendar, setAbrirReagendar] = useState(false);
-const [novaData, setNovaData] = useState("");
-const [novaHora, setNovaHora] = useState("");
+  const [abrirReagendar, setAbrirReagendar] = useState(false);
+  const [novaData, setNovaData] = useState("");
+  const [novaHora, setNovaHora] = useState("");
+  const [carregandoInicial, setCarregandoInicial] = useState(true);
+  const [erroCarga, setErroCarga] = useState("");
+  const ultimoSnapshotAnotacoesRef = useRef("");
+  const salvandoAnotacoesRef = useRef(false);
+  const salvarNovamenteDepoisRef = useRef(false);
+  const salvamentoAnotacoesPromiseRef = useRef<Promise<void> | null>(null);
+  const sessaoRef = useRef<Sessao | null>(null);
+  const evolucoesRef = useRef<Evolucao[]>([]);
+  const preSessaoRef = useRef("");
+  const anotacoesSessaoRef = useRef("");
+  const observacoesSessaoRef = useRef("");
+
   useEffect(() => {
-    carregarSessao();
-  }, []);
+    sessaoRef.current = sessao;
+  }, [sessao]);
+
+  useEffect(() => {
+    evolucoesRef.current = evolucoes;
+  }, [evolucoes]);
+
+  useEffect(() => {
+    preSessaoRef.current = preSessao;
+  }, [preSessao]);
+
+  useEffect(() => {
+    anotacoesSessaoRef.current = anotacoesSessao;
+  }, [anotacoesSessao]);
+
+  useEffect(() => {
+    observacoesSessaoRef.current = observacoesSessao;
+  }, [observacoesSessao]);
+
+  useEffect(() => {
+    void carregarSessao();
+    // carregarSessao deve reagir apenas à troca do id da sessão.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   useEffect(() => {
     if (sessao?.paciente_id) {
-      carregarEvolucoes();
+      void carregarEvolucoes();
     }
+    // carregarEvolucoes deve rodar quando a sessão carregada muda.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessao]);
+
+  useEffect(() => {
+    setAnotacoesInicializadas(false);
+    setPreSessao("");
+    setAnotacoesSessao("");
+    setObservacoesSessao("");
+  }, [sessao?.id]);
+
+  useEffect(() => {
+    if (!sessao || anotacoesInicializadas || !evolucoesCarregadas) return;
+
+    const anotacaoDaSessao = obterRegistroAnotacoesSessao(
+      evolucoes,
+      sessao.id
+    );
+    const rascunho = lerRascunhoAnotacoes(sessao.id);
+    const preSessaoSalva = anotacaoDaSessao?.objetivo || "";
+    const anotacoesSalvas = anotacaoDaSessao?.observacoes || "";
+    const observacoesSalvas = anotacaoDaSessao?.plano || "";
+    const snapshotSalvo = snapshotAnotacoesSessao(
+      preSessaoSalva,
+      anotacoesSalvas,
+      observacoesSalvas
+    );
+    const snapshotRascunho = rascunho
+      ? snapshotAnotacoesSessao(
+          rascunho.preSessao,
+          rascunho.anotacoesSessao,
+          rascunho.observacoesSessao
+        )
+      : "";
+
+    if (rascunho && snapshotRascunho && snapshotRascunho !== snapshotSalvo) {
+      setPreSessao(rascunho.preSessao);
+      setAnotacoesSessao(rascunho.anotacoesSessao);
+      setObservacoesSessao(rascunho.observacoesSessao);
+      ultimoSnapshotAnotacoesRef.current = snapshotSalvo;
+    } else {
+      setPreSessao(preSessaoSalva);
+      setAnotacoesSessao(anotacoesSalvas);
+      setObservacoesSessao(observacoesSalvas);
+      ultimoSnapshotAnotacoesRef.current = snapshotSalvo;
+    }
+
+    setAnotacoesInicializadas(true);
+  }, [anotacoesInicializadas, evolucoes, evolucoesCarregadas, sessao]);
+
+  useEffect(() => {
+    if (!sessao || !anotacoesInicializadas || !evolucoesCarregadas) return;
+
+    const snapshotAtual = snapshotAnotacoesSessao(
+      preSessao,
+      anotacoesSessao,
+      observacoesSessao
+    );
+    if (!temConteudoAnotacoes(preSessao, anotacoesSessao, observacoesSessao)) {
+      return;
+    }
+    if (snapshotAtual === ultimoSnapshotAnotacoesRef.current) return;
+
+    const timer = window.setTimeout(() => {
+      void salvarAnotacoesSessao(true);
+    }, 650);
+
+    return () => window.clearTimeout(timer);
+    // salvarAnotacoesSessao usa o estado atual da sessão e das evoluções.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    anotacoesInicializadas,
+    anotacoesSessao,
+    evolucoesCarregadas,
+    observacoesSessao,
+    preSessao,
+    sessao?.id,
+  ]);
+
+  useEffect(() => {
+    if (!sessao || !anotacoesInicializadas || !evolucoesCarregadas) return;
+
+    const snapshotAtual = snapshotAnotacoesSessao(
+      preSessao,
+      anotacoesSessao,
+      observacoesSessao
+    );
+
+    if (
+      snapshotAtual !== ultimoSnapshotAnotacoesRef.current &&
+      temConteudoAnotacoes(preSessao, anotacoesSessao, observacoesSessao)
+    ) {
+      salvarRascunhoAnotacoes(sessao.id, {
+        preSessao,
+        anotacoesSessao,
+        observacoesSessao,
+      });
+    }
+  }, [
+    anotacoesInicializadas,
+    anotacoesSessao,
+    evolucoesCarregadas,
+    observacoesSessao,
+    preSessao,
+    sessao,
+  ]);
+
+  useEffect(() => {
+    if (!sessao || !anotacoesInicializadas) return;
+
+    function preservarRascunhoAntesDeSair() {
+      const sessaoAtual = sessaoRef.current;
+      if (!sessaoAtual) return;
+
+      const dados = {
+        preSessao: preSessaoRef.current,
+        anotacoesSessao: anotacoesSessaoRef.current,
+        observacoesSessao: observacoesSessaoRef.current,
+      };
+
+      if (
+        temConteudoAnotacoes(
+          dados.preSessao,
+          dados.anotacoesSessao,
+          dados.observacoesSessao
+        )
+      ) {
+        salvarRascunhoAnotacoes(sessaoAtual.id, dados);
+      }
+    }
+
+    window.addEventListener("pagehide", preservarRascunhoAntesDeSair);
+    window.addEventListener("beforeunload", preservarRascunhoAntesDeSair);
+
+    return () => {
+      preservarRascunhoAntesDeSair();
+      window.removeEventListener("pagehide", preservarRascunhoAntesDeSair);
+      window.removeEventListener("beforeunload", preservarRascunhoAntesDeSair);
+    };
+  }, [anotacoesInicializadas, sessao]);
 
   function mostrarMensagem(texto: string) {
     setMensagem(texto);
@@ -53,160 +262,159 @@ const [novaHora, setNovaHora] = useState("");
   }
 
   async function carregarSessao() {
-    const user = await getCurrentUser();
-    if (!user) return;
+    if (!id) {
+      setErroCarga("Sessão não encontrada.");
+      setCarregandoInicial(false);
+      return;
+    }
 
-    const { data, error } = await getSessaoById(user.id, id as string);
+    setCarregandoInicial(true);
+    setErroCarga("");
+
+    const user = await requireUserClient(router, getCurrentUser);
+    if (!user) {
+      setCarregandoInicial(false);
+      return;
+    }
+
+    const { data, error } = await getSessaoById(user.id, id);
 
     if (error) {
-      mostrarMensagem("Erro ao carregar sessão: " + error.message);
+      setErroCarga("Erro ao carregar sessão: " + error.message);
+      setSessao(null);
+      setCarregandoInicial(false);
+      return;
+    }
+
+    if (!data) {
+      setErroCarga("Sessão não encontrada.");
+      setSessao(null);
+      setCarregandoInicial(false);
       return;
     }
 
     setSessao(data as Sessao);
+    setCarregandoInicial(false);
   }
 
   async function carregarEvolucoes() {
     if (!sessao?.paciente_id) return;
 
-    const user = await getCurrentUser();
-    if (!user) return;
+    setEvolucoesCarregadas(false);
+
+    const user = await requireUserClient(router, getCurrentUser);
+    if (!user) {
+      setEvolucoesCarregadas(true);
+      return;
+    }
 
     const { data, error } = await listEvolucoesPorPacientePorId(
       user.id,
-      Number(sessao.paciente_id)
+      sessao.paciente_id
     );
 
     if (error) {
       mostrarMensagem("Erro ao carregar evoluções: " + error.message);
+      setEvolucoesCarregadas(true);
       return;
     }
 
     setEvolucoes((data || []) as Evolucao[]);
+    setEvolucoesCarregadas(true);
   }
 
-  function formatarDataBR(data: string) {
-    if (!data) return "";
-
-    if (data.includes("/")) return data;
-
-    const [ano, mes, dia] = data.split("-");
-    return `${dia}/${mes}/${ano}`;
-  }
-
- async function atualizarStatus(novoStatus: string) {
-  if (!sessao) return;
-
-  const user = await getCurrentUser();
-  if (!user) return;
-
-  const { error } = await updateSessao(user.id, Number(sessao.id), {
-    status: novoStatus,
-  });
-
-  if (error) {
-    mostrarMensagem(
-      "Erro ao atualizar status: " + error.message
-    );
-    return;
-  }
-
-  if (
-    novoStatus === "Presente" ||
-    novoStatus === "Faltou"
-  ) {
-    await deleteFrequenciaPorSessao(user.id, Number(sessao.id));
-
-    await insertFrequencia({
-      user_id: user.id,
-      sessao_id: Number(sessao.id),
-      paciente_id: Number(sessao.paciente_id),
-      paciente_nome: sessao.paciente_nome,
-      data: sessao.data,
-      status: novoStatus,
-    });
-  }
-
-  if (novoStatus === "Cancelada") {
-    window.location.href = "/agenda";
-    return;
-  }
-
-  mostrarMensagem(
-    `Sessão marcada como ${novoStatus}.`
-  );
-
-  carregarSessao();
-}
-
-  function gerarReciboPDF() {
+  async function atualizarStatus(novoStatus: string) {
     if (!sessao) return;
 
-    const doc = new jsPDF();
+    const user = await requireUserClient(router, getCurrentUser);
+    if (!user) return;
 
-    doc.setFontSize(22);
-    doc.text("RECIBO DE SESSÃO", 20, 25);
+    const { error } = await updateSessao(user.id, Number(sessao.id), {
+      status: novoStatus,
+    });
 
-    doc.setFontSize(13);
-    doc.text(`Paciente: ${sessao.paciente_nome || "-"}`, 20, 50);
-    doc.text(`Data: ${sessao.data || "-"}`, 20, 62);
-    doc.text(`Horário: ${sessao.hora || "-"}`, 20, 74);
-    doc.text(`Valor: R$ ${Number(sessao.valor || 0).toFixed(2)}`, 20, 86);
-    doc.text(`Forma de pagamento: ${sessao.forma_pagamento || "-"}`, 20, 98);
-    doc.text(`Status do pagamento: ${sessao.status_pagamento || "-"}`, 20, 110);
+    if (error) {
+      mostrarMensagem(
+        "Erro ao atualizar status: " + error.message
+      );
+      return;
+    }
 
-    doc.text(
-      "Declaro ter recebido o valor referente à sessão psicológica.",
-      20,
-      140
+    const { error: frequenciaError } = await salvarFrequenciaDaSessao(
+      user.id,
+      sessao,
+      novoStatus
     );
 
-    doc.text("__________________________________", 20, 190);
-    doc.text("Assinatura", 20, 200);
+    if (frequenciaError) {
+      mostrarMensagem(
+        "Erro ao atualizar frequência: " + frequenciaError.message
+      );
+      return;
+    }
 
-    doc.save(`recibo-${sessao.paciente_nome || "sessao"}.pdf`);
-  }
-async function reagendarSessao() {
-  if (!sessao || !novaData || !novaHora) {
-    mostrarMensagem("Informe a nova data e o novo horário.");
-    return;
-  }
+    if (novoStatus === "Cancelada") {
+      router.push("/agenda");
+      return;
+    }
 
-  const user = await getCurrentUser();
-  if (!user) return;
+    mostrarMensagem(
+      `Sessão marcada como ${novoStatus}.`
+    );
 
-  const { error } = await updateSessao(user.id, Number(id), {
-    data: novaData,
-    hora: novaHora,
-    status: "Agendada",
-  });
-
-  if (error) {
-    mostrarMensagem("Erro ao reagendar: " + error.message);
-    return;
+    void carregarSessao();
   }
 
-  setAbrirReagendar(false);
+  async function reagendarSessao() {
+    if (!sessao || !novaData || !novaHora) {
+      mostrarMensagem("Informe a nova data e o novo horário.");
+      return;
+    }
 
-  mostrarMensagem("Sessão reagendada com sucesso.");
+    const user = await requireUserClient(router, getCurrentUser);
+    if (!user) return;
 
-  carregarSessao();
-}
+    const { error } = await updateSessao(user.id, Number(id), {
+      data: novaData,
+      hora: novaHora,
+      status: "Agendada",
+    });
+
+    if (error) {
+      mostrarMensagem("Erro ao reagendar: " + error.message);
+      return;
+    }
+
+    await deleteFrequenciaPorSessao(user.id, Number(id));
+
+    setAbrirReagendar(false);
+
+    mostrarMensagem("Sessão reagendada com sucesso.");
+
+    void carregarSessao();
+  }
   async function salvarEvolucao() {
     if (!sessao) return;
 
-    const user = await getCurrentUser();
+    await salvarAnotacoesSessao(true);
 
-    if (!user) {
-      mostrarMensagem("Faça login novamente.");
+    const user = await requireUserClient(router, getCurrentUser);
+    if (!user) return;
+
+    const sessaoIdNumero = toFiniteNumberId(sessao.id);
+    const pacienteIdNumero = toFiniteNumberId(sessao.paciente_id);
+    if (sessaoIdNumero == null || pacienteIdNumero == null) {
+      mostrarMensagem(
+        "Erro ao salvar evolução: sessão ou paciente inválido. Atualize a página e tente novamente."
+      );
       return;
     }
 
     const { error } = await insertEvolucao({
       user_id: user.id,
-      sessao_id: Number(sessao.id),
-      paciente_id: Number(sessao.paciente_id),
-      data: new Date().toISOString().split("T")[0],
+      sessao_id: sessaoIdNumero,
+      paciente_id: pacienteIdNumero,
+      data: dataIsoHoje(),
       queixa,
       objetivo,
       intervencao,
@@ -228,204 +436,418 @@ async function reagendarSessao() {
     setEncaminhamentos("");
 
     mostrarMensagem("Evolução salva com sucesso.");
-    carregarEvolucoes();
+    void carregarEvolucoes();
+  }
+
+  async function salvarAnotacoesSessao(silencioso = false) {
+    if (salvamentoAnotacoesPromiseRef.current) {
+      salvarNovamenteDepoisRef.current = true;
+      await salvamentoAnotacoesPromiseRef.current;
+      if (!salvarNovamenteDepoisRef.current) return;
+    }
+
+    const sessaoAtual = sessaoRef.current;
+    if (!sessaoAtual) return;
+
+    const preSessaoAtualTela = preSessaoRef.current;
+    const anotacoesSessaoAtualTela = anotacoesSessaoRef.current;
+    const observacoesSessaoAtualTela = observacoesSessaoRef.current;
+
+    if (
+      !temConteudoAnotacoes(
+        preSessaoAtualTela,
+        anotacoesSessaoAtualTela,
+        observacoesSessaoAtualTela
+      )
+    ) {
+      if (!silencioso) {
+        mostrarMensagem("Escreva alguma informação antes de salvar.");
+      }
+      return;
+    }
+
+    const user = await requireUserClient(router, getCurrentUser);
+    if (!user) return;
+
+    const executarSalvamento = async () => {
+      salvandoAnotacoesRef.current = true;
+
+      const registroAtual = obterRegistroAnotacoesSessao(
+        evolucoesRef.current,
+        sessaoAtual.id
+      );
+      const preSessaoAtual = conteudoOuAnterior(
+        preSessaoAtualTela,
+        registroAtual?.objetivo
+      );
+      const anotacoesAtuais = conteudoOuAnterior(
+        anotacoesSessaoAtualTela,
+        registroAtual?.observacoes
+      );
+      const observacoesAtuais = conteudoOuAnterior(
+        observacoesSessaoAtualTela,
+        registroAtual?.plano
+      );
+      const pacienteIdNumero = toFiniteNumberId(sessaoAtual.paciente_id);
+      if (pacienteIdNumero == null) {
+        mostrarMensagem(
+          "Erro ao salvar anotação: paciente inválido nesta sessão. Atualize a página e tente novamente."
+        );
+        return;
+      }
+      const payload = {
+        user_id: user.id,
+        sessao_id: Number(sessaoAtual.id),
+        paciente_id: pacienteIdNumero,
+        data: dataIsoHoje(),
+        status_sessao: "anotacoes_sessao",
+        queixa: "",
+        objetivo: preSessaoAtual,
+        intervencao: "",
+        observacoes: anotacoesAtuais,
+        plano: observacoesAtuais,
+        encaminhamentos: "",
+      };
+
+      const { error } = registroAtual?.id
+        ? await updateEvolucao(user.id, registroAtual.id, payload)
+        : await insertEvolucao(payload);
+
+      if (error) {
+        mostrarMensagem("Erro ao salvar anotação: " + error.message);
+        return;
+      }
+
+      ultimoSnapshotAnotacoesRef.current = snapshotAnotacoesSessao(
+        preSessaoAtual,
+        anotacoesAtuais,
+        observacoesAtuais
+      );
+      removerRascunhoAnotacoes(sessaoAtual.id);
+      setPreSessao(preSessaoAtual);
+      setAnotacoesSessao(anotacoesAtuais);
+      setObservacoesSessao(observacoesAtuais);
+
+      if (!silencioso) {
+        mostrarMensagem("Anotações da sessão salvas.");
+      }
+
+      void carregarEvolucoes();
+    };
+
+    salvarNovamenteDepoisRef.current = false;
+    salvamentoAnotacoesPromiseRef.current = executarSalvamento();
+    await salvamentoAnotacoesPromiseRef.current;
+    salvamentoAnotacoesPromiseRef.current = null;
+    salvandoAnotacoesRef.current = false;
+
+    if (salvarNovamenteDepoisRef.current) {
+      salvarNovamenteDepoisRef.current = false;
+      await salvarAnotacoesSessao(true);
+    }
+  }
+
+  if (carregandoInicial) {
+    return (
+      <p className="empty-text page-loading">
+        Carregando...
+      </p>
+    );
+  }
+
+  if (erroCarga) {
+    return (
+      <div>
+        <Janela titulo="Sessão Clínica">
+          <FlashMessage kind="error">{erroCarga}</FlashMessage>
+
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => router.push("/agenda")}
+          >
+            Voltar à agenda
+          </button>
+        </Janela>
+      </div>
+    );
   }
 
   if (!sessao) {
-    return <p style={{ color: "#fff" }}>Carregando...</p>;
+    return (
+      <div>
+        <Janela titulo="Sessão Clínica">
+          <p className="empty-text">
+            Não foi possível exibir esta sessão.
+          </p>
+
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => router.push("/agenda")}
+          >
+            Voltar à agenda
+          </button>
+        </Janela>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <Janela titulo="Sessão Clínica">
-        <h1 style={{ fontSize: "28px", color: "#fff", marginBottom: "10px" }}>
-          {sessao.paciente_nome}
-        </h1>
-
-        <p style={{ color: "#94a3b8" }}>
-          {sessao.data} às {sessao.hora}
-        </p>
-
-        <div
-          style={{
-            display: "flex",
-            gap: "12px",
-            marginTop: "24px",
-            flexWrap: "wrap",
-          }}
-        >
-          <button
-            className="btn btn-green"
-            onClick={() => atualizarStatus("Presente")}
-          >
-            Presente
-          </button>
-
-          <button
-            className="btn btn-outline"
-            onClick={() => atualizarStatus("Faltou")}
-            style={{ borderColor: "#ef4444", color: "#fecaca" }}
-          >
-            Faltou
-          </button>
-
-         <button
-  className="btn btn-outline"
-  onClick={() => atualizarStatus("Cancelada")}
->
-  Cancelar
-</button>
-
-<button
-  className="btn btn-outline"
-  onClick={() => setAbrirReagendar(!abrirReagendar)}
->
-  Reagendar
-</button>
-
-<button className="btn btn-outline" onClick={gerarReciboPDF}>
-  Gerar recibo
-</button>
-        </div>
-{abrirReagendar && (
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr auto",
-      gap: "12px",
-      marginTop: "18px",
-      alignItems: "center",
-    }}
-  >
-    <input
-      type="date"
-      value={novaData}
-      onChange={(e) => setNovaData(e.target.value)}
-    />
-
-    <input
-      type="time"
-      value={novaHora}
-      onChange={(e) => setNovaHora(e.target.value)}
-    />
-
-    <button className="btn btn-green" onClick={reagendarSessao}>
-      Salvar
-    </button>
-  </div>
-)}
-        {mensagem && (
-          <div
-            style={{
-              marginTop: "18px",
-              background: "rgba(62,207,142,0.12)",
-              border: "1px solid rgba(62,207,142,0.4)",
-              padding: "14px",
-              borderRadius: "14px",
-              color: "#86efac",
-              fontWeight: 600,
-            }}
-          >
-            {mensagem}
-          </div>
-        )}
-      </Janela>
-
-      <Janela titulo="Evolução da Sessão">
-        <div style={{ display: "grid", gap: "18px" }}>
-          <CardEvolucao
-            titulo="Queixa"
-            value={queixa}
-            onChange={setQueixa}
-            placeholder="Descreva a demanda principal..."
-          />
-
-          <CardEvolucao
-            titulo="Objetivo da Sessão"
-            value={objetivo}
-            onChange={setObjetivo}
-            placeholder="Objetivos terapêuticos trabalhados..."
-          />
-
-          <CardEvolucao
-            titulo="Intervenção"
-            value={intervencao}
-            onChange={setIntervencao}
-            placeholder="Técnicas utilizadas..."
-          />
-
-          <CardEvolucao
-            titulo="Observações Clínicas"
-            value={observacoes}
-            onChange={setObservacoes}
-            placeholder="Comportamentos observados..."
-          />
-
-          <CardEvolucao
-            titulo="Plano Terapêutico"
-            value={plano}
-            onChange={setPlano}
-            placeholder="Plano para próxima sessão..."
-          />
-
-          <CardEvolucao
-            titulo="Encaminhamentos"
-            value={encaminhamentos}
-            onChange={setEncaminhamentos}
-            placeholder="Orientações e encaminhamentos..."
-          />
-
-          <button
-            className="btn btn-green"
-            onClick={salvarEvolucao}
-            style={{
-              width: "100%",
-              height: "54px",
-              fontSize: "15px",
-              borderRadius: "16px",
-            }}
-          >
-            Salvar evolução
-          </button>
-        </div>
-      </Janela>
-
-      <Janela titulo="Histórico do Paciente">
-        {evolucoes.length === 0 ? (
-          <p style={{ color: "#94a3b8" }}>Nenhuma evolução registrada.</p>
-        ) : (
-          <div style={{ display: "grid", gap: "18px" }}>
-            {evolucoes.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  background: "#0f172a",
-                  border: "1px solid #1e293b",
-                  borderRadius: "18px",
-                  padding: "20px",
-                }}
-              >
-                <p
-                  style={{
-                    color: "#94a3b8",
-                    marginBottom: "14px",
-                    fontSize: "14px",
-                  }}
-                >
-                  {item.data}
-                </p>
-
-                <Campo titulo="Queixa" valor={item.queixa} />
-                <Campo titulo="Objetivo" valor={item.objetivo} />
-                <Campo titulo="Intervenção" valor={item.intervencao} />
-                <Campo titulo="Observações" valor={item.observacoes} />
-                <Campo titulo="Plano" valor={item.plano} />
-                <Campo titulo="Encaminhamentos" valor={item.encaminhamentos} />
+    <div className="session-detail-page">
+      {!modoAnotacoes ? (
+        <Janela titulo="Sessão Clínica">
+          <div className="session-hero-card">
+            <div>
+              <span className="patient-status-pill">Sessão clínica</span>
+              <h1 className="patient-record-title">
+                {sessao.paciente_nome}
+              </h1>
+              <p className="patient-muted">
+                {formatarDataHoraSessao(sessao.data, sessao.hora)}
+              </p>
+            </div>
+            <div className="patient-quick-grid">
+              <div>
+                <span>Status</span>
+                <strong>{sessao.status || "Agendada"}</strong>
               </div>
-            ))}
+              <div>
+                <span>Valor</span>
+                <strong>R$ {Number(sessao.valor || 0).toFixed(2).replace(".", ",")}</strong>
+              </div>
+            </div>
           </div>
-        )}
+
+          <div className="session-actions">
+            <button
+              type="button"
+              className="btn btn-green"
+              onClick={() => void atualizarStatus("Presente")}
+            >
+              Presente
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={() => void atualizarStatus("Faltou")}
+            >
+              Faltou
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => void atualizarStatus("Cancelada")}
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => setAbrirReagendar(!abrirReagendar)}
+            >
+              Reagendar
+            </button>
+          </div>
+
+          {abrirReagendar ? (
+            <div className="session-reschedule-grid">
+              <input
+                type="date"
+                value={novaData}
+                onChange={(e) => setNovaData(e.target.value)}
+              />
+
+              <input
+                type="time"
+                value={novaHora}
+                onChange={(e) => setNovaHora(e.target.value)}
+              />
+
+              <button
+                type="button"
+                className="btn btn-green"
+                onClick={() => void reagendarSessao()}
+              >
+                Salvar
+              </button>
+            </div>
+          ) : null}
+          {mensagem && (
+            <FlashMessage kind="success">{mensagem}</FlashMessage>
+          )}
+        </Janela>
+      ) : null}
+
+      <Janela titulo="Registro da sessão">
+        {modoAnotacoes ? (
+          <div className="session-notes-focus-header">
+            <div>
+              <span className="patient-status-pill">Registro da sessão</span>
+              <strong>{sessao.paciente_nome}</strong>
+              <p>{formatarDataHoraSessao(sessao.data, sessao.hora)}</p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={async () => {
+                await salvarAnotacoesSessao(true);
+                router.push("/agenda");
+              }}
+            >
+              Voltar à agenda
+            </button>
+          </div>
+        ) : null}
+        {modoAnotacoes && mensagem ? (
+          <FlashMessage kind="success">{mensagem}</FlashMessage>
+        ) : null}
+        <div className="session-notes-workspace">
+          <aside className="session-notes-sidebar" aria-label="Abas do registro da sessão">
+            <button
+              type="button"
+              className={abaRegistro === "pre-sessao" ? "is-active" : ""}
+              onClick={() => setAbaRegistro("pre-sessao")}
+            >
+              Pré-sessão
+            </button>
+            <button
+              type="button"
+              className={abaRegistro === "anotacoes" ? "is-active" : ""}
+              onClick={() => setAbaRegistro("anotacoes")}
+            >
+              Anotações
+            </button>
+            <button
+              type="button"
+              className={abaRegistro === "observacoes" ? "is-active" : ""}
+              onClick={() => setAbaRegistro("observacoes")}
+            >
+              Observações
+            </button>
+            <button
+              type="button"
+              className={abaRegistro === "evolucao-clinica" ? "is-active" : ""}
+              onClick={() => setAbaRegistro("evolucao-clinica")}
+            >
+              Evolução clínica
+            </button>
+          </aside>
+
+          <section className="session-notes-editor">
+            <div className="session-notes-header">
+              <div>
+                <strong>{rotuloAbaRegistro(abaRegistro)}</strong>
+                {abaRegistro === "evolucao-clinica" ? (
+                  <p>Esta aba será salva no histórico de evolução do paciente.</p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                className="btn btn-green"
+                onClick={() =>
+                  abaRegistro === "evolucao-clinica"
+                    ? void salvarEvolucao()
+                    : void salvarAnotacoesSessao()
+                }
+              >
+                {abaRegistro === "evolucao-clinica"
+                  ? "Salvar evolução"
+                  : "Salvar anotações"}
+              </button>
+            </div>
+
+            {abaRegistro === "evolucao-clinica" ? (
+              <div className="session-evolution-grid session-evolution-grid-embedded">
+                <CardEvolucao
+                  titulo="Queixa"
+                  value={queixa}
+                  onChange={setQueixa}
+                  placeholder="Descreva a demanda principal..."
+                />
+
+                <CardEvolucao
+                  titulo="Objetivo da Sessão"
+                  value={objetivo}
+                  onChange={setObjetivo}
+                  placeholder="Objetivos terapêuticos trabalhados..."
+                />
+
+                <CardEvolucao
+                  titulo="Intervenção"
+                  value={intervencao}
+                  onChange={setIntervencao}
+                  placeholder="Técnicas utilizadas..."
+                />
+
+                <CardEvolucao
+                  titulo="Observações Clínicas"
+                  value={observacoes}
+                  onChange={setObservacoes}
+                  placeholder="Comportamentos observados..."
+                />
+
+                <CardEvolucao
+                  titulo="Plano Terapêutico"
+                  value={plano}
+                  onChange={setPlano}
+                  placeholder="Plano para próxima sessão..."
+                />
+
+                <CardEvolucao
+                  titulo="Encaminhamentos"
+                  value={encaminhamentos}
+                  onChange={setEncaminhamentos}
+                  placeholder="Orientações e encaminhamentos..."
+                />
+              </div>
+            ) : (
+              <RichTextEditor
+                key={abaRegistro}
+                editorLabel={rotuloAbaRegistro(abaRegistro)}
+                placeholder={placeholderAbaRegistro(abaRegistro)}
+                value={
+                  abaRegistro === "pre-sessao"
+                    ? preSessao
+                    : abaRegistro === "anotacoes"
+                      ? anotacoesSessao
+                      : observacoesSessao
+                }
+                onChange={(valor) => {
+                  if (abaRegistro === "pre-sessao") {
+                    setPreSessao(valor);
+                    return;
+                  }
+                  if (abaRegistro === "anotacoes") {
+                    setAnotacoesSessao(valor);
+                    return;
+                  }
+                  setObservacoesSessao(valor);
+                }}
+              />
+            )}
+          </section>
+        </div>
       </Janela>
+
+      {!modoAnotacoes ? (
+        <>
+          <Janela titulo="Histórico do Paciente">
+            {evolucoesClinicas(evolucoes).length === 0 ? (
+              <p className="empty-text">Nenhuma evolução registrada.</p>
+            ) : (
+              <div className="session-history-list">
+                {evolucoesClinicas(evolucoes).map((item) => (
+                  <EvolucaoHistoricoCard key={item.id} evolucao={item} />
+                ))}
+              </div>
+            )}
+          </Janela>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -442,40 +864,16 @@ function CardEvolucao({
   placeholder: string;
 }) {
   return (
-    <div
-      style={{
-        background: "#0f172a",
-        border: "1px solid #1e293b",
-        borderRadius: "18px",
-        padding: "20px",
-      }}
-    >
-      <h3
-        style={{
-          color: "#fff",
-          marginBottom: "14px",
-          fontSize: "17px",
-          fontWeight: 700,
-        }}
-      >
+    <div className="psico-card session-evolution-card">
+      <h3>
         {titulo}
       </h3>
 
-      <textarea
+      <RichTextEditor
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
         placeholder={placeholder}
-        style={{
-          width: "100%",
-          minHeight: "120px",
-          background: "#020617",
-          border: "1px solid #334155",
-          borderRadius: "14px",
-          padding: "14px",
-          color: "#fff",
-          fontSize: "14px",
-          resize: "vertical",
-        }}
+        editorLabel={titulo}
       />
     </div>
   );
@@ -491,18 +889,126 @@ function Campo({
   if (!valor) return null;
 
   return (
-    <div style={{ marginBottom: "14px" }}>
-      <strong
-        style={{
-          color: "#3ecf8e",
-          display: "block",
-          marginBottom: "6px",
-        }}
-      >
+    <div className="patient-field">
+      <strong className="patient-field-title">
         {titulo}
       </strong>
 
-      <p style={{ color: "#e2e8f0", lineHeight: "1.7" }}>{valor}</p>
+      {pareceHtml(valor) ? (
+        <div
+          className="patient-field-text rich-text-output"
+          dangerouslySetInnerHTML={{ __html: sanitizarHtmlBasico(valor) }}
+        />
+      ) : (
+        <p className="patient-field-text">{valor}</p>
+      )}
     </div>
   );
+}
+
+function obterRegistroAnotacoesSessao(
+  evolucoes: Evolucao[],
+  sessaoId: Sessao["id"]
+) {
+  return evolucoes.find(
+    (item) =>
+      String(item.sessao_id || "") === String(sessaoId) &&
+      item.status_sessao === "anotacoes_sessao"
+  );
+}
+
+function snapshotAnotacoesSessao(
+  preSessao: string,
+  anotacoesSessao: string,
+  observacoesSessao: string
+) {
+  return [preSessao, anotacoesSessao, observacoesSessao].join("\n---\n");
+}
+
+function conteudoOuAnterior(atual: string, anterior?: string | null) {
+  return atual.trim() ? atual : anterior || "";
+}
+
+function temConteudoAnotacoes(...valores: string[]) {
+  return valores.some((valor) =>
+    valor
+      .replace(/<[^>]*>/g, "")
+      .replace(/&nbsp;/gi, " ")
+      .trim()
+  );
+}
+
+type RascunhoAnotacoesSessao = {
+  preSessao: string;
+  anotacoesSessao: string;
+  observacoesSessao: string;
+};
+
+function chaveRascunhoAnotacoes(sessaoId: Sessao["id"]) {
+  return `clinica-online:rascunho-anotacoes:${sessaoId}`;
+}
+
+function lerRascunhoAnotacoes(
+  sessaoId: Sessao["id"]
+): RascunhoAnotacoesSessao | null {
+  try {
+    const raw = window.localStorage.getItem(chaveRascunhoAnotacoes(sessaoId));
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<RascunhoAnotacoesSessao>;
+    return {
+      preSessao: parsed.preSessao || "",
+      anotacoesSessao: parsed.anotacoesSessao || "",
+      observacoesSessao: parsed.observacoesSessao || "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function salvarRascunhoAnotacoes(
+  sessaoId: Sessao["id"],
+  dados: RascunhoAnotacoesSessao
+) {
+  try {
+    window.localStorage.setItem(
+      chaveRascunhoAnotacoes(sessaoId),
+      JSON.stringify(dados)
+    );
+  } catch {
+    // Se o navegador bloquear localStorage, o salvamento no banco continua.
+  }
+}
+
+function removerRascunhoAnotacoes(sessaoId: Sessao["id"]) {
+  try {
+    window.localStorage.removeItem(chaveRascunhoAnotacoes(sessaoId));
+  } catch {
+    // Sem ação: falha de limpeza local não deve impedir o fluxo clínico.
+  }
+}
+
+function evolucoesClinicas(evolucoes: Evolucao[]) {
+  return ordenarCronologico(
+    evolucoes.filter((item) => item.status_sessao !== "anotacoes_sessao"),
+    (e) => ({ data: e.data }),
+    "asc"
+  );
+}
+
+function rotuloAbaRegistro(aba: AbaRegistroSessao) {
+  if (aba === "pre-sessao") return "Pré-sessão";
+  if (aba === "observacoes") return "Observações";
+  if (aba === "evolucao-clinica") return "Evolução clínica";
+  return "Anotações";
+}
+
+function placeholderAbaRegistro(aba: Exclude<AbaRegistroSessao, "evolucao-clinica">) {
+  if (aba === "pre-sessao") {
+    return "Escreva o planejamento, tema ou preparação para esta sessão...";
+  }
+  if (aba === "observacoes") {
+    return "Escreva observações gerais sobre a sessão...";
+  }
+  return "Escreva as anotações clínicas desta sessão...";
 }

@@ -3,10 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser } from "../lib/auth";
+import { formatarCidParaExibicao } from "../lib/cid-psicologia";
+import { requireUserClient } from "../lib/require-user-client";
 import {
   deletePacienteComDependencias,
-  listPacientes,
+  listPacientesPaginated,
+  PACIENTES_PAGE_SIZE,
 } from "../lib/db/pacientes";
+import FlashMessage from "../components/FlashMessage";
 import Janela from "../components/Janela";
 import type { Paciente } from "../types";
 
@@ -14,38 +18,92 @@ export default function PacientesPage() {
   const router = useRouter();
 
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
   const [busca, setBusca] = useState("");
+  const [debouncedBusca, setDebouncedBusca] = useState("");
   const [status, setStatus] = useState("");
   const [carregando, setCarregando] = useState(true);
+  const [carregandoMais, setCarregandoMais] = useState(false);
   const [erro, setErro] = useState("");
+  const [exclusaoPendente, setExclusaoPendente] = useState<{
+    id: string | number;
+    nome: string;
+  } | null>(null);
 
-  const carregarPacientes = useCallback(async () => {
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedBusca(busca), 400);
+    return () => clearTimeout(t);
+  }, [busca]);
+
+  const carregarPrimeiraPagina = useCallback(async () => {
     setCarregando(true);
     setErro("");
 
-    const user = await getCurrentUser();
-
+    const user = await requireUserClient(router, getCurrentUser);
     if (!user) {
-      router.push("/login");
+      setCarregando(false);
       return;
     }
 
-    const { data, error } = await listPacientes(user.id);
+    const { data, error, count } = await listPacientesPaginated(user.id, {
+      offset: 0,
+      limit: PACIENTES_PAGE_SIZE,
+      search: debouncedBusca,
+      status: status || undefined,
+    });
 
     if (error) {
       setErro("Erro ao carregar pacientes: " + error.message);
       setPacientes([]);
+      setTotalCount(null);
       setCarregando(false);
       return;
     }
 
     setPacientes((data || []) as Paciente[]);
+    setTotalCount(count ?? 0);
     setCarregando(false);
-  }, [router]);
+  }, [router, debouncedBusca, status]);
 
   useEffect(() => {
-    void carregarPacientes();
-  }, [carregarPacientes]);
+    void carregarPrimeiraPagina();
+  }, [carregarPrimeiraPagina]);
+
+  const carregarMais = useCallback(async () => {
+    if (totalCount == null || pacientes.length >= totalCount) return;
+
+    setCarregandoMais(true);
+    const user = await requireUserClient(router, getCurrentUser);
+    if (!user) {
+      setCarregandoMais(false);
+      return;
+    }
+
+    const { data, error } = await listPacientesPaginated(user.id, {
+      offset: pacientes.length,
+      limit: PACIENTES_PAGE_SIZE,
+      search: debouncedBusca,
+      status: status || undefined,
+    });
+
+    if (error) {
+      setErro("Erro ao carregar mais pacientes: " + error.message);
+      setCarregandoMais(false);
+      return;
+    }
+
+    if (data?.length) {
+      setPacientes((p) => [...p, ...(data as Paciente[])]);
+    }
+
+    setCarregandoMais(false);
+  }, [
+    pacientes.length,
+    totalCount,
+    debouncedBusca,
+    status,
+    router,
+  ]);
 
   function classeStatus(statusPaciente: string) {
     if (statusPaciente === "ativo") return "status-success";
@@ -55,40 +113,77 @@ export default function PacientesPage() {
     return "status-neutral";
   }
 
-  async function excluirPaciente(
-    id: string | number,
-    nome: string
-  ) {
-    const confirmar = confirm(`Tem certeza que deseja excluir ${nome}?`);
-    if (!confirmar) return;
+  function solicitarExclusao(id: string | number, nome: string) {
+    setExclusaoPendente({ id, nome });
+  }
 
-    const user = await getCurrentUser();
+  async function confirmarExclusaoPaciente() {
+    if (!exclusaoPendente) return;
+
+    const { id } = exclusaoPendente;
+    setExclusaoPendente(null);
+
+    const user = await requireUserClient(router, getCurrentUser);
     if (!user) return;
 
     const { error } = await deletePacienteComDependencias(user.id, id);
 
     if (error) {
-      alert("Erro ao excluir paciente: " + error.message);
+      setErro("Erro ao excluir paciente: " + error.message);
       return;
     }
 
-    void carregarPacientes();
+    setErro("");
+    void carregarPrimeiraPagina();
   }
 
-  const filtrados = pacientes.filter((p) => {
-    const nomeOk = (p.nome ?? "")
-      .toLowerCase()
-      .includes(busca.toLowerCase());
-    const statusOk = status
-      ? (p.status ?? "ativo").toLowerCase() === status.toLowerCase()
-      : true;
-    return nomeOk && statusOk;
-  });
+  const temMais =
+    totalCount != null && pacientes.length < totalCount;
 
   return (
     <div className="patients-page">
       <Janela titulo="Pacientes">
-        {erro && <p className="financeiro-erro">{erro}</p>}
+        {erro ? <FlashMessage kind="error">{erro}</FlashMessage> : null}
+
+        {exclusaoPendente ? (
+          <div
+            className="psico-card"
+            style={{
+              marginBottom: "20px",
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: "12px 16px",
+              justifyContent: "space-between",
+            }}
+            role="status"
+            aria-live="polite"
+          >
+            <p style={{ margin: 0 }}>
+              Tem certeza que deseja excluir{" "}
+              <strong>{exclusaoPendente.nome}</strong>? Esta ação não pode ser
+              desfeita.
+            </p>
+
+            <div style={{ display: "flex", gap: "10px", flexShrink: 0 }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setExclusaoPendente(null)}
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => void confirmarExclusaoPaciente()}
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         <div
           className="patients-toolbar"
@@ -101,10 +196,11 @@ export default function PacientesPage() {
           }}
         >
           <input
-            placeholder="Buscar paciente..."
+            placeholder="Buscar paciente…"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             style={{ maxWidth: "340px" }}
+            autoComplete="off"
           />
 
           <select
@@ -142,7 +238,7 @@ export default function PacientesPage() {
             </thead>
 
             <tbody>
-              {filtrados.map((p) => {
+              {pacientes.map((p) => {
                 const statusPaciente = p.status || "ativo";
 
                 return (
@@ -162,7 +258,7 @@ export default function PacientesPage() {
                     </td>
 
                     <td>{p.convenio || "-"}</td>
-                    <td>{p.cid || "-"}</td>
+                    <td>{formatarCidParaExibicao(p.cid)}</td>
                     <td>{p.valor_sessao ? `R$ ${p.valor_sessao}` : "-"}</td>
 
                     <td className="patients-actions-cell">
@@ -177,7 +273,7 @@ export default function PacientesPage() {
                         <button
                           className="btn btn-outline"
                           onClick={() =>
-                            router.push(`/pacientes/${p.id}/editar`)
+                            router.push(`/paciente/${p.id}/editar`)
                           }
                         >
                           Editar
@@ -185,7 +281,7 @@ export default function PacientesPage() {
 
                         <button
                           className="btn btn-danger"
-                          onClick={() => excluirPaciente(p.id, p.nome)}
+                          onClick={() => solicitarExclusao(p.id, p.nome)}
                         >
                           Excluir
                         </button>
@@ -201,12 +297,25 @@ export default function PacientesPage() {
             <p className="empty-text" style={{ marginTop: "16px" }}>
               Carregando pacientes...
             </p>
-          ) : filtrados.length === 0 ? (
+          ) : pacientes.length === 0 ? (
             <p className="empty-text" style={{ marginTop: "16px" }}>
-              {pacientes.length === 0
-                ? "Nenhum paciente cadastrado."
-                : "Nenhum paciente encontrado com esses filtros."}
+              Nenhum paciente encontrado com esses filtros.
             </p>
+          ) : null}
+
+          {!carregando && temMais ? (
+            <div style={{ marginTop: "20px", textAlign: "center" }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                disabled={carregandoMais}
+                onClick={() => void carregarMais()}
+              >
+                {carregandoMais
+                  ? "Carregando…"
+                  : `Carregar mais (${pacientes.length} de ${totalCount})`}
+              </button>
+            </div>
           ) : null}
         </div>
       </Janela>

@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import FlashMessage from "../../../components/FlashMessage";
+import RichTextEditor, {
+  pareceHtml,
+  sanitizarHtmlBasico,
+} from "../../../components/RichTextEditor";
 import { getCurrentUser } from "../../../lib/auth";
 import {
   insertEvolucao,
@@ -9,12 +14,24 @@ import {
 } from "../../../lib/db/evolucoes";
 import { getPacienteById } from "../../../lib/db/pacientes";
 import Janela from "../../../components/Janela";
+import { dataIsoHoje } from "../../../lib/datas-paciente";
+import EvolucaoHistoricoCard from "../../../components/EvolucaoHistoricoCard";
+import { requireUserClient } from "../../../lib/require-user-client";
+import { toFiniteNumberId } from "../../../lib/id";
+import { mensagemErroSupabase } from "../../../lib/supabase-error";
 import type { Evolucao } from "../../../types";
 
 export default function NovaEvolucao() {
+  const router = useRouter();
   const params = useParams();
 
   const paciente_id = params.id;
+  const draftKey = useMemo(
+    () => `evolucao-draft:${String(paciente_id ?? "")}`,
+    [paciente_id]
+  );
+  const dirtyRef = useRef(false);
+  const salvarDraftTimeout = useRef<number | null>(null);
 
   const [queixa, setQueixa] = useState("");
   const [objetivo, setObjetivo] = useState("");
@@ -28,49 +45,120 @@ export default function NovaEvolucao() {
     useState("Realizada");
 
   const [evolucoes, setEvolucoes] = useState<Evolucao[]>([]);
+  const [erro, setErro] = useState("");
+  const [sucesso, setSucesso] = useState("");
+
+  function lerDraft() {
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return null;
+      return JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
+
+  function gravarDraft(partial: Record<string, unknown>) {
+    dirtyRef.current = true;
+    if (salvarDraftTimeout.current != null) {
+      window.clearTimeout(salvarDraftTimeout.current);
+    }
+    salvarDraftTimeout.current = window.setTimeout(() => {
+      try {
+        const base = (lerDraft() || {}) as Record<string, unknown>;
+        localStorage.setItem(
+          draftKey,
+          JSON.stringify({ ...base, ...partial })
+        );
+      } catch {
+        // ignore
+      }
+    }, 250);
+  }
+
+  function limparDraft() {
+    dirtyRef.current = false;
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      // ignore
+    }
+  }
 
   useEffect(() => {
-    carregarEvolucoes();
+    const d = lerDraft();
+    if (!d) return;
+    if (typeof d.queixa === "string") setQueixa(d.queixa);
+    if (typeof d.objetivo === "string") setObjetivo(d.objetivo);
+    if (typeof d.intervencao === "string") setIntervencao(d.intervencao);
+    if (typeof d.observacoes === "string") setObservacoes(d.observacoes);
+    if (typeof d.plano === "string") setPlano(d.plano);
+    if (typeof d.encaminhamentos === "string") setEncaminhamentos(d.encaminhamentos);
+    if (typeof d.humor === "string") setHumor(d.humor);
+    if (typeof d.statusSessao === "string") setStatusSessao(d.statusSessao);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  useEffect(() => {
+    function antesDeSair(e: BeforeUnloadEvent) {
+      if (!dirtyRef.current) return;
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    window.addEventListener("beforeunload", antesDeSair);
+    return () => window.removeEventListener("beforeunload", antesDeSair);
+  }, []);
+
+  useEffect(() => {
+    void carregarEvolucoes();
+    // carregarEvolucoes deve buscar o paciente inicial quando a página abre.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function carregarEvolucoes() {
-    const user = await getCurrentUser();
+    setErro("");
+    const user = await requireUserClient(router, getCurrentUser);
     if (!user) return;
 
     const { error } = await getPacienteById(user.id, paciente_id as string);
     if (error) {
-      alert("Paciente não encontrado ou sem permissão.");
+      setErro("Paciente não encontrado ou sem permissão.");
       return;
     }
 
     const { data, error: evolucoesError } = await listEvolucoesPorPaciente(
       user.id,
-      Number(paciente_id)
+      paciente_id as string
     );
 
     if (evolucoesError) {
-      alert(
-        "Erro ao carregar evoluções: " +
-          evolucoesError.message
-      );
+      setErro(mensagemErroSupabase("carregar evoluções", evolucoesError));
       return;
     }
 
-    setEvolucoes((data || []) as Evolucao[]);
+    setEvolucoes(
+      ((data || []) as Evolucao[]).filter(
+        (item) => item.status_sessao !== "anotacoes_sessao"
+      )
+    );
   }
 
   async function salvarEvolucao() {
-    const user = await getCurrentUser();
+    setErro("");
+    setSucesso("");
+    const user = await requireUserClient(router, getCurrentUser);
+    if (!user) return;
 
-    if (!user) {
-      alert("Usuário não encontrado. Faça login novamente.");
+    const pacienteIdNumero = toFiniteNumberId(paciente_id);
+    if (pacienteIdNumero == null) {
+      setErro("Paciente inválido. Volte e abra este paciente novamente.");
       return;
     }
 
     const { error } = await insertEvolucao({
       user_id: user.id,
-      paciente_id: Number(paciente_id),
-      data: new Date().toISOString().split("T")[0],
+      paciente_id: pacienteIdNumero,
+      data: dataIsoHoje(),
       humor,
       status_sessao: statusSessao,
       queixa,
@@ -82,14 +170,11 @@ export default function NovaEvolucao() {
     });
 
     if (error) {
-      alert(
-        "Erro ao salvar evolução: " +
-          error.message
-      );
+      setErro(mensagemErroSupabase("salvar evolução", error));
       return;
     }
 
-    alert("Evolução salva com sucesso!");
+    setSucesso("Evolução salva com sucesso.");
 
     setQueixa("");
     setObjetivo("");
@@ -99,8 +184,9 @@ export default function NovaEvolucao() {
     setEncaminhamentos("");
     setHumor("");
     setStatusSessao("Realizada");
+    limparDraft();
 
-    carregarEvolucoes();
+    void carregarEvolucoes();
   }
 
   function Campo({
@@ -118,9 +204,16 @@ export default function NovaEvolucao() {
           {titulo}
         </p>
 
-        <p className="patient-field-text">
-          {valor}
-        </p>
+        {pareceHtml(valor) ? (
+          <div
+            className="patient-field-text rich-text-output"
+            dangerouslySetInnerHTML={{ __html: sanitizarHtmlBasico(valor) }}
+          />
+        ) : (
+          <p className="patient-field-text">
+            {valor}
+          </p>
+        )}
       </div>
     );
   }
@@ -128,13 +221,12 @@ export default function NovaEvolucao() {
   return (
     <div>
       <Janela titulo="Nova Evolução">
-        <p
-          style={{
-            color: "#94a3b8",
-            marginBottom: "18px",
-            fontSize: "14px",
-          }}
-        >
+        {erro ? <FlashMessage kind="error">{erro}</FlashMessage> : null}
+        {sucesso ? (
+          <FlashMessage kind="success">{sucesso}</FlashMessage>
+        ) : null}
+
+        <p className="patient-muted evolution-date-note">
           Evolução registrada automaticamente em{" "}
           {new Date().toLocaleDateString(
             "pt-BR"
@@ -149,9 +241,11 @@ export default function NovaEvolucao() {
 
             <select
               value={humor}
-              onChange={(e) =>
-                setHumor(e.target.value)
-              }
+              onChange={(e) => {
+                const v = e.target.value;
+                setHumor(v);
+                gravarDraft({ humor: v });
+              }}
               className="input"
             >
               <option value="">
@@ -191,11 +285,11 @@ export default function NovaEvolucao() {
 
             <select
               value={statusSessao}
-              onChange={(e) =>
-                setStatusSessao(
-                  e.target.value
-                )
-              }
+              onChange={(e) => {
+                const v = e.target.value;
+                setStatusSessao(v);
+                gravarDraft({ statusSessao: v });
+              }}
               className="input"
             >
               <option>
@@ -212,58 +306,64 @@ export default function NovaEvolucao() {
             </select>
           </div>
 
-          <textarea
-            placeholder="Queixa"
+          <EvolucaoEditorField
+            titulo="Queixa"
+            placeholder="Descreva a queixa principal..."
             value={queixa}
-            onChange={(e) =>
-              setQueixa(e.target.value)
-            }
+            onChange={(v) => {
+              setQueixa(v);
+              gravarDraft({ queixa: v });
+            }}
           />
 
-          <textarea
-            placeholder="Objetivo da sessão"
+          <EvolucaoEditorField
+            titulo="Objetivo da sessão"
+            placeholder="Descreva o objetivo da sessão..."
             value={objetivo}
-            onChange={(e) =>
-              setObjetivo(e.target.value)
-            }
+            onChange={(v) => {
+              setObjetivo(v);
+              gravarDraft({ objetivo: v });
+            }}
           />
 
-          <textarea
-            placeholder="Intervenção realizada"
+          <EvolucaoEditorField
+            titulo="Intervenção realizada"
+            placeholder="Descreva as intervenções realizadas..."
             value={intervencao}
-            onChange={(e) =>
-              setIntervencao(
-                e.target.value
-              )
-            }
+            onChange={(v) => {
+              setIntervencao(v);
+              gravarDraft({ intervencao: v });
+            }}
           />
 
-          <textarea
-            placeholder="Observações"
+          <EvolucaoEditorField
+            titulo="Observações"
+            placeholder="Registre observações clínicas..."
             value={observacoes}
-            onChange={(e) =>
-              setObservacoes(
-                e.target.value
-              )
-            }
+            onChange={(v) => {
+              setObservacoes(v);
+              gravarDraft({ observacoes: v });
+            }}
           />
 
-          <textarea
-            placeholder="Plano terapêutico"
+          <EvolucaoEditorField
+            titulo="Plano terapêutico"
+            placeholder="Registre o plano terapêutico..."
             value={plano}
-            onChange={(e) =>
-              setPlano(e.target.value)
-            }
+            onChange={(v) => {
+              setPlano(v);
+              gravarDraft({ plano: v });
+            }}
           />
 
-          <textarea
-            placeholder="Encaminhamentos"
+          <EvolucaoEditorField
+            titulo="Encaminhamentos"
+            placeholder="Registre orientações ou encaminhamentos..."
             value={encaminhamentos}
-            onChange={(e) =>
-              setEncaminhamentos(
-                e.target.value
-              )
-            }
+            onChange={(v) => {
+              setEncaminhamentos(v);
+              gravarDraft({ encaminhamentos: v });
+            }}
           />
 
           <button
@@ -283,71 +383,39 @@ export default function NovaEvolucao() {
         ) : (
           <div className="session-list">
             {evolucoes.map((e) => (
-              <div
+              <EvolucaoHistoricoCard
                 key={e.id}
-                className="psico-card patient-evolution-card"
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent:
-                      "space-between",
-                    marginBottom: "18px",
-                  }}
-                >
-                  <strong>
-                    {e.data || "Sem data"}
-                  </strong>
-
-                  <span
-                    className="patient-evolution-status"
-                  >
-                    {e.status_sessao ||
-                      "Realizada"}
-                  </span>
-                </div>
-
-                <Campo
-                  titulo="Humor"
-                  valor={e.humor}
-                />
-
-                <Campo
-                  titulo="Queixa"
-                  valor={e.queixa}
-                />
-
-                <Campo
-                  titulo="Objetivo"
-                  valor={e.objetivo}
-                />
-
-                <Campo
-                  titulo="Intervenção"
-                  valor={e.intervencao}
-                />
-
-                <Campo
-                  titulo="Observações"
-                  valor={e.observacoes}
-                />
-
-                <Campo
-                  titulo="Plano terapêutico"
-                  valor={e.plano}
-                />
-
-                <Campo
-                  titulo="Encaminhamentos"
-                  valor={
-                    e.encaminhamentos
-                  }
-                />
-              </div>
+                evolucao={e}
+                rotuloPlano="Plano terapêutico"
+              />
             ))}
           </div>
         )}
       </Janela>
+    </div>
+  );
+}
+
+function EvolucaoEditorField({
+  titulo,
+  value,
+  onChange,
+  placeholder,
+}: {
+  titulo: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="psico-card session-evolution-card evolution-rich-editor-card">
+      <h3>{titulo}</h3>
+      <RichTextEditor
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        editorLabel={titulo}
+      />
     </div>
   );
 }

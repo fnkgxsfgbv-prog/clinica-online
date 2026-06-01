@@ -1,67 +1,73 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+
+import CidSearchSelect from "../components/CidSearchSelect";
+import FlashMessage from "../components/FlashMessage";
+import Janela from "../components/Janela";
 import { getCurrentUser } from "../lib/auth";
 import { createPaciente } from "../lib/db/pacientes";
-import Janela from "../components/Janela";
+import { salvarDataInicioNasObservacoes } from "../lib/paciente-metadata";
+import { requireUserClient } from "../lib/require-user-client";
+import { mensagemErroSupabase } from "../lib/supabase-error";
 
 export default function NovoPaciente() {
+  const router = useRouter();
+
   const [nome, setNome] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
+  const [dataInicioAtendimento, setDataInicioAtendimento] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [cid, setCid] = useState("");
   const [valorSessao, setValorSessao] = useState("");
 
-  const [mensagem, setMensagem] = useState("");
-  const [tipoMensagem, setTipoMensagem] = useState<
-    "sucesso" | "erro" | ""
-  >("");
+  const [flash, setFlash] = useState<{
+    kind: "success" | "error";
+    text: string;
+  } | null>(null);
 
-  function mostrarMensagem(
+  function mostrarFlash(
     texto: string,
-    tipo: "sucesso" | "erro"
+    kind: "success" | "error"
   ) {
-    setMensagem(texto);
-    setTipoMensagem(tipo);
+    setFlash({ kind, text: texto });
 
-    setTimeout(() => {
-      setMensagem("");
-      setTipoMensagem("");
-    }, 3000);
+    window.setTimeout(() => {
+      setFlash(null);
+    }, 4000);
   }
 
-  async function salvarPaciente(e: React.FormEvent) {
+  async function salvarPaciente(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    const user = await getCurrentUser();
-
-    if (!user) {
-      mostrarMensagem("Usuário não logado.", "erro");
-      return;
-    }
+    const user = await requireUserClient(router, getCurrentUser);
+    if (!user) return;
 
     const { error } = await createPaciente(user.id, {
       nome,
       data_nascimento: dataNascimento,
       telefone,
+      cid,
+      observacoes: salvarDataInicioNasObservacoes("", dataInicioAtendimento),
       valor_sessao: valorSessao,
     });
 
     if (error) {
-      mostrarMensagem(
-        "Erro ao salvar paciente: " + error.message,
-        "erro"
+      mostrarFlash(
+        mensagemErroSupabase("salvar paciente", error),
+        "error"
       );
       return;
     }
 
-    mostrarMensagem(
-      "Paciente cadastrado com sucesso!",
-      "sucesso"
-    );
+    mostrarFlash("Paciente cadastrado com sucesso!", "success");
 
     setNome("");
     setDataNascimento("");
+    setDataInicioAtendimento("");
     setTelefone("");
+    setCid("");
     setValorSessao("");
   }
 
@@ -69,33 +75,80 @@ export default function NovoPaciente() {
     <div>
       <Janela titulo="Novo Paciente">
         <form
-          onSubmit={salvarPaciente}
+          onSubmit={(e) => void salvarPaciente(e)}
           style={{
             display: "grid",
             gap: "18px",
             marginTop: "24px",
           }}
         >
+          {flash ? (
+            <FlashMessage kind={flash.kind}>{flash.text}</FlashMessage>
+          ) : null}
+
+          <label className="login-field-label" htmlFor="novo-paciente-nome">
+            Nome completo
+          </label>
           <input
+            id="novo-paciente-nome"
+            className="psico-input"
             placeholder="Nome do paciente"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
+            required
+            autoComplete="name"
           />
 
+          <label className="login-field-label" htmlFor="novo-paciente-nasc">
+            Data de nascimento
+          </label>
           <input
+            id="novo-paciente-nasc"
+            className="psico-input"
             type="date"
             value={dataNascimento}
             onChange={(e) => setDataNascimento(e.target.value)}
           />
 
+          <label className="login-field-label" htmlFor="novo-paciente-inicio">
+            Data de início do atendimento
+          </label>
           <input
+            id="novo-paciente-inicio"
+            className="psico-input"
+            type="date"
+            value={dataInicioAtendimento}
+            onChange={(e) => setDataInicioAtendimento(e.target.value)}
+          />
+
+          <label className="login-field-label" htmlFor="novo-paciente-tel">
+            Telefone
+          </label>
+          <input
+            id="novo-paciente-tel"
+            className="psico-input"
+            type="tel"
             placeholder="Telefone"
             value={telefone}
             onChange={(e) => setTelefone(e.target.value)}
+            autoComplete="tel"
           />
 
+          <CidSearchSelect
+            id="novo-paciente-cid"
+            value={cid}
+            onChange={setCid}
+            label="CIDs do paciente"
+          />
+
+          <label className="login-field-label" htmlFor="novo-paciente-valor">
+            Valor da sessão (R$)
+          </label>
           <input
-            placeholder="Valor da sessão. Ex: 120"
+            id="novo-paciente-valor"
+            className="psico-input"
+            inputMode="decimal"
+            placeholder="Ex.: 120"
             value={valorSessao}
             onChange={(e) => setValorSessao(e.target.value)}
           />
@@ -111,33 +164,6 @@ export default function NovoPaciente() {
           >
             Salvar paciente
           </button>
-
-          {mensagem && (
-            <div
-              style={{
-                background:
-                  tipoMensagem === "sucesso"
-                    ? "rgba(62,207,142,0.12)"
-                    : "rgba(248,113,113,0.12)",
-
-                border:
-                  tipoMensagem === "sucesso"
-                    ? "1px solid rgba(62,207,142,0.35)"
-                    : "1px solid rgba(248,113,113,0.35)",
-
-                color:
-                  tipoMensagem === "sucesso"
-                    ? "#86efac"
-                    : "#fecaca",
-
-                padding: "14px",
-                borderRadius: "14px",
-                fontWeight: 700,
-              }}
-            >
-              {mensagem}
-            </div>
-          )}
         </form>
       </Janela>
     </div>
