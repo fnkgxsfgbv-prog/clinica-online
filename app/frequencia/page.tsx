@@ -1,82 +1,107 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import jsPDF from "jspdf";
+import { useRouter } from "next/navigation";
+import FlashMessage from "../components/FlashMessage";
+import Janela from "../components/Janela";
 import { getCurrentUser } from "../lib/auth";
 import { carregarFrequenciasCompleto } from "../lib/db/frequencia";
+import {
+  deveExecutarManutencaoFrequencia,
+  marcarManutencaoFrequenciaExecutada,
+} from "../lib/manutencao-frequencia";
 import {
   chaveMes,
   indicePacientes,
   resolverPaciente,
 } from "../lib/frequencia-utils";
+import { formatarDataPaciente } from "../lib/datas-paciente";
+import { labelMesAno } from "../lib/mes";
+import { ordenarChavesMes, ordenarCronologico } from "../lib/ordenar-datas";
 import { parseValorBr } from "../lib/moeda";
-import { isStatusFaltou, isStatusPresente } from "../lib/status";
-import Janela from "../components/Janela";
+import { requireUserClient } from "../lib/require-user-client";
+import {
+  frequenciaPassaFiltroStatus,
+  isStatusFaltou,
+  isStatusPresente,
+} from "../lib/status";
 import type { Frequencia, Paciente } from "../types";
 
 export default function FrequenciaPage() {
+  const router = useRouter();
   const [frequencias, setFrequencias] = useState<Frequencia[]>([]);
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState("");
   const [mes, setMes] = useState("");
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
 
   useEffect(() => {
-    carregarDados();
+    void carregarDados();
+    // carregarDados depende do router estável do Next e deve rodar só ao montar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function carregarDados() {
-    const user = await getCurrentUser();
-    if (!user) return;
+  async function carregarDados(forcarManutencao = false) {
+    setCarregando(true);
+    setErro("");
+    const user = await requireUserClient(router, getCurrentUser);
+    if (!user) {
+      setCarregando(false);
+      return;
+    }
 
-    const { pacientes, frequencias } = await carregarFrequenciasCompleto(
-      user.id
-    );
+    const manutencao =
+      forcarManutencao || deveExecutarManutencaoFrequencia(user.id);
 
-    setFrequencias(frequencias);
-    setPacientes(pacientes);
+    const {
+      pacientes: pList,
+      frequencias: fList,
+      error,
+    } = await carregarFrequenciasCompleto(user.id, { manutencao });
+
+    if (manutencao && !error) {
+      marcarManutencaoFrequenciaExecutada(user.id);
+    }
+
+    if (error) {
+      setErro("Erro ao carregar frequência: " + error.message);
+      setFrequencias([]);
+      setPacientes([]);
+      setCarregando(false);
+      return;
+    }
+
+    setFrequencias(fList);
+    setPacientes(pList);
+    setCarregando(false);
   }
 
-  function nomeMes(chave: string) {
-    if (!chave) return "Todos os meses";
-
-    const [ano, mes] = chave.split("-");
-
-    const nomes: Record<string, string> = {
-      "01": "Janeiro",
-      "02": "Fevereiro",
-      "03": "Março",
-      "04": "Abril",
-      "05": "Maio",
-      "06": "Junho",
-      "07": "Julho",
-      "08": "Agosto",
-      "09": "Setembro",
-      "10": "Outubro",
-      "11": "Novembro",
-      "12": "Dezembro",
-    };
-
-    return `${nomes[mes]} de ${ano}`;
-  }
-
-  const mesesDisponiveis = Array.from(
-    new Set(frequencias.map((f) => chaveMes(f.data || "")).filter(Boolean))
+  const mesesDisponiveis = ordenarChavesMes(
+    Array.from(
+      new Set(frequencias.map((f) => chaveMes(f.data || "")).filter(Boolean))
+    ),
+    "asc"
   );
 
-  const filtradas = frequencias.filter((f) => {
+  const filtradas = ordenarCronologico(
+    frequencias.filter((f) => {
     const nomePaciente = f.paciente_nome || "";
 
     const nomeOk = nomePaciente
       .toLowerCase()
       .includes(busca.toLowerCase());
 
-    const statusOk = status ? f.status === status : true;
+    const statusOk = frequenciaPassaFiltroStatus(status, f.status);
 
     const mesOk = mes ? chaveMes(f.data || "") === mes : true;
 
     return nomeOk && statusOk && mesOk;
-  });
+    }),
+    (f) => ({ data: f.data }),
+    "asc"
+  );
 
   const presencas = filtradas.filter((f) => isStatusPresente(f.status)).length;
 
@@ -149,7 +174,8 @@ export default function FrequenciaPage() {
     0
   );
 
-  function gerarPDF() {
+  async function gerarPDF() {
+    const { default: jsPDF } = await import("jspdf");
     const doc = new jsPDF();
 
     doc.setFontSize(20);
@@ -158,7 +184,7 @@ export default function FrequenciaPage() {
     doc.setFontSize(12);
 
     doc.text(
-      `Período: ${nomeMes(mes)}`,
+      `Período: ${labelMesAno(mes)}`,
       14,
       35
     );
@@ -258,6 +284,14 @@ export default function FrequenciaPage() {
   return (
     <div className="frequency-page">
       <Janela titulo="Frequência e Financeiro">
+        {erro ? <FlashMessage kind="error">{erro}</FlashMessage> : null}
+
+        {carregando ? (
+          <p className="empty-text" style={{ padding: "24px 0" }}>
+            Carregando frequência...
+          </p>
+        ) : (
+        <>
         <div
           style={{
             display: "flex",
@@ -281,7 +315,7 @@ export default function FrequenciaPage() {
 
           <button
             className="btn btn-green"
-            onClick={gerarPDF}
+            onClick={() => void gerarPDF()}
           >
             Gerar PDF do mês
           </button>
@@ -371,7 +405,7 @@ export default function FrequenciaPage() {
 
             {mesesDisponiveis.map((m) => (
               <option key={m} value={m}>
-                {nomeMes(m)}
+                {labelMesAno(m)}
               </option>
             ))}
           </select>
@@ -404,7 +438,7 @@ export default function FrequenciaPage() {
                   </td>
 
                   <td>
-                    {item.data || "-"}
+                    {item.data ? formatarDataPaciente(item.data) : "-"}
                   </td>
 
                   <td>
@@ -414,7 +448,7 @@ export default function FrequenciaPage() {
                   </td>
 
                   <td>
-                    {nomeMes(
+                    {labelMesAno(
                       chaveMes(item.data || "")
                     )}
                   </td>
@@ -499,6 +533,8 @@ export default function FrequenciaPage() {
             </div>
           ))}
         </div>
+        </>
+        )}
       </Janela>
     </div>
   );
