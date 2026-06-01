@@ -47,11 +47,6 @@ export function detectarViradaMesCalendario(): {
   };
 }
 
-/** @deprecated Use detectarViradaMesCalendario */
-export function detectarViradaMesFinanceiro() {
-  return detectarViradaMesCalendario();
-}
-
 /** Mês numérico `MM` → nome em português (capitalizado). */
 export const NOME_MES_PT: Record<string, string> = {
   "01": "Janeiro",

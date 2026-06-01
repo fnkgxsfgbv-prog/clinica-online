@@ -21,7 +21,6 @@ function sessao(
     hora,
     valor: 100,
     status,
-    status_pagamento: "pendente",
   };
 }
 

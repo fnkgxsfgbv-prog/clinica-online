@@ -5576,32 +5576,6 @@ button:hover {
   font-size: 14px;
 }
 
-.financeiro-total-recebido .financeiro-total-valor {
-  color: var(--green);
-}
-
-.financeiro-total-pendente .financeiro-total-valor.financeiro-valor-pendente {
-  color: #fbbf24;
-}
-
-[data-theme="light"] .financeiro-total-pendente .financeiro-valor-pendente {
-  color: #b45309;
-}
-
-.financeiro-pagamento-meta {
-  display: block;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.financeiro-pagamento-pendente {
-  color: #fcd34d;
-}
-
-[data-theme="light"] .financeiro-pagamento-pendente {
-  color: #92400e;
-}
-
 .financeiro-erro {
   margin: 0 0 16px;
   color: var(--red);
@@ -5784,10 +5758,6 @@ button:hover {
 
 .financeiro-alerta.is-sem_valor {
   border-color: color-mix(in srgb, #d97706 35%, var(--border));
-}
-
-.financeiro-alerta.is-pagamento_pendente {
-  border-color: color-mix(in srgb, #2563eb 30%, var(--border));
 }
 
 .financeiro-alertas-mais {

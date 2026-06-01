@@ -28,7 +28,7 @@ import {
 } from "../lib/financeiro";
 import { dataIsoHoje } from "../lib/datas-paciente";
 import {
-  detectarViradaMesFinanceiro,
+  detectarViradaMesCalendario,
   labelMesAno,
   mesAtualChave,
 } from "../lib/mes";
@@ -210,7 +210,7 @@ export default function FinanceiroPage() {
   }, [carregar]);
 
   useEffect(() => {
-    const { mudou, mesAtual } = detectarViradaMesFinanceiro();
+    const { mudou, mesAtual } = detectarViradaMesCalendario();
     if (!mudou || !mesAtual) return;
 
     seguirMesCalendarioRef.current = true;
