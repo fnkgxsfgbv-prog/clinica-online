@@ -2,44 +2,75 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
 import { useEffect, useState, type ReactNode } from "react";
 
+import { getCurrentUser } from "../lib/auth";
+import { buscarPacientesPorNome } from "../lib/db/pacientes";
+import { resolverUrlFotoPerfil } from "../lib/db/profile-photo";
 import supabase from "../lib/supabase";
+import type { Paciente } from "../types";
+import { MenuIcon, type MenuIconName } from "./MenuIcons";
 
 type ThemeMode = "light" | "dark";
 
 type MenuItem = {
   href: string;
   label: string;
+  icon: MenuIconName;
   activePaths?: string[];
 };
 
 const menuItems: MenuItem[] = [
   {
     href: "/",
-    label: "Dashboard",
+    label: "Painel",
+    icon: "painel",
   },
   {
     href: "/pacientes",
     label: "Pacientes",
+    icon: "pacientes",
     activePaths: ["/pacientes", "/paciente"],
   },
   {
     href: "/agenda",
     label: "Agenda",
-  },
-  {
-    href: "/frequencia",
-    label: "Frequência",
-  },
-  {
-    href: "/frequencia/historico",
-    label: "Histórico",
+    icon: "agenda",
   },
   {
     href: "/financeiro",
     label: "Financeiro",
+    icon: "financeiro",
   },
+  {
+    href: "/modelos",
+    label: "Documentos",
+    icon: "documentos",
+  },
+  {
+    href: "/frequencia/historico",
+    label: "Frequência",
+    icon: "frequencia",
+  },
+  {
+    href: "/minha-clinica",
+    label: "Minha clínica",
+    icon: "clinica",
+  },
+];
+
+const routeTitles: Array<[string, string]> = [
+  ["/modelos", "Documentos"],
+  ["/novo-paciente", "Novo paciente"],
+  ["/frequencia/historico", "Histórico"],
+  ["/frequencia", "Frequência"],
+  ["/financeiro", "Financeiro"],
+  ["/agenda", "Agenda"],
+  ["/pacientes", "Pacientes"],
+  ["/paciente", "Paciente"],
+  ["/sessao", "Sessão"],
+  ["/minha-clinica", "Minha clínica"],
 ];
 
 const THEME_STORAGE_KEY = "psicodesk-theme";
@@ -62,8 +93,18 @@ export default function AppShell({
   const pathname = usePathname();
   const router = useRouter();
   const [theme, setTheme] = useState<ThemeMode>("dark");
+  const [resultadosBusca, setResultadosBusca] = useState<Paciente[]>([]);
+  const [busca, setBusca] = useState("");
+  const [buscandoPacientes, setBuscandoPacientes] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState("");
 
-  const isLogin = pathname === "/login";
+  const isAuthLayout =
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname === "/privacidade" ||
+    pathname === "/termos";
 
   useEffect(() => {
     const currentTheme =
@@ -73,6 +114,68 @@ export default function AppShell({
 
     setTheme(currentTheme);
   }, []);
+
+  useEffect(() => {
+    if (isAuthLayout) return;
+
+    async function aplicarUsuario(user: User) {
+      setUserEmail(user.email || "");
+      setProfilePhotoUrl(await resolverUrlFotoPerfil(user.user_metadata || {}));
+
+    }
+
+    async function carregarUsuario() {
+      const user = await getCurrentUser();
+      if (!user) return;
+      await aplicarUsuario(user);
+    }
+
+    void carregarUsuario();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        void aplicarUsuario(session.user);
+      } else {
+        setUserEmail("");
+        setProfilePhotoUrl("");
+        setResultadosBusca([]);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [isAuthLayout]);
+
+  useEffect(() => {
+    if (isAuthLayout) return;
+
+    const termo = busca.trim();
+    if (termo.length < 2) {
+      setResultadosBusca([]);
+      setBuscandoPacientes(false);
+      return;
+    }
+
+    setBuscandoPacientes(true);
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const user = await getCurrentUser();
+        if (!user) {
+          setBuscandoPacientes(false);
+          return;
+        }
+
+        const { data, error } = await buscarPacientesPorNome(user.id, termo);
+        if (!error) {
+          setResultadosBusca((data || []) as Paciente[]);
+        }
+        setBuscandoPacientes(false);
+      })();
+    }, 280);
+
+    return () => window.clearTimeout(timer);
+  }, [busca, isAuthLayout]);
 
   function atualizarTema(novoTema: ThemeMode) {
     setTheme(novoTema);
@@ -85,16 +188,24 @@ export default function AppShell({
     router.push("/login");
   }
 
-  if (isLogin) {
+  const pacientesFiltrados = resultadosBusca;
+
+  const tituloPagina =
+    menuItems.find((item) => isMenuItemActive(pathname, item))?.label ||
+    routeTitles.find(([path]) => pathname.startsWith(path))?.[1] ||
+    "Painel";
+
+  const inicialUsuario = (userEmail || "P").slice(0, 1).toUpperCase();
+
+  if (isAuthLayout) {
     return <>{children}</>;
   }
 
   return (
-    <div className="app-shell">
-      <aside className="app-sidebar">
-        <Link href="/" className="app-brand">
-          <span>Psico</span>
-          Desk
+    <div className="app-shell psicomanager-shell">
+      <aside className="app-sidebar psicomanager-sidebar">
+        <Link href="/" className="app-brand psicomanager-brand">
+          <span>Psico</span>Desk
         </Link>
 
         <p className="sidebar-section-label">Menu</p>
@@ -110,46 +221,92 @@ export default function AppShell({
                 className={`menu-link${active ? " active" : ""}`}
                 aria-current={active ? "page" : undefined}
               >
-                {item.label}
+                <span className="menu-icon" aria-hidden="true">
+                  <MenuIcon name={item.icon} />
+                </span>
+                <span className="menu-label">{item.label}</span>
               </Link>
             );
           })}
         </nav>
       </aside>
 
-      <main className="main-content">
-        <div className="topbar">
-          <div className="theme-toggle" aria-label="Tema" role="group">
-            <button
-              type="button"
-              className={theme === "light" ? "active" : ""}
-              aria-pressed={theme === "light"}
-              onClick={() => atualizarTema("light")}
-            >
-              Claro
-            </button>
-
-            <button
-              type="button"
-              className={theme === "dark" ? "active" : ""}
-              aria-pressed={theme === "dark"}
-              onClick={() => atualizarTema("dark")}
-            >
-              Escuro
-            </button>
+      <main className="main-content psicomanager-main">
+        <div className="topbar psicomanager-topbar">
+          <div className="topbar-left">
+            <span className="topbar-page-pill">{tituloPagina}</span>
+            <div className="topbar-search">
+              <span aria-hidden="true">⌕</span>
+              <input
+                value={busca}
+                onChange={(event) => setBusca(event.target.value)}
+                placeholder="Buscar paciente"
+              />
+              {busca.trim().length >= 2 ? (
+                <div className="topbar-search-results">
+                  {buscandoPacientes ? (
+                    <p className="topbar-search-hint">Buscando…</p>
+                  ) : pacientesFiltrados.length === 0 ? (
+                    <p className="topbar-search-hint">Nenhum paciente encontrado.</p>
+                  ) : null}
+                  {pacientesFiltrados.map((paciente) => (
+                    <button
+                      key={paciente.id}
+                      type="button"
+                      onClick={() => {
+                        setBusca("");
+                        router.push(`/paciente/${paciente.id}`);
+                      }}
+                    >
+                      {paciente.nome}
+                    </button>
+                  ))}
+                </div>
+              ) : busca.trim().length === 1 ? (
+                <p className="topbar-search-hint">Digite pelo menos 2 letras.</p>
+              ) : null}
+            </div>
           </div>
 
-          <Link href="/" className="psico-button">
-            Início
-          </Link>
+          <div className="profile-menu-wrap">
+            <button
+              type="button"
+              className="profile-trigger"
+              onClick={() => setProfileOpen((open) => !open)}
+              aria-expanded={profileOpen}
+            >
+              <span className="profile-avatar">
+                {profilePhotoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profilePhotoUrl} alt="Foto do perfil" />
+                ) : (
+                  inicialUsuario
+                )}
+              </span>
+              <span className="profile-caret">⌄</span>
+            </button>
 
-          <button
-            type="button"
-            className="psico-button button-danger"
-            onClick={sair}
-          >
-            Sair
-          </button>
+            {profileOpen ? (
+              <div className="profile-dropdown">
+                <button
+                  type="button"
+                  onClick={() => {
+                    atualizarTema(theme === "dark" ? "light" : "dark");
+                    setProfileOpen(false);
+                  }}
+                >
+                  <span>☼</span>{" "}
+                  {theme === "dark" ? "Alterar para Modo Claro" : "Alterar para Modo Escuro"}
+                </button>
+                <Link href="/minha-clinica" onClick={() => setProfileOpen(false)}>
+                  <span>▤</span> Minha clínica
+                </Link>
+                <button type="button" onClick={sair}>
+                  <span>↪</span> Sair
+                </button>
+              </div>
+            ) : null}
+          </div>
 
           <span className="topbar-version">v1.0</span>
         </div>

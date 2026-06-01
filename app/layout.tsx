@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import type { ReactNode } from "react";
 
@@ -7,13 +7,40 @@ import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "600", "700"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "PsicoDesk",
   description: "Sistema de gestão para clínica psicológica.",
+  applicationName: "PsicoDesk",
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [
+      {
+        url: "/psicodesk-icon.svg",
+        type: "image/svg+xml",
+      },
+    ],
+    shortcut: ["/psicodesk-icon.svg"],
+    apple: [
+      {
+        url: "/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "PsicoDesk",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1b6f68",
 };
 
 export default function RootLayout({
