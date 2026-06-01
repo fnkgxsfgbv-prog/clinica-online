@@ -25,6 +25,7 @@
 .logs/
 
 # misc
+.npm-cache/
 .DS_Store
 *.pem
 
