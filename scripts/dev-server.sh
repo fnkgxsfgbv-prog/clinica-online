@@ -24,6 +24,17 @@ start() {
     exit 0
   fi
 
+  # Libera a porta se outro processo (ex.: next dev antigo) ficou preso.
+  if command -v lsof >/dev/null 2>&1; then
+    local ocupante
+    ocupante="$(lsof -ti ":${PORT}" 2>/dev/null || true)"
+    if [[ -n "$ocupante" ]]; then
+      echo "Encerrando processo na porta ${PORT} (PID ${ocupante})..."
+      kill -9 $ocupante 2>/dev/null || true
+      sleep 1
+    fi
+  fi
+
   cd "$ROOT"
   if [[ ! -x "$ROOT/node_modules/.bin/next" ]]; then
     echo "Execute npm install antes de iniciar o servidor."
