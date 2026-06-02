@@ -5,16 +5,22 @@ import {
   detectarViradaMesCalendario,
   mesAtualChave,
 } from "./mes";
+import {
+  deveSeguirMesCalendario,
+  mesInicialPreferido,
+  persistirMesSelecionado,
+} from "./preferencias";
 
 /**
  * Filtro de mês alinhado ao calendário: inicia no mês atual e acompanha a virada.
  */
 export function useFiltroMesCalendario() {
-  const [mes, setMesState] = useState(mesAtualChave);
-  const seguirMesCalendarioRef = useRef(true);
-  const mesCalendarioRef = useRef(mesAtualChave());
+  const [mes, setMesState] = useState(mesInicialPreferido);
+  const seguirMesCalendarioRef = useRef(deveSeguirMesCalendario());
+  const mesCalendarioRef = useRef(mesInicialPreferido());
 
   useEffect(() => {
+    if (!deveSeguirMesCalendario()) return;
     const { mudou, mesAtual } = detectarViradaMesCalendario();
     if (!mudou || !mesAtual) return;
     seguirMesCalendarioRef.current = true;
@@ -34,7 +40,10 @@ export function useFiltroMesCalendario() {
   const setMes = useCallback((valor: string) => {
     const atual = mesAtualChave();
     seguirMesCalendarioRef.current = Boolean(valor && valor === atual);
-    if (valor) mesCalendarioRef.current = valor;
+    if (valor) {
+      mesCalendarioRef.current = valor;
+      persistirMesSelecionado(valor);
+    }
     setMesState(valor);
   }, []);
 

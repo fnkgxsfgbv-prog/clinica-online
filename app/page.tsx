@@ -21,6 +21,8 @@ import DashboardAgendaHoje, {
 } from "./components/DashboardAgendaHoje";
 import FlashMessage from "./components/FlashMessage";
 import Janela from "./components/Janela";
+import PendenciasClinica from "./components/PendenciasClinica";
+import { montarChecklistUnificado } from "./lib/checklist-clinica";
 import type { Frequencia, Paciente, Sessao } from "./types";
 
 function formatarDataISO(data: Date) {
@@ -275,6 +277,15 @@ export default function Home() {
           </>
         )}
       </Janela>
+
+      {!carregando ? (
+        <div className="dashboard-pendencias">
+          <PendenciasClinica
+            itens={montarChecklistUnificado(pacientes, sessoes, frequencias)}
+            titulo="Pendências da clínica"
+          />
+        </div>
+      ) : null}
 
       <Janela titulo={`Aniversariantes de ${mesAtual}`}>
         {carregando ? (

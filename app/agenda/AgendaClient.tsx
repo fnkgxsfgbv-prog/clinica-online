@@ -10,6 +10,7 @@ import "moment/locale/pt-br.js";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import ConfirmacaoModal from "../components/ConfirmacaoModal";
 import FlashMessage from "../components/FlashMessage";
+import { usePreferencias } from "../components/PreferenciasProvider";
 import { getCurrentUser } from "../lib/auth";
 import {
   excluirSessaoCompleta,
@@ -94,10 +95,17 @@ type SessaoParaCriar = {
 export default function AgendaClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { preferencias } = usePreferencias();
   const simularGrupo = searchParams.get("simulacao-grupo") === "1";
   const [dataAtual, setDataAtual] = useState(new Date());
-  const [visualizacao, setVisualizacao] = useState<View>(Views.WEEK);
-  const [modoAgenda, setModoAgenda] = useState<AgendaModo>("geral");
+  const [visualizacao, setVisualizacao] = useState<View>(() => {
+    if (preferencias.agendaVisualizacao === "day") return Views.DAY;
+    if (preferencias.agendaVisualizacao === "month") return Views.MONTH;
+    return Views.WEEK;
+  });
+  const [modoAgenda, setModoAgenda] = useState<AgendaModo>(
+    preferencias.agendaModo
+  );
   const [situacaoFiltro, setSituacaoFiltro] = useState("todos");
 
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
@@ -206,6 +214,26 @@ export default function AgendaClient() {
   }, [carregarDados]);
 
   useEffect(() => {
+    setVisualizacao(
+      preferencias.agendaVisualizacao === "day"
+        ? Views.DAY
+        : preferencias.agendaVisualizacao === "month"
+          ? Views.MONTH
+          : Views.WEEK
+    );
+    setModoAgenda(preferencias.agendaModo);
+  }, [preferencias.agendaVisualizacao, preferencias.agendaModo]);
+
+  function pacienteAtivoAgenda(paciente: Paciente) {
+    const status = String(paciente.status || "").trim().toLowerCase();
+    return !status || status === "ativo";
+  }
+
+  const pacientesAgenda = preferencias.ocultarPacientesInativos
+    ? pacientes.filter(pacienteAtivoAgenda)
+    : pacientes;
+
+  useEffect(() => {
     if (modoAgenda !== "dia") return;
     void carregarPreSessoesDoDia();
   }, [modoAgenda, carregarPreSessoesDoDia]);
@@ -254,7 +282,7 @@ export default function AgendaClient() {
     if (!inicio) return [];
 
     const fim = new Date(inicio);
-    fim.setHours(fim.getHours() + 1);
+    fim.setMinutes(fim.getMinutes() + (preferencias.duracaoSessaoMinutos || 50));
 
     return [
       {
@@ -344,7 +372,9 @@ export default function AgendaClient() {
         paciente_nome: paciente.nome,
         data: formatarDataISO(dataBase),
         hora,
-        valor: Number(valor || paciente.valor_sessao || 0),
+        valor: Number(
+          valor || paciente.valor_sessao || preferencias.valorSessaoPadrao || 0
+        ),
         status: "Agendada",
       });
     }
@@ -730,13 +760,13 @@ export default function AgendaClient() {
               setValor(
                 paciente?.valor_sessao
                   ? String(paciente.valor_sessao)
-                  : ""
+                  : preferencias.valorSessaoPadrao || ""
               );
             }}
           >
             <option value="">Selecione o paciente</option>
 
-            {pacientes.map((p) => (
+            {pacientesAgenda.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.nome}
               </option>
@@ -1237,7 +1267,7 @@ function criarEventosSimulacaoGrupo(
   return nomes.map((nome, index) => {
     const inicio = criarDataHora("2026-05-21", "10:00");
     const fim = new Date(inicio);
-    fim.setHours(fim.getHours() + 1);
+    fim.setMinutes(fim.getMinutes() + 50);
 
     return {
       id: `simulacao-grupo-${index}`,

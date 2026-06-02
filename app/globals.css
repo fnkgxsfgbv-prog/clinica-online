@@ -9878,3 +9878,126 @@ td {
   color: #b91c1c !important;
   border-left-color: rgba(15, 23, 42, 0.1) !important;
 }
+
+/* Preferências e pendências */
+.preferencias-page .preferencias-intro {
+  margin: 0 0 16px;
+  color: var(--muted, #94a3b8);
+  max-width: 720px;
+}
+
+.preferencias-actions-top,
+.preferencias-actions-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.preferencias-saved-hint {
+  font-size: 0.9rem;
+  color: var(--muted, #94a3b8);
+}
+
+.preferencias-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.preferencias-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preferencias-card-wide {
+  grid-column: 1 / -1;
+}
+
+.preferencias-card h2 {
+  margin: 0;
+}
+
+.preferencias-card > p {
+  margin: 0;
+  color: var(--muted, #94a3b8);
+  font-size: 0.92rem;
+}
+
+.preferencias-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preferencias-field span {
+  font-size: 0.88rem;
+  color: var(--muted, #94a3b8);
+}
+
+.preferencias-field select,
+.preferencias-field input {
+  width: 100%;
+}
+
+.preferencias-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.92rem;
+}
+
+.preferencias-check-inline {
+  margin: 0;
+}
+
+.preferencias-status ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--muted, #94a3b8);
+  font-size: 0.92rem;
+}
+
+.preferencias-help-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.preferencias-help-grid p {
+  margin: 4px 0 0;
+  color: var(--muted, #94a3b8);
+  font-size: 0.92rem;
+}
+
+.sync-dados-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sync-dados-msg {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #2f9b87;
+}
+
+.dashboard-pendencias {
+  margin: 16px 0;
+}
+
+.clinic-insight-link {
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.clinic-insight-link:hover {
+  transform: translateY(-1px);
+}
+
+[data-theme="light"] .sync-dados-msg {
+  color: #0f766e;
+}

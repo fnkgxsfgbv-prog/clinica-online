@@ -1,6 +1,8 @@
 import type { FechamentoMes } from "./financeiro-fechamento";
 import { rotuloVariacao } from "./financeiro-fechamento";
 import type { ResumoFinanceiro } from "./financeiro";
+import type { DadosClinica } from "./dados-clinica";
+import { rotuloRodapeClinica } from "./dados-clinica";
 
 const COLUNAS = 4;
 
@@ -90,7 +92,8 @@ function preencherLinhasResumo(
 export async function exportarFinanceiroXlsx(
   linhas: ResumoFinanceiro[],
   sufixoArquivo: string,
-  periodoLabel: string
+  periodoLabel: string,
+  clinica?: DadosClinica
 ) {
   const { Workbook } = await import("exceljs");
   const wb = new Workbook();
@@ -111,15 +114,21 @@ export async function exportarFinanceiroXlsx(
   const col = "D";
 
   ws.mergeCells(`A1:${col}1`);
-  ws.getCell("A1").value = "PsicoDesk — Resumo financeiro";
+  ws.getCell("A1").value = clinica
+    ? `${clinica.nomeClinica} — Resumo financeiro`
+    : "PsicoDesk — Resumo financeiro";
   ws.getCell("A1").font = { name: "Calibri", size: 16, bold: true, color: { argb: "FF0F172A" } };
   ws.getRow(1).height = 26;
 
   ws.mergeCells(`A2:${col}2`);
-  ws.getCell("A2").value = `Período: ${periodo}`;
+  ws.getCell("A2").value = clinica
+    ? rotuloRodapeClinica(clinica)
+    : `Período: ${periodo}`;
 
   ws.mergeCells(`A3:${col}3`);
-  ws.getCell("A3").value = `Gerado em: ${geradoEm}`;
+  ws.getCell("A3").value = clinica
+    ? `Período: ${periodo} • Gerado em: ${geradoEm}`
+    : `Gerado em: ${geradoEm}`;
 
   const headerRowIdx = 7;
   const headerRow = ws.getRow(headerRowIdx);
@@ -144,7 +153,10 @@ export async function exportarFinanceiroXlsx(
   await baixarWorkbook(wb, `financeiro-${sufixoArquivo}-xlsx-v1.xlsx`);
 }
 
-export async function exportarFechamentoMesXlsx(fechamento: FechamentoMes) {
+export async function exportarFechamentoMesXlsx(
+  fechamento: FechamentoMes,
+  clinica?: DadosClinica
+) {
   const { Workbook } = await import("exceljs");
   const wb = new Workbook();
   wb.creator = "PsicoDesk";
@@ -164,12 +176,16 @@ export async function exportarFechamentoMesXlsx(fechamento: FechamentoMes) {
   const col = "D";
 
   ws.mergeCells(`A1:${col}1`);
-  ws.getCell("A1").value = `Fechamento — ${label}`;
+  ws.getCell("A1").value = clinica
+    ? `${clinica.nomeClinica} — Fechamento ${label}`
+    : `Fechamento — ${label}`;
   ws.getCell("A1").font = { name: "Calibri", size: 16, bold: true, color: { argb: "FF0F172A" } };
   ws.getRow(1).height = 26;
 
   ws.mergeCells(`A2:${col}2`);
-  ws.getCell("A2").value = `Gerado em: ${geradoEm}`;
+  ws.getCell("A2").value = clinica
+    ? `${rotuloRodapeClinica(clinica)} • Gerado em: ${geradoEm}`
+    : `Gerado em: ${geradoEm}`;
 
   const linhasResumo = [
     ["Total faturado", totais.total],

@@ -1,6 +1,11 @@
 import jsPDF from "jspdf";
 import type { AnamneseCampo } from "../../types";
 import { formatarDataPaciente } from "../datas-paciente";
+import {
+  type DadosClinica,
+  dadosClinicaPadrao,
+  rotuloRodapeClinica,
+} from "../dados-clinica";
 import type { FormularioExportMeta } from "../formulario-export";
 
 const MARGEM = 16;
@@ -53,9 +58,21 @@ export function gerarFormularioPdfBlob({
   nomeFormulario,
   pacienteNome,
   pacienteDataNascimento,
-}: FormularioExportMeta & { campos: AnamneseCampo[] }): Blob {
+  clinica = dadosClinicaPadrao(),
+}: FormularioExportMeta & {
+  campos: AnamneseCampo[];
+  clinica?: DadosClinica;
+}): Blob {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const c: Cursor = { y: MARGEM };
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  const cabecalho = rotuloRodapeClinica(clinica);
+  if (cabecalho) {
+    doc.text(cabecalho, MARGEM, c.y);
+    c.y += 8;
+  }
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);

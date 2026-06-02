@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import FlashMessage from "../components/FlashMessage";
+import PendenciasClinica from "../components/PendenciasClinica";
+import SincronizarDadosButton from "../components/SincronizarDadosButton";
 import { getCurrentUser } from "../lib/auth";
+import { baixarBackupClinica, montarBackupClinica } from "../lib/backup-clinica";
+import { montarChecklistUnificado } from "../lib/checklist-clinica";
+import { listFrequenciasResumo } from "../lib/db/frequencia";
 import { listPacientes } from "../lib/db/pacientes";
 import {
   getProfilePhotoPath,
@@ -16,12 +21,9 @@ import { listSessoes } from "../lib/db/sessoes";
 import { baixarBlob } from "../lib/download";
 import { extrairDataInicioAtendimento } from "../lib/paciente-metadata";
 import { dataIsoHoje, formatarDataPaciente } from "../lib/datas-paciente";
-import { dataReferenciaISO } from "../lib/financeiro";
-import { timestampDataHora } from "../lib/ordenar-datas";
 import { requireUserClient } from "../lib/require-user-client";
-import { isStatusCancelada, isStatusFaltou } from "../lib/status";
 import supabase from "../lib/supabase";
-import type { Paciente, Sessao } from "../types";
+import type { Frequencia, Paciente, Sessao } from "../types";
 
 type UserProfile = {
   email: string;
@@ -38,12 +40,6 @@ type UserProfile = {
 };
 
 type ProfileForm = Omit<UserProfile, "email" | "fotoUrl" | "fotoPath" | "criadoEm">;
-type ClinicInsight = {
-  titulo: string;
-  valor: number;
-  descricao: string;
-  tom?: "ok" | "warn";
-};
 
 function formatarData(data?: string | null) {
   const formatada = formatarDataPaciente(data);
@@ -70,96 +66,6 @@ function pacienteAtivo(paciente: Paciente) {
   return !status || status === "ativo";
 }
 
-function sessoesDoMes(sessoes: Sessao[]) {
-  const mesAtual = dataIsoHoje().slice(0, 7);
-  return sessoes.filter((sessao) => String(sessao.data || "").startsWith(mesAtual));
-}
-
-function montarChecklistClinica(pacientes: Paciente[]): ClinicInsight[] {
-  const ativos = pacientes.filter(pacienteAtivo);
-
-  return [
-    {
-      titulo: "Sem telefone",
-      valor: ativos.filter((paciente) => !String(paciente.telefone || "").trim()).length,
-      descricao: "Pacientes ativos sem contato cadastrado.",
-      tom: "warn",
-    },
-    {
-      titulo: "Sem nascimento",
-      valor: ativos.filter((paciente) => !paciente.data_nascimento).length,
-      descricao: "Importante para idade cronológica e aniversários.",
-      tom: "warn",
-    },
-    {
-      titulo: "Sem CID",
-      valor: ativos.filter((paciente) => !String(paciente.cid || "").trim()).length,
-      descricao: "Prontuários que ainda podem ser completados.",
-      tom: "warn",
-    },
-    {
-      titulo: "Sem início",
-      valor: ativos.filter((paciente) => !extrairDataInicioAtendimento(paciente)).length,
-      descricao: "Falta data de início do atendimento.",
-      tom: "warn",
-    },
-  ];
-}
-
-function montarLembretesClinicos(
-  pacientes: Paciente[],
-  sessoes: Sessao[]
-): ClinicInsight[] {
-  const hoje = dataIsoHoje();
-  const mesAtual = hoje.slice(5, 7);
-  const sessoesMes = sessoesDoMes(sessoes);
-  const limiteRecente = new Date();
-  limiteRecente.setDate(limiteRecente.getDate() - 30);
-
-  const pacientesAtivos = pacientes.filter(pacienteAtivo);
-  const pacientesSemSessaoRecente = pacientesAtivos.filter((paciente) => {
-    const ultimaSessao = sessoes
-      .filter((sessao) => String(sessao.paciente_id) === String(paciente.id))
-      .map((sessao) => timestampDataHora(sessao.data, sessao.hora))
-      .filter((ts) => ts > 0)
-      .sort((a, b) => b - a)[0];
-
-    return !ultimaSessao || ultimaSessao < limiteRecente.getTime();
-  }).length;
-
-  return [
-    {
-      titulo: "Aniversários do mês",
-      valor: pacientesAtivos.filter((paciente) =>
-        String(paciente.data_nascimento || "").slice(5, 7) === mesAtual
-      ).length,
-      descricao: "Pacientes ativos com aniversário neste mês.",
-    },
-    {
-      titulo: "Sessões de hoje",
-      valor: sessoes.filter(
-        (sessao) => dataReferenciaISO(sessao.data) === hoje
-      ).length,
-      descricao: "Atendimentos previstos para hoje.",
-    },
-    {
-      titulo: "Faltas/cancelamentos",
-      valor: sessoesMes.filter(
-        (sessao) =>
-          isStatusFaltou(sessao.status) || isStatusCancelada(sessao.status)
-      ).length,
-      descricao: "Ocorrências registradas no mês atual.",
-      tom: "warn",
-    },
-    {
-      titulo: "Sem sessão recente",
-      valor: pacientesSemSessaoRecente,
-      descricao: "Pacientes ativos sem sessão nos últimos 30 dias.",
-      tom: "warn",
-    },
-  ];
-}
-
 export default function MinhaClinicaPage() {
   const router = useRouter();
   const [perfil, setPerfil] = useState<UserProfile | null>(null);
@@ -174,6 +80,7 @@ export default function MinhaClinicaPage() {
   });
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [sessoes, setSessoes] = useState<Sessao[]>([]);
+  const [frequencias, setFrequencias] = useState<Frequencia[]>([]);
   const [erro, setErro] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [carregando, setCarregando] = useState(true);
@@ -192,12 +99,16 @@ export default function MinhaClinicaPage() {
         return;
       }
 
-      const [pacientesRes, sessoesRes] = await Promise.all([
+      const [pacientesRes, sessoesRes, frequenciasRes] = await Promise.all([
         listPacientes(user.id),
         listSessoes(user.id),
+        listFrequenciasResumo(user.id),
       ]);
 
-      const loadError = pacientesRes.error?.message || sessoesRes.error?.message;
+      const loadError =
+        pacientesRes.error?.message ||
+        sessoesRes.error?.message ||
+        frequenciasRes.error?.message;
       if (loadError) {
         setErro("Erro ao carregar dados da clínica: " + loadError);
       }
@@ -232,6 +143,7 @@ export default function MinhaClinicaPage() {
       });
       setPacientes((pacientesRes.data || []) as Paciente[]);
       setSessoes((sessoesRes.data || []) as Sessao[]);
+      setFrequencias((frequenciasRes.data || []) as Frequencia[]);
       setCarregando(false);
     }
 
@@ -239,8 +151,14 @@ export default function MinhaClinicaPage() {
   }, [router]);
 
   const pacientesAtivos = pacientes.filter(pacienteAtivo).length;
-  const checklistClinica = montarChecklistClinica(pacientes);
-  const lembretesClinicos = montarLembretesClinicos(pacientes, sessoes);
+  const checklistCompleto = montarChecklistUnificado(
+    pacientes,
+    sessoes,
+    frequencias
+  );
+  const lembretesRotina = checklistCompleto.filter(
+    (item) => item.categoria === "rotina"
+  );
 
   function atualizarCampo(campo: keyof ProfileForm, valor: string) {
     setForm((atual) => ({ ...atual, [campo]: valor }));
@@ -449,6 +367,12 @@ export default function MinhaClinicaPage() {
     ]);
   }
 
+  function exportarBackupCompleto() {
+    baixarBackupClinica(
+      montarBackupClinica(pacientes, sessoes, frequencias)
+    );
+  }
+
   return (
     <div className="clinic-page">
       <div className="clinic-layout clinic-layout-single">
@@ -618,11 +542,17 @@ export default function MinhaClinicaPage() {
             </section>
 
             <div className="clinic-tools-grid">
+              <PendenciasClinica
+                itens={checklistCompleto}
+                titulo="Pendências da clínica"
+                linkPreferencias
+              />
+
               <section className="clinic-card clinic-tool-card">
                 <div className="clinic-tool-header">
                   <div>
                     <h2>Backup e exportação</h2>
-                    <p>Baixe planilhas simples para guardar uma cópia dos dados principais.</p>
+                    <p>Baixe cópias dos dados principais para guardar ou migrar.</p>
                   </div>
                 </div>
                 <div className="clinic-export-actions">
@@ -642,44 +572,48 @@ export default function MinhaClinicaPage() {
                   >
                     Baixar sessões
                   </button>
+                  <button
+                    type="button"
+                    className="btn btn-green"
+                    onClick={exportarBackupCompleto}
+                    disabled={
+                      pacientes.length === 0 &&
+                      sessoes.length === 0 &&
+                      frequencias.length === 0
+                    }
+                  >
+                    Backup completo (JSON)
+                  </button>
                 </div>
               </section>
 
               <section className="clinic-card clinic-tool-card">
                 <div className="clinic-tool-header">
                   <div>
-                    <h2>Checklist da clínica</h2>
-                    <p>Itens de cadastro que podem atrapalhar prontuários e lembretes.</p>
+                    <h2>Manutenção dos dados</h2>
+                    <p>
+                      Alinha presenças na frequência com sessões da agenda quando
+                      algo parecer desatualizado.
+                    </p>
                   </div>
                 </div>
-                <div className="clinic-insight-list">
-                  {checklistClinica.map((item) => (
-                    <div
-                      key={item.titulo}
-                      className={`clinic-insight-item${item.valor > 0 ? " is-warn" : " is-ok"}`}
-                    >
-                      <strong>{item.valor}</strong>
-                      <div>
-                        <span>{item.titulo}</span>
-                        <p>{item.descricao}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <SincronizarDadosButton className="btn btn-outline" />
               </section>
 
               <section className="clinic-card clinic-tool-card clinic-tool-card-wide">
                 <div className="clinic-tool-header">
                   <div>
-                    <h2>Lembretes clínicos</h2>
-                    <p>Alertas rápidos para acompanhar rotina, faltas e pacientes sem movimentação.</p>
+                    <h2>Lembretes da rotina</h2>
+                    <p>Alertas rápidos para acompanhar o dia a dia da clínica.</p>
                   </div>
                 </div>
                 <div className="clinic-insight-list clinic-insight-list-wide">
-                  {lembretesClinicos.map((item) => (
+                  {lembretesRotina.map((item) => (
                     <div
-                      key={item.titulo}
-                      className={`clinic-insight-item${item.tom === "warn" && item.valor > 0 ? " is-warn" : " is-ok"}`}
+                      key={item.id}
+                      className={`clinic-insight-item${
+                        item.tom === "warn" && item.valor > 0 ? " is-warn" : " is-ok"
+                      }`}
                     >
                       <strong>{item.valor}</strong>
                       <div>

@@ -8,9 +8,17 @@ import { useEffect, useState, type ReactNode } from "react";
 import { getCurrentUser } from "../lib/auth";
 import { buscarPacientesPorNome } from "../lib/db/pacientes";
 import { resolverUrlFotoPerfil } from "../lib/db/profile-photo";
+import {
+  THEME_STORAGE_KEY,
+  type TemaPreferencia,
+} from "../lib/preferencias";
 import supabase from "../lib/supabase";
 import type { Paciente } from "../types";
 import { MenuIcon, type MenuIconName } from "./MenuIcons";
+import {
+  PreferenciasProvider,
+  usePreferenciasOpcional,
+} from "./PreferenciasProvider";
 
 type ThemeMode = "light" | "dark";
 
@@ -58,6 +66,11 @@ const menuItems: MenuItem[] = [
     label: "Minha clínica",
     icon: "clinica",
   },
+  {
+    href: "/preferencias",
+    label: "Preferências",
+    icon: "preferencias",
+  },
 ];
 
 const routeTitles: Array<[string, string]> = [
@@ -71,9 +84,8 @@ const routeTitles: Array<[string, string]> = [
   ["/paciente", "Paciente"],
   ["/sessao", "Sessão"],
   ["/minha-clinica", "Minha clínica"],
+  ["/preferencias", "Preferências"],
 ];
-
-const THEME_STORAGE_KEY = "psicodesk-theme";
 
 function isMenuItemActive(pathname: string, item: MenuItem) {
   if (item.href === "/") {
@@ -91,7 +103,32 @@ export default function AppShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+
+  const isAuthLayout =
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname === "/privacidade" ||
+    pathname === "/termos";
+
+  if (isAuthLayout) {
+    return <>{children}</>;
+  }
+
+  return (
+    <PreferenciasProvider>
+      <AppShellFrame>{children}</AppShellFrame>
+    </PreferenciasProvider>
+  );
+}
+
+function AppShellFrame({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const pathname = usePathname();
   const router = useRouter();
+  const preferenciasCtx = usePreferenciasOpcional();
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const [resultadosBusca, setResultadosBusca] = useState<Paciente[]>([]);
   const [busca, setBusca] = useState("");
@@ -99,12 +136,6 @@ export default function AppShell({
   const [profileOpen, setProfileOpen] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [profilePhotoUrl, setProfilePhotoUrl] = useState("");
-
-  const isAuthLayout =
-    pathname === "/login" ||
-    pathname.startsWith("/login/") ||
-    pathname === "/privacidade" ||
-    pathname === "/termos";
 
   useEffect(() => {
     const currentTheme =
@@ -116,8 +147,11 @@ export default function AppShell({
   }, []);
 
   useEffect(() => {
-    if (isAuthLayout) return;
+    if (!preferenciasCtx?.preferencias.tema) return;
+    setTheme(preferenciasCtx.preferencias.tema);
+  }, [preferenciasCtx?.preferencias.tema]);
 
+  useEffect(() => {
     async function aplicarUsuario(user: User) {
       setUserEmail(user.email || "");
       setProfilePhotoUrl(await resolverUrlFotoPerfil(user.user_metadata || {}));
@@ -145,11 +179,9 @@ export default function AppShell({
     });
 
     return () => subscription.unsubscribe();
-  }, [isAuthLayout]);
+  }, []);
 
   useEffect(() => {
-    if (isAuthLayout) return;
-
     const termo = busca.trim();
     if (termo.length < 2) {
       setResultadosBusca([]);
@@ -175,12 +207,16 @@ export default function AppShell({
     }, 280);
 
     return () => window.clearTimeout(timer);
-  }, [busca, isAuthLayout]);
+  }, [busca]);
 
   function atualizarTema(novoTema: ThemeMode) {
     setTheme(novoTema);
     document.documentElement.dataset.theme = novoTema;
     localStorage.setItem(THEME_STORAGE_KEY, novoTema);
+    void preferenciasCtx?.atualizarPreferencias(
+      { tema: novoTema as TemaPreferencia },
+      { salvarNuvem: true }
+    );
   }
 
   async function sair() {
@@ -196,10 +232,6 @@ export default function AppShell({
     "Painel";
 
   const inicialUsuario = (userEmail || "P").slice(0, 1).toUpperCase();
-
-  if (isAuthLayout) {
-    return <>{children}</>;
-  }
 
   return (
     <div className="app-shell psicomanager-shell">
@@ -300,6 +332,9 @@ export default function AppShell({
                 </button>
                 <Link href="/minha-clinica" onClick={() => setProfileOpen(false)}>
                   <span>▤</span> Minha clínica
+                </Link>
+                <Link href="/preferencias" onClick={() => setProfileOpen(false)}>
+                  <span>⚙</span> Preferências
                 </Link>
                 <button type="button" onClick={sair}>
                   <span>↪</span> Sair

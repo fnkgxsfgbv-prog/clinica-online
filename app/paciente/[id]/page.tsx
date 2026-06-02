@@ -6,6 +6,7 @@ import AnamneseSection from "./AnamneseSection";
 import FlashMessage from "../../components/FlashMessage";
 import Janela from "../../components/Janela";
 import { getCurrentUser } from "../../lib/auth";
+import { extrairDadosClinicaDeUsuario } from "../../lib/dados-clinica";
 import { formatarCidParaExibicao } from "../../lib/cid-psicologia";
 import {
   formatarDataPaciente,
@@ -276,7 +277,8 @@ export default function PacientePage() {
     const { gerarDocumentoModeloPdfBlob } = await import(
       "../../lib/pdf/documento-modelo"
     );
-    const blob = gerarDocumentoModeloPdfBlob(modelo, paciente);
+    const clinica = extrairDadosClinicaDeUsuario(user);
+    const blob = gerarDocumentoModeloPdfBlob(modelo, paciente, clinica);
     const nomeArquivo = `${modelo.nome || "Documento"} - ${paciente.nome}.pdf`;
 
     const { error } = await salvarBlobComoDocumentoPaciente({
@@ -525,10 +527,16 @@ export default function PacientePage() {
                 className="btn btn-green patient-hero-action"
                 onClick={() =>
                   void (async () => {
+                    const user = await getCurrentUser();
                     const { exportarProntuarioPacientePdf } = await import(
                       "../../lib/pdf/prontuario-paciente"
                     );
-                    exportarProntuarioPacientePdf(paciente, evolucoesClinicas, sessoes);
+                    exportarProntuarioPacientePdf(
+                      paciente,
+                      evolucoesClinicas,
+                      sessoes,
+                      extrairDadosClinicaDeUsuario(user)
+                    );
                   })()
                 }
               >

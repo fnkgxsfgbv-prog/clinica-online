@@ -1,5 +1,10 @@
 import jsPDF from "jspdf";
 import { formatarDataPaciente } from "../datas-paciente";
+import {
+  type DadosClinica,
+  dadosClinicaPadrao,
+  rotuloRodapeClinica,
+} from "../dados-clinica";
 import { ordenarCronologico } from "../ordenar-datas";
 import type { Evolucao, Paciente, Sessao } from "../../types";
 
@@ -83,10 +88,19 @@ function ordenarSessoes(lista: Sessao[]): Sessao[] {
 export function exportarProntuarioPacientePdf(
   paciente: Paciente,
   evolucoes: Evolucao[],
-  sessoes: Sessao[]
+  sessoes: Sessao[],
+  clinica: DadosClinica = dadosClinicaPadrao()
 ): void {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const c: Cursor = { y: MARGEM };
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  const cabecalho = rotuloRodapeClinica(clinica);
+  if (cabecalho) {
+    doc.text(cabecalho, MARGEM, c.y);
+    c.y += 8;
+  }
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);

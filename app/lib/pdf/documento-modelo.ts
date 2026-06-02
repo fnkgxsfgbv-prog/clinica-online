@@ -1,5 +1,11 @@
 import jsPDF from "jspdf";
 import type { DocumentoModelo, Paciente } from "../../types";
+import {
+  type DadosClinica,
+  dadosClinicaPadrao,
+  preencherVariaveisClinica,
+  rotuloRodapeClinica,
+} from "../dados-clinica";
 
 const MARGEM = 16;
 const LARGURA = 180 - MARGEM * 2;
@@ -23,19 +29,22 @@ function formatarDataHoje() {
 
 export function preencherVariaveisDocumento(
   conteudo: string,
-  paciente: Paciente
+  paciente: Paciente,
+  clinica: DadosClinica = dadosClinicaPadrao()
 ) {
   const valorSessao =
     paciente.valor_sessao != null && String(paciente.valor_sessao).trim()
       ? `R$ ${paciente.valor_sessao}`
       : "";
 
-  return conteudo
+  const base = conteudo
     .replaceAll("{{paciente_nome}}", paciente.nome || "")
     .replaceAll("{{paciente_telefone}}", paciente.telefone || "")
     .replaceAll("{{paciente_cid}}", paciente.cid || "")
     .replaceAll("{{data_hoje}}", formatarDataHoje())
     .replaceAll("{{valor_sessao}}", valorSessao);
+
+  return preencherVariaveisClinica(base, clinica);
 }
 
 function pareceHtml(valor: string) {
@@ -180,11 +189,24 @@ function renderizarBloco(doc: jsPDF, bloco: BlocoPdf, yInicial: number) {
 
 export function gerarDocumentoModeloPdfBlob(
   modelo: DocumentoModelo,
-  paciente: Paciente
+  paciente: Paciente,
+  clinica: DadosClinica = dadosClinicaPadrao()
 ) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const conteudo = preencherVariaveisDocumento(modelo.conteudo || "", paciente);
+  const conteudo = preencherVariaveisDocumento(
+    modelo.conteudo || "",
+    paciente,
+    clinica
+  );
   let y = MARGEM;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  const cabecalho = rotuloRodapeClinica(clinica);
+  if (cabecalho) {
+    doc.text(cabecalho, MARGEM, y);
+    y += 8;
+  }
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);

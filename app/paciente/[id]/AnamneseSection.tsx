@@ -6,6 +6,7 @@ import FlashMessage from "../../components/FlashMessage";
 import FormularioCamposLista from "../../components/FormularioCamposLista";
 import FormularioWorkflowSteps from "../../components/FormularioWorkflowSteps";
 import { getCurrentUser } from "../../lib/auth";
+import { extrairDadosClinicaDeUsuario } from "../../lib/dados-clinica";
 import { getAnamnesePorPaciente } from "../../lib/db/anamnese";
 import { salvarFormularioPdfDocumentoPaciente } from "../../lib/db/documentos";
 import { baixarBlob } from "../../lib/download";
@@ -264,11 +265,13 @@ export default function AnamneseSection({
     }
 
     const nomeFormulario = formularioAtual.nome_formulario || "Formulário";
+    const clinica = extrairDadosClinicaDeUsuario(user);
     const pdfBlob = gerarFormularioPdfBlob({
       campos: formularioAtual.campos,
       nomeFormulario,
       pacienteNome,
       pacienteDataNascimento,
+      clinica,
     });
     const documento = await salvarFormularioPdfDocumentoPaciente({
       userId: user.id,
@@ -366,13 +369,15 @@ export default function AnamneseSection({
     }));
   }
 
-  function baixarFormularioAtual() {
+  async function baixarFormularioAtual() {
     const nomeFormulario = formularioAtual.nome_formulario || "Formulário";
+    const user = await getCurrentUser();
     const blob = gerarFormularioPdfBlob({
       campos: formularioAtual.campos,
       nomeFormulario,
       pacienteNome,
       pacienteDataNascimento,
+      clinica: extrairDadosClinicaDeUsuario(user),
     });
     baixarBlob(blob, nomeArquivoFormulario(nomeFormulario, "pdf"));
   }

@@ -32,7 +32,13 @@ import {
   labelMesAno,
   mesAtualChave,
 } from "../lib/mes";
+import {
+  deveSeguirMesCalendario,
+  mesInicialPreferido,
+  persistirMesSelecionado,
+} from "../lib/preferencias";
 import { diagnosticarIntegracaoFinanceiro } from "../lib/financeiro-diagnostico";
+import { extrairDadosClinicaDeUsuario, type DadosClinica } from "../lib/dados-clinica";
 import {
   calcularFechamentoMes,
   rotuloVariacao,
@@ -136,15 +142,16 @@ export default function FinanceiroPage() {
   const [sessoes, setSessoes] = useState<Sessao[]>([]);
   const [frequencias, setFrequencias] = useState<Frequencia[]>([]);
 
-  const [mesSelecionado, setMesSelecionado] = useState(mesAtualChave);
+  const [mesSelecionado, setMesSelecionado] = useState(mesInicialPreferido);
   const [semanaSelecionada, setSemanaSelecionada] = useState("");
   /** Quando true, o filtro de mês acompanha o calendário (virada de mês). */
-  const seguirMesCalendarioRef = useRef(true);
-  const mesCalendarioRef = useRef(mesAtualChave());
+  const seguirMesCalendarioRef = useRef(deveSeguirMesCalendario());
+  const mesCalendarioRef = useRef(mesInicialPreferido());
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
+  const [dadosClinica, setDadosClinica] = useState<DadosClinica | undefined>();
 
   const intervaloAtivo = Boolean(dataInicio.trim() && dataFim.trim());
   const semanaAtiva = Boolean(semanaSelecionada.trim());
@@ -163,6 +170,8 @@ export default function FinanceiroPage() {
       setCarregando(false);
       return;
     }
+
+    setDadosClinica(extrairDadosClinicaDeUsuario(user));
 
     const manutencao =
       forcarManutencao || deveExecutarManutencaoFrequencia(user.id);
@@ -210,6 +219,7 @@ export default function FinanceiroPage() {
   }, [carregar]);
 
   useEffect(() => {
+    if (!deveSeguirMesCalendario()) return;
     const { mudou, mesAtual } = detectarViradaMesCalendario();
     if (!mudou || !mesAtual) return;
 
@@ -459,7 +469,10 @@ export default function FinanceiroPage() {
   function aoMudarMes(valor: string) {
     const atual = mesAtualChave();
     seguirMesCalendarioRef.current = Boolean(valor && valor === atual);
-    if (valor) mesCalendarioRef.current = valor;
+    if (valor) {
+      mesCalendarioRef.current = valor;
+      persistirMesSelecionado(valor);
+    }
     setMesSelecionado(valor);
     limparSemana();
   }
@@ -567,7 +580,8 @@ export default function FinanceiroPage() {
                             await exportarFinanceiroXlsx(
                               dados,
                               sufixoCsv,
-                              labelFiltroAtivo || "Todos os períodos"
+                              labelFiltroAtivo || "Todos os períodos",
+                              dadosClinica
                             );
                           } catch (e) {
                             const msg = String(
@@ -773,7 +787,7 @@ export default function FinanceiroPage() {
                 onClick={() => {
                   void (async () => {
                     try {
-                      await exportarFechamentoMesXlsx(fechamento);
+                      await exportarFechamentoMesXlsx(fechamento, dadosClinica);
                     } catch (e) {
                       const msg = String(
                         (e as { message?: string } | null)?.message || e || ""

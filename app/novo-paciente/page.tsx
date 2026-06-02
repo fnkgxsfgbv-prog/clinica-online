@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import CidSearchSelect from "../components/CidSearchSelect";
 import FlashMessage from "../components/FlashMessage";
 import Janela from "../components/Janela";
+import { usePreferencias } from "../components/PreferenciasProvider";
 import { getCurrentUser } from "../lib/auth";
 import { createPaciente } from "../lib/db/pacientes";
 import { salvarDataInicioNasObservacoes } from "../lib/paciente-metadata";
@@ -14,6 +15,7 @@ import { mensagemErroSupabase } from "../lib/supabase-error";
 
 export default function NovoPaciente() {
   const router = useRouter();
+  const { preferencias } = usePreferencias();
 
   const [nome, setNome] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
@@ -21,6 +23,12 @@ export default function NovoPaciente() {
   const [telefone, setTelefone] = useState("");
   const [cid, setCid] = useState("");
   const [valorSessao, setValorSessao] = useState("");
+
+  useEffect(() => {
+    if (preferencias.valorSessaoPadrao) {
+      setValorSessao(preferencias.valorSessaoPadrao);
+    }
+  }, [preferencias.valorSessaoPadrao]);
 
   const [flash, setFlash] = useState<{
     kind: "success" | "error";
@@ -68,7 +76,7 @@ export default function NovoPaciente() {
     setDataInicioAtendimento("");
     setTelefone("");
     setCid("");
-    setValorSessao("");
+    setValorSessao(preferencias.valorSessaoPadrao || "");
   }
 
   return (

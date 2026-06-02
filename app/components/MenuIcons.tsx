@@ -21,7 +21,8 @@ export type MenuIconName =
   | "financeiro"
   | "documentos"
   | "frequencia"
-  | "clinica";
+  | "clinica"
+  | "preferencias";
 
 export function MenuIcon({
   name,
@@ -83,6 +84,13 @@ export function MenuIcon({
           <path d="M6 4h9l3 3v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" />
           <path d="M15 4v4h4" />
           <path d="M8 12h8M8 16h5" />
+        </svg>
+      );
+    case "preferencias":
+      return (
+        <svg {...base} {...props}>
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
         </svg>
       );
     default:
