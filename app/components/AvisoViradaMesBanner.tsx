@@ -16,6 +16,7 @@ export default function AvisoViradaMesBanner({ aviso, onDispensar }: Props) {
   if (!aviso) return null;
 
   function dispensar() {
+    if (!aviso) return;
     dispensarAvisoViradaMes(aviso.mesAtual);
     onDispensar();
   }
