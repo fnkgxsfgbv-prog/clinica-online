@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { criarAvisoViradaMes, type AvisoViradaMes } from "./aviso-virada-mes";
 import {
   detectarViradaMesCalendario,
   mesAtualChave,
@@ -16,12 +17,18 @@ import {
  */
 export function useFiltroMesCalendario() {
   const [mes, setMesState] = useState(mesInicialPreferido);
+  const [avisoViradaMes, setAvisoViradaMes] = useState<AvisoViradaMes | null>(
+    null
+  );
   const seguirMesCalendarioRef = useRef(deveSeguirMesCalendario());
   const mesCalendarioRef = useRef(mesInicialPreferido());
 
   useEffect(() => {
+    const { mudou, mesAtual, mesAnterior } = detectarViradaMesCalendario();
+    const aviso = criarAvisoViradaMes(mudou, mesAnterior, mesAtual);
+    if (aviso) setAvisoViradaMes(aviso);
+
     if (!deveSeguirMesCalendario()) return;
-    const { mudou, mesAtual } = detectarViradaMesCalendario();
     if (!mudou || !mesAtual) return;
     seguirMesCalendarioRef.current = true;
     mesCalendarioRef.current = mesAtual;
@@ -55,10 +62,16 @@ export function useFiltroMesCalendario() {
     setMesState(atual);
   }, []);
 
+  const dispensarAvisoViradaMes = useCallback(() => {
+    setAvisoViradaMes(null);
+  }, []);
+
   return {
     mes,
     setMes,
     selecionarMesAtual,
     mesAtual: mesAtualChave(),
+    avisoViradaMes,
+    dispensarAvisoViradaMes,
   };
 }

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import FlashMessage from "../components/FlashMessage";
+import AvisoViradaMesBanner from "../components/AvisoViradaMesBanner";
 import Janela from "../components/Janela";
 import { getCurrentUser } from "../lib/auth";
 import { carregarFrequenciasCompleto } from "../lib/db/frequencia";
@@ -34,7 +35,14 @@ export default function FrequenciaPage() {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState("");
-  const { mes, setMes, selecionarMesAtual, mesAtual } = useFiltroMesCalendario();
+  const {
+    mes,
+    setMes,
+    selecionarMesAtual,
+    mesAtual,
+    avisoViradaMes,
+    dispensarAvisoViradaMes,
+  } = useFiltroMesCalendario();
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
 
@@ -287,6 +295,10 @@ export default function FrequenciaPage() {
   return (
     <div className="frequency-page">
       <Janela titulo="Frequência e Financeiro">
+        <AvisoViradaMesBanner
+          aviso={avisoViradaMes}
+          onDispensar={dispensarAvisoViradaMes}
+        />
         {erro ? <FlashMessage kind="error">{erro}</FlashMessage> : null}
 
         {carregando ? (

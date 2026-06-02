@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import FlashMessage from "../components/FlashMessage";
+import AvisoViradaMesBanner from "../components/AvisoViradaMesBanner";
 import Janela from "../components/Janela";
 import { getCurrentUser } from "../lib/auth";
 import { carregarFrequenciasCompleto } from "../lib/db/frequencia";
@@ -32,6 +33,7 @@ import {
   labelMesAno,
   mesAtualChave,
 } from "../lib/mes";
+import { criarAvisoViradaMes, type AvisoViradaMes } from "../lib/aviso-virada-mes";
 import {
   deveSeguirMesCalendario,
   mesInicialPreferido,
@@ -143,6 +145,9 @@ export default function FinanceiroPage() {
   const [frequencias, setFrequencias] = useState<Frequencia[]>([]);
 
   const [mesSelecionado, setMesSelecionado] = useState(mesInicialPreferido);
+  const [avisoViradaMes, setAvisoViradaMes] = useState<AvisoViradaMes | null>(
+    null
+  );
   const [semanaSelecionada, setSemanaSelecionada] = useState("");
   /** Quando true, o filtro de mês acompanha o calendário (virada de mês). */
   const seguirMesCalendarioRef = useRef(deveSeguirMesCalendario());
@@ -219,8 +224,11 @@ export default function FinanceiroPage() {
   }, [carregar]);
 
   useEffect(() => {
+    const { mudou, mesAtual, mesAnterior } = detectarViradaMesCalendario();
+    const aviso = criarAvisoViradaMes(mudou, mesAnterior, mesAtual);
+    if (aviso) setAvisoViradaMes(aviso);
+
     if (!deveSeguirMesCalendario()) return;
-    const { mudou, mesAtual } = detectarViradaMesCalendario();
     if (!mudou || !mesAtual) return;
 
     seguirMesCalendarioRef.current = true;
@@ -732,6 +740,10 @@ export default function FinanceiroPage() {
           </div>
         </div>
 
+        <AvisoViradaMesBanner
+          aviso={avisoViradaMes}
+          onDispensar={() => setAvisoViradaMes(null)}
+        />
         {erro ? <FlashMessage kind="error">{erro}</FlashMessage> : null}
 
         {!carregando && alertasFinanceiro.length > 0 ? (

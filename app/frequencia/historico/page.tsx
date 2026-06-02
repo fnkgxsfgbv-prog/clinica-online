@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import FlashMessage from "../../components/FlashMessage";
+import AvisoViradaMesBanner from "../../components/AvisoViradaMesBanner";
 import Janela from "../../components/Janela";
 import { getCurrentUser } from "../../lib/auth";
 import {
@@ -29,8 +30,14 @@ export default function HistoricoFrequenciaPage() {
   const [totalFrequencias, setTotalFrequencias] = useState<number | null>(
     null
   );
-  const { mes: mesSelecionado, setMes: setMesSelecionado, selecionarMesAtual, mesAtual } =
-    useFiltroMesCalendario();
+  const {
+    mes: mesSelecionado,
+    setMes: setMesSelecionado,
+    selecionarMesAtual,
+    mesAtual,
+    avisoViradaMes,
+    dispensarAvisoViradaMes,
+  } = useFiltroMesCalendario();
   const [carregando, setCarregando] = useState(true);
   const [carregandoMais, setCarregandoMais] = useState(false);
   const [erro, setErro] = useState("");
@@ -195,6 +202,10 @@ export default function HistoricoFrequenciaPage() {
   return (
     <div>
       <Janela titulo="Histórico de Frequência">
+        <AvisoViradaMesBanner
+          aviso={avisoViradaMes}
+          onDispensar={dispensarAvisoViradaMes}
+        />
         {erro ? <FlashMessage kind="error">{erro}</FlashMessage> : null}
 
         <div

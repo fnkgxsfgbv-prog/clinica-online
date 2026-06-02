@@ -6,6 +6,7 @@ import supabase from "./supabase";
 export const PREFS_METADATA_KEY = "psicodesk_prefs";
 export const PREFS_LOCAL_KEY = "psicodesk-prefs";
 export const THEME_STORAGE_KEY = "psicodesk-theme";
+export const AVISO_VIRADA_MES_KEY = "psicodesk-aviso-virada-mes";
 
 export type TemaPreferencia = "light" | "dark";
 export type MesModoPreferencia = "automatico" | "ultimo";
@@ -158,6 +159,21 @@ export function mesInicialPreferido(): string {
 export function deveSeguirMesCalendario(): boolean {
   const prefs = lerPreferenciasLocal();
   return prefs?.mesModo !== "ultimo";
+}
+
+export function deveMostrarAvisoViradaMes(): boolean {
+  const prefs = lerPreferenciasLocal();
+  return prefs?.avisoViradaMes !== false;
+}
+
+export function avisoViradaMesJaDispensado(mesAtual: string): boolean {
+  if (typeof window === "undefined" || !mesAtual) return false;
+  return window.localStorage.getItem(AVISO_VIRADA_MES_KEY) === mesAtual;
+}
+
+export function dispensarAvisoViradaMes(mesAtual: string): void {
+  if (typeof window === "undefined" || !mesAtual) return;
+  window.localStorage.setItem(AVISO_VIRADA_MES_KEY, mesAtual);
 }
 
 export function persistirMesSelecionado(mes: string): void {

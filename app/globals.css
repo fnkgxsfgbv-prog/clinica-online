@@ -5650,6 +5650,23 @@ button:hover {
   background: color-mix(in srgb, var(--card) 88%, transparent);
 }
 
+.aviso-virada-mes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.aviso-virada-mes p {
+  margin: 0;
+  flex: 1 1 220px;
+}
+
+.aviso-virada-mes-btn {
+  flex-shrink: 0;
+}
+
 [data-theme="light"] .app-flash-success {
   color: #166534;
   border-color: rgba(22, 101, 52, 0.35);

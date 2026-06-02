@@ -27,15 +27,17 @@ export function mesesComMesAtual(meses: string[]): string[] {
 export function detectarViradaMesCalendario(): {
   mudou: boolean;
   mesAtual: string;
+  mesAnterior: string;
 } {
   const mesAtual = mesAtualChave();
   if (typeof window === "undefined") {
-    return { mudou: false, mesAtual };
+    return { mudou: false, mesAtual, mesAnterior: "" };
   }
 
   const gravado =
     window.localStorage.getItem(MES_CALENDARIO_KEY) ??
-    window.localStorage.getItem(LEGACY_FINANCEIRO_MES_KEY);
+    window.localStorage.getItem(LEGACY_FINANCEIRO_MES_KEY) ??
+    "";
 
   if (mesAtual) {
     window.localStorage.setItem(MES_CALENDARIO_KEY, mesAtual);
@@ -44,6 +46,7 @@ export function detectarViradaMesCalendario(): {
   return {
     mudou: Boolean(gravado && mesAtual && gravado !== mesAtual),
     mesAtual,
+    mesAnterior: gravado,
   };
 }
 
