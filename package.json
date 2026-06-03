@@ -14,6 +14,7 @@
     "production:sync-supabase-auth": "node --env-file=.env.local scripts/sync-supabase-production-url.mjs",
     "github:init-push": "bash scripts/github-init-push.sh",
     "push:github": "node scripts/push-github.mjs",
+    "deploy:check": "node scripts/check-auto-deploy.mjs",
     "lint": "eslint",
     "security:check": "node --env-file=.env.local scripts/validate-security.mjs",
     "security:apply-rls": "node --env-file=.env.local scripts/apply-rls.mjs",

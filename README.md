@@ -10,7 +10,8 @@ Funciona no navegador, no notebook da equipe e no app Mac **sem** ligar o servid
 
 | Ação | Comando |
 |------|---------|
-| Publicar alterações | `npm run site:deploy` (roda testes antes) |
+| Publicar alterações | Push na `main` (automático) ou `npm run site:deploy` (manual) |
+| Ativar deploy automático | `npm run deploy:check` (configura secret no GitHub) |
 | Conferir migrations Supabase | `npm run db:check-migrations` |
 | Pacote comercial (deploy + auth) | `npm run producao:comercial` |
 | Ver URL pública | `npm run site:url` |

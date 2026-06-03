@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Envia a branch atual para origin usando um token (evita "Device not configured").
-# Token: https://github.com/settings/tokens (classic: escopo repo)
+# Token: https://github.com/settings/tokens
+# Classic: escopos repo + workflow (workflow só na 1ª vez que envia .github/workflows/)
 #
 #   GITHUB_TOKEN=ghp_xxxx bash scripts/push-with-github-token.sh
 #   npm run push:github
@@ -38,4 +39,5 @@ fi
 echo "→ git push para github.com/${path} …"
 git push "https://oauth2:${TOKEN}@github.com/${path}.git" HEAD:main
 
-echo "→ OK. Próximo: Vercel → Import → ${path}"
+echo "→ OK. Se o deploy automático estiver configurado (GitHub secret VERCEL_TOKEN), a Vercel publica sozinha em ~2 min."
+echo "   Conferir: npm run deploy:check"

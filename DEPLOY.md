@@ -2,7 +2,9 @@
 
 **URL atual:** https://clinica-online-ten.vercel.app/login
 
-**Publicar mudanças:** `npm run site:deploy`
+**Publicar mudanças:** push na `main` (deploy automático) ou `npm run site:deploy` (manual).
+
+**Ativar deploy automático (uma vez):** `npm run deploy:check`
 
 **App PsicoDesk no Mac (Dock):** após mudar de localhost para produção, rode `npm run psicodesk:producao`, feche o app (Cmd+Q) e abra de novo.
 
@@ -124,9 +126,33 @@ git push -u origin main
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 4. **Deploy**. Anote a URL (ex.: `https://clinica-online-xxx.vercel.app`).
 
-O workflow opcional de GitHub Actions foi removido do repo: pushes com PAT
-só com escopo **repo** falham em arquivos sob `.github/workflows/` sem escopo **workflow**.
-Para CI na Vercel, use a integração Git da Vercel (Import Repository).
+O workflow de GitHub Actions (`.github/workflows/vercel-production.yml`) publica em produção a cada push na `main` do repositório **`fnkgxsfgbv-prog/clinica-online`**.
+
+**Por que não basta o Git da Vercel?** O projeto na Vercel está ligado a `joaopcvoliveira-sudo/clinica-online`, mas o código é enviado para `fnkgxsfgbv-prog/clinica-online`. O workflow resolve isso: testa e faz deploy via CLI no push certo.
+
+### Configuração única (2 minutos)
+
+1. Crie um [token Vercel](https://vercel.com/account/settings/tokens) (escopo **joaopcvoliveira-7251's projects** ou Full Account).
+2. No GitHub: [Secrets do repositório](https://github.com/fnkgxsfgbv-prog/clinica-online/settings/secrets/actions) → **New repository secret** → nome **`VERCEL_TOKEN`**, cole o token.
+3. Envie o código com PAT que tenha escopos **`repo`** e **`workflow`**:
+
+```bash
+GITHUB_TOKEN=ghp_... npm run push:github
+```
+
+4. Próximos pushes na `main` disparam o workflow **Deploy production** (Actions no GitHub). Em ~2 minutos o site atualiza.
+
+Conferir instruções: `npm run deploy:check`
+
+Deploy manual continua disponível: `npm run site:deploy` (token no `.env.local` ou `vercel login`).
+
+---
+
+### CI na Vercel (alternativa nativa)
+
+Para usar só a integração Git da Vercel (sem GitHub Actions), ligue o projeto ao repositório **`fnkgxsfgbv-prog/clinica-online`** em Vercel → Settings → Git (conta GitHub `fnkgxsfgbv-prog` no namespace da Vercel). Aí cada push na `main` publica direto.
+
+O workflow abaixo foi removido anteriormente por PAT sem escopo **workflow**; o novo workflow exige esse escopo na **primeira** vez que o arquivo for enviado.
 
 ### 3. Supabase — login na URL de produção
 

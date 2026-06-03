@@ -37,7 +37,8 @@ loadEnvLocal();
 if (!process.env.GITHUB_TOKEN) {
   console.error(
     "Adicione ao .env.local (não commite):\n  GITHUB_TOKEN=ghp_...\n" +
-      "Token: https://github.com/settings/tokens (classic, escopo repo)\n" +
+      "Token: https://github.com/settings/tokens\n" +
+      "  Classic: escopos repo + workflow (workflow é obrigatório na 1ª vez com .github/workflows/)\n" +
       "Ou rode: GITHUB_TOKEN=ghp_... npm run push:github"
   );
   process.exit(1);
