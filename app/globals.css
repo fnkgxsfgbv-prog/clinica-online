@@ -3702,6 +3702,20 @@ button:hover {
 
 /* COMPACT PATIENT LIST */
 
+.patients-summary {
+  margin: 0 0 16px;
+  color: var(--text-muted, rgba(255, 255, 255, 0.62));
+  font-size: 14px;
+}
+
+.patients-summary-sep {
+  margin: 0 0.35em;
+}
+
+.patients-summary-filtered {
+  color: var(--text-secondary, rgba(255, 255, 255, 0.78));
+}
+
 .patients-toolbar {
   align-items: center;
 }
@@ -3717,7 +3731,7 @@ button:hover {
 }
 
 .patients-table {
-  min-width: 820px;
+  min-width: 980px;
   table-layout: fixed;
 }
 
@@ -3729,32 +3743,43 @@ button:hover {
 }
 
 .patients-table th:nth-child(1) {
-  width: 34%;
+  width: 26%;
 }
 
 .patients-table th:nth-child(2) {
-  width: 120px;
+  width: 110px;
 }
 
 .patients-table th:nth-child(3) {
-  width: 140px;
+  width: 120px;
 }
 
 .patients-table th:nth-child(4) {
-  width: 90px;
+  width: 120px;
 }
 
 .patients-table th:nth-child(5) {
-  width: 100px;
+  width: 80px;
 }
 
 .patients-table th:nth-child(6) {
-  width: 310px;
+  width: 90px;
+}
+
+.patients-table th:nth-child(7) {
+  width: 340px;
   text-align: right;
 }
 
-.patients-table td:nth-child(5) {
+.patients-table td:nth-child(6) {
   white-space: nowrap;
+}
+
+.patients-name-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
 }
 
 .patients-name-cell strong {
@@ -3767,14 +3792,50 @@ button:hover {
   -webkit-line-clamp: 2;
 }
 
+.patients-row-clickable {
+  cursor: pointer;
+}
+
+.patients-row-clickable:hover {
+  background: rgba(47, 155, 135, 0.06);
+}
+
+.patients-row-clickable:focus-visible {
+  outline: 2px solid rgba(47, 155, 135, 0.55);
+  outline-offset: -2px;
+}
+
+.patients-cadastro-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #d97706;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.patients-cadastro-badge:hover {
+  background: rgba(245, 158, 11, 0.22);
+}
+
+.patients-phone-cell {
+  white-space: nowrap;
+  font-size: 13px;
+}
+
 .patients-actions-cell {
   text-align: right;
-  min-width: 310px;
+  min-width: 340px;
 }
 
 .patients-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(74px, 1fr));
+  grid-template-columns: repeat(4, minmax(68px, 1fr));
   justify-content: flex-end;
   align-items: center;
   gap: 7px;

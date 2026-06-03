@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Calendar, momentLocalizer, Views } from "react-big-calendar";
 import type { EventProps, ToolbarProps, View } from "react-big-calendar";
 import moment from "moment";
@@ -30,6 +30,7 @@ import {
   sessaoPassaFiltroAgenda,
 } from "../lib/agenda-sessao";
 import { dataReferenciaISO } from "../lib/financeiro";
+import { dataIsoHoje } from "../lib/datas-paciente";
 import {
   rotuloStatusFrequencia,
   visualFrequenciaAgenda,
@@ -95,6 +96,8 @@ type SessaoParaCriar = {
 
 export default function AgendaClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pacienteAgendaPreselecionado = useRef(false);
   const { preferencias } = usePreferencias();
   const [dataAtual, setDataAtual] = useState(new Date());
   const [visualizacao, setVisualizacao] = useState<View>(() => {
@@ -212,6 +215,21 @@ export default function AgendaClient() {
   useEffect(() => {
     void carregarDados();
   }, [carregarDados]);
+
+  useEffect(() => {
+    if (pacienteAgendaPreselecionado.current) return;
+
+    const idParam = searchParams.get("paciente")?.trim();
+    if (!idParam || pacientes.length === 0) return;
+
+    const encontrado = pacientes.find((p) => String(p.id) === idParam);
+    if (!encontrado) return;
+
+    pacienteAgendaPreselecionado.current = true;
+    setPacienteId(String(encontrado.id));
+    setData(dataIsoHoje());
+    setAbrirForm(true);
+  }, [searchParams, pacientes]);
 
   useEffect(() => {
     setVisualizacao(

@@ -4,6 +4,7 @@ import {
   hrefPendencia,
   listarLinhasPendencia,
   montarChecklistUnificado,
+  pendenciasCadastroPaciente,
   totalPendenciasChecklist,
 } from "./checklist-clinica";
 import type { Paciente, Sessao } from "../types";
@@ -45,6 +46,21 @@ describe("montarChecklistUnificado", () => {
     );
     const semTelefone = itens.find((i) => i.id === "cadastro-sem-telefone");
     expect(semTelefone?.href).toBe(hrefPendencia("cadastro-sem-telefone"));
+  });
+
+  it("lista pendências de cadastro por paciente", () => {
+    const pendencias = pendenciasCadastroPaciente({
+      ...pacienteBase,
+      telefone: "",
+      cid: "",
+    });
+    expect(pendencias.map((p) => p.tipo)).toEqual([
+      "cadastro-sem-telefone",
+      "cadastro-sem-nascimento",
+      "cadastro-sem-cid",
+      "cadastro-sem-inicio",
+      "cadastro-sem-valor",
+    ]);
   });
 
   it("lista pacientes sem telefone", () => {

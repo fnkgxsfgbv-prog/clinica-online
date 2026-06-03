@@ -45,6 +45,50 @@ export function isPendenciaTipoId(tipo: string): tipo is PendenciaTipoId {
   return (PENDENCIA_TIPOS as readonly string[]).includes(tipo);
 }
 
+export type PendenciaCadastroPaciente = {
+  tipo: PendenciaTipoId;
+  titulo: string;
+};
+
+/** Pendências de cadastro de um paciente ativo (para badge na lista). */
+export function pendenciasCadastroPaciente(
+  paciente: Paciente
+): PendenciaCadastroPaciente[] {
+  if (!pacienteAtivo(paciente)) return [];
+
+  const pendencias: PendenciaCadastroPaciente[] = [];
+
+  if (!String(paciente.telefone || "").trim()) {
+    pendencias.push({
+      tipo: "cadastro-sem-telefone",
+      titulo: "Sem telefone",
+    });
+  }
+  if (!paciente.data_nascimento) {
+    pendencias.push({
+      tipo: "cadastro-sem-nascimento",
+      titulo: "Sem nascimento",
+    });
+  }
+  if (!String(paciente.cid || "").trim()) {
+    pendencias.push({ tipo: "cadastro-sem-cid", titulo: "Sem CID" });
+  }
+  if (!extrairDataInicioAtendimento(paciente)) {
+    pendencias.push({
+      tipo: "cadastro-sem-inicio",
+      titulo: "Sem início",
+    });
+  }
+  if (!String(paciente.valor_sessao || paciente.valor || "").trim()) {
+    pendencias.push({
+      tipo: "cadastro-sem-valor",
+      titulo: "Sem valor de sessão",
+    });
+  }
+
+  return pendencias;
+}
+
 function statusNormalizado(status?: string | null) {
   return String(status || "").trim().toLowerCase();
 }

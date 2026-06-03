@@ -7,6 +7,57 @@ import { TABLES } from "./tables";
 /** Tamanho de página na lista de pacientes (UI “Carregar mais”). */
 export const PACIENTES_PAGE_SIZE = 40;
 
+export type ResumoContagemPacientes = {
+  total: number;
+  ativos: number;
+  listaEspera: number;
+};
+
+async function contarPacientesUsuario(
+  userId: string,
+  filtro?: (q: ReturnType<typeof supabase.from>) => ReturnType<typeof supabase.from>
+) {
+  let q = supabase
+    .from(TABLES.PACIENTES)
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  if (filtro) {
+    q = filtro(q);
+  }
+
+  const { count, error } = await q;
+  if (error) return { count: 0, error };
+  return { count: count ?? 0, error: null };
+}
+
+/** Contagens globais para o resumo no topo da lista de pacientes. */
+export async function resumoContagemPacientes(userId: string) {
+  const [total, ativos, listaEspera] = await Promise.all([
+    contarPacientesUsuario(userId),
+    contarPacientesUsuario(userId, (q) =>
+      q.or("status.eq.ativo,status.is.null")
+    ),
+    contarPacientesUsuario(userId, (q) =>
+      q.eq("status", "lista de espera")
+    ),
+  ]);
+
+  const error = total.error || ativos.error || listaEspera.error;
+  if (error) {
+    return { data: null, error };
+  }
+
+  return {
+    data: {
+      total: total.count,
+      ativos: ativos.count,
+      listaEspera: listaEspera.count,
+    } satisfies ResumoContagemPacientes,
+    error: null,
+  };
+}
+
 export async function listPacientesPaginated(
   userId: string,
   options: {

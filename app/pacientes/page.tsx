@@ -1,27 +1,41 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser } from "../lib/auth";
 import { formatarCidParaExibicao } from "../lib/cid-psicologia";
+import {
+  hrefPendencia,
+  pendenciasCadastroPaciente,
+} from "../lib/checklist-clinica";
 import { requireUserClient } from "../lib/require-user-client";
 import {
   deletePacienteComDependencias,
   listPacientesPaginated,
   PACIENTES_PAGE_SIZE,
+  resumoContagemPacientes,
+  type ResumoContagemPacientes,
 } from "../lib/db/pacientes";
 import FlashMessage from "../components/FlashMessage";
 import Janela from "../components/Janela";
 import type { Paciente } from "../types";
+
+function hrefTelefone(telefone: string | null | undefined) {
+  const digits = String(telefone || "").replace(/\D/g, "");
+  if (digits.length < 8) return null;
+  return `tel:${digits}`;
+}
 
 export default function PacientesPage() {
   const router = useRouter();
 
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [resumo, setResumo] = useState<ResumoContagemPacientes | null>(null);
   const [busca, setBusca] = useState("");
   const [debouncedBusca, setDebouncedBusca] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("ativo");
   const [carregando, setCarregando] = useState(true);
   const [carregandoMais, setCarregandoMais] = useState(false);
   const [erro, setErro] = useState("");
@@ -35,6 +49,13 @@ export default function PacientesPage() {
     return () => clearTimeout(t);
   }, [busca]);
 
+  const carregarResumo = useCallback(async (userId: string) => {
+    const { data, error } = await resumoContagemPacientes(userId);
+    if (!error && data) {
+      setResumo(data);
+    }
+  }, []);
+
   const carregarPrimeiraPagina = useCallback(async () => {
     setCarregando(true);
     setErro("");
@@ -45,12 +66,17 @@ export default function PacientesPage() {
       return;
     }
 
-    const { data, error, count } = await listPacientesPaginated(user.id, {
-      offset: 0,
-      limit: PACIENTES_PAGE_SIZE,
-      search: debouncedBusca,
-      status: status || undefined,
-    });
+    const [listResult] = await Promise.all([
+      listPacientesPaginated(user.id, {
+        offset: 0,
+        limit: PACIENTES_PAGE_SIZE,
+        search: debouncedBusca,
+        status: status || undefined,
+      }),
+      carregarResumo(user.id),
+    ]);
+
+    const { data, error, count } = listResult;
 
     if (error) {
       setErro("Erro ao carregar pacientes: " + error.message);
@@ -63,7 +89,7 @@ export default function PacientesPage() {
     setPacientes((data || []) as Paciente[]);
     setTotalCount(count ?? 0);
     setCarregando(false);
-  }, [router, debouncedBusca, status]);
+  }, [router, debouncedBusca, status, carregarResumo]);
 
   useEffect(() => {
     void carregarPrimeiraPagina();
@@ -137,13 +163,43 @@ export default function PacientesPage() {
     void carregarPrimeiraPagina();
   }
 
+  function abrirPaciente(id: string | number) {
+    router.push(`/paciente/${id}`);
+  }
+
   const temMais =
     totalCount != null && pacientes.length < totalCount;
+
+  const filtroAtivo = debouncedBusca.trim() || status !== "ativo";
 
   return (
     <div className="patients-page">
       <Janela titulo="Pacientes">
         {erro ? <FlashMessage kind="error">{erro}</FlashMessage> : null}
+
+        {resumo ? (
+          <p className="patients-summary">
+            <span>{resumo.ativos} ativos</span>
+            <span className="patients-summary-sep" aria-hidden>
+              ·
+            </span>
+            <span>{resumo.listaEspera} lista de espera</span>
+            <span className="patients-summary-sep" aria-hidden>
+              ·
+            </span>
+            <span>{resumo.total} total</span>
+            {filtroAtivo && totalCount != null ? (
+              <>
+                <span className="patients-summary-sep" aria-hidden>
+                  ·
+                </span>
+                <span className="patients-summary-filtered">
+                  {totalCount} neste filtro
+                </span>
+              </>
+            ) : null}
+          </p>
+        ) : null}
 
         {exclusaoPendente ? (
           <div
@@ -230,6 +286,7 @@ export default function PacientesPage() {
               <tr>
                 <th>Nome</th>
                 <th>Status</th>
+                <th>Telefone</th>
                 <th>Convênio</th>
                 <th>CID</th>
                 <th>Valor</th>
@@ -240,11 +297,40 @@ export default function PacientesPage() {
             <tbody>
               {pacientes.map((p) => {
                 const statusPaciente = p.status || "ativo";
+                const pendencias = pendenciasCadastroPaciente(p);
+                const telHref = hrefTelefone(p.telefone);
 
                 return (
-                  <tr key={p.id}>
+                  <tr
+                    key={p.id}
+                    className="patients-row-clickable"
+                    tabIndex={0}
+                    role="link"
+                    aria-label={`Abrir prontuário de ${p.nome}`}
+                    onClick={() => abrirPaciente(p.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        abrirPaciente(p.id);
+                      }
+                    }}
+                  >
                     <td className="patients-name-cell">
-                      <strong>{p.nome}</strong>
+                      <div className="patients-name-wrap">
+                        <strong>{p.nome}</strong>
+                        {pendencias.length > 0 ? (
+                          <Link
+                            href={hrefPendencia(pendencias[0].tipo)}
+                            className="patients-cadastro-badge"
+                            title={pendencias
+                              .map((item) => item.titulo)
+                              .join(" · ")}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Cadastro incompleto
+                          </Link>
+                        ) : null}
+                      </div>
                     </td>
 
                     <td>
@@ -257,20 +343,50 @@ export default function PacientesPage() {
                       </span>
                     </td>
 
-                    <td>{p.convenio || "-"}</td>
+                    <td className="patients-phone-cell">
+                      {p.telefone?.trim() ? p.telefone : "—"}
+                    </td>
+                    <td>{p.convenio || "—"}</td>
                     <td>{formatarCidParaExibicao(p.cid)}</td>
-                    <td>{p.valor_sessao ? `R$ ${p.valor_sessao}` : "-"}</td>
+                    <td>{p.valor_sessao ? `R$ ${p.valor_sessao}` : "—"}</td>
 
-                    <td className="patients-actions-cell">
+                    <td
+                      className="patients-actions-cell"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="patients-actions">
                         <button
+                          type="button"
                           className="btn btn-outline"
-                          onClick={() => router.push(`/paciente/${p.id}`)}
+                          title="Agendar sessão"
+                          onClick={() =>
+                            router.push(`/agenda?paciente=${p.id}`)
+                          }
                         >
-                          Abrir
+                          Agendar
                         </button>
 
+                        {telHref ? (
+                          <a
+                            className="btn btn-outline"
+                            href={telHref}
+                            title={`Ligar para ${p.nome}`}
+                          >
+                            Ligar
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn btn-outline"
+                            disabled
+                            title="Sem telefone cadastrado"
+                          >
+                            Ligar
+                          </button>
+                        )}
+
                         <button
+                          type="button"
                           className="btn btn-outline"
                           onClick={() =>
                             router.push(`/paciente/${p.id}/editar`)
@@ -280,6 +396,7 @@ export default function PacientesPage() {
                         </button>
 
                         <button
+                          type="button"
                           className="btn btn-danger"
                           onClick={() => solicitarExclusao(p.id, p.nome)}
                         >
