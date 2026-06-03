@@ -8,9 +8,8 @@ import {
   rotuloDistanciaAniversario,
 } from "./lib/datas-paciente";
 import { requireUserClient } from "./lib/require-user-client";
-import { listFrequenciasResumo } from "./lib/db/frequencia";
+import { listFrequenciasResumo, resumoComparecimentoMes } from "./lib/db/frequencia";
 import { deduplicarFrequenciasPorSessao } from "./lib/frequencia-utils";
-import { isStatusFaltou, isStatusPresente } from "./lib/status";
 import { listPacientes } from "./lib/db/pacientes";
 import { listSessoesAgendadasFuturas, listSessoesDoDia } from "./lib/db/sessoes";
 import DashboardAgendaHoje, {
@@ -45,6 +44,10 @@ export default function Home() {
   const [sessoes, setSessoes] = useState<Sessao[]>([]);
   const [sessoesHojeLista, setSessoesHojeLista] = useState<Sessao[]>([]);
   const [frequencias, setFrequencias] = useState<Frequencia[]>([]);
+  const [comparecimentoMes, setComparecimentoMes] = useState({
+    presencas: 0,
+    faltas: 0,
+  });
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
 
@@ -62,18 +65,22 @@ export default function Home() {
     const hoje = formatarDataISO(agora);
     const horaAtual = agora.toTimeString().slice(0, 5);
 
-    const [pRes, sRes, fRes, hojeRes] = await Promise.all([
+    const mesAtualChave = hoje.slice(0, 7);
+
+    const [pRes, sRes, fRes, hojeRes, comparecimentoRes] = await Promise.all([
       listPacientes(user.id),
       listSessoesAgendadasFuturas(user.id, hoje, horaAtual),
       listFrequenciasResumo(user.id),
       listSessoesDoDia(user.id, hoje),
+      resumoComparecimentoMes(user.id, mesAtualChave),
     ]);
 
     const loadError =
       pRes.error?.message ||
       sRes.error?.message ||
       fRes.error?.message ||
-      hojeRes.error?.message;
+      hojeRes.error?.message ||
+      comparecimentoRes.error?.message;
 
     if (loadError) {
       setErro("Erro ao carregar o dashboard: " + loadError);
@@ -81,6 +88,7 @@ export default function Home() {
       setSessoes([]);
       setSessoesHojeLista([]);
       setFrequencias([]);
+      setComparecimentoMes({ presencas: 0, faltas: 0 });
       setCarregando(false);
       return;
     }
@@ -93,6 +101,10 @@ export default function Home() {
     setFrequencias(
       deduplicarFrequenciasPorSessao((fRes.data || []) as Frequencia[])
     );
+    setComparecimentoMes({
+      presencas: comparecimentoRes.presencas,
+      faltas: comparecimentoRes.faltas,
+    });
     setCarregando(false);
   }, [router]);
 
@@ -108,9 +120,8 @@ export default function Home() {
 
   const sessoesHoje = sessoesHojeLista;
 
-  const presencas = frequencias.filter((f) => isStatusPresente(f.status)).length;
-
-  const faltas = frequencias.filter((f) => isStatusFaltou(f.status)).length;
+  const presencas = comparecimentoMes.presencas;
+  const faltas = comparecimentoMes.faltas;
 
   const receitaPrevista = sessoes.reduce(
     (total, sessao) => {
@@ -170,7 +181,7 @@ export default function Home() {
             <DashboardMetric
               label="Comparecimento"
               value={`${taxaComparecimento}%`}
-              detail={`${presencas} presenças / ${faltas} faltas`}
+              detail={`${presencas} presenças / ${faltas} faltas no mês`}
               variant="attendance"
             />
 
@@ -224,7 +235,7 @@ function BirthdayReminder({
       <div className="birthday-empty-card">
         <strong>Nenhum aniversário cadastrado para este mês</strong>
         <p>
-          Cadastre a data de nascimento dos pacientes para receber lembretes
+          Cadastre a data de nascimento dos pacientes para ver aniversários
           detalhados aqui.
         </p>
       </div>

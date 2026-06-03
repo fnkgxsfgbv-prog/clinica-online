@@ -57,9 +57,10 @@ const menuItems: MenuItem[] = [
     icon: "documentos",
   },
   {
-    href: "/frequencia/historico",
+    href: "/frequencia",
     label: "Frequência",
     icon: "frequencia",
+    activePaths: ["/frequencia"],
   },
   {
     href: "/minha-clinica",
@@ -72,7 +73,7 @@ const menuItems: MenuItem[] = [
 const routeTitles: Array<[string, string]> = [
   ["/modelos", "Documentos"],
   ["/novo-paciente", "Novo paciente"],
-  ["/frequencia/historico", "Histórico"],
+  ["/frequencia/historico", "Frequência"],
   ["/frequencia", "Frequência"],
   ["/financeiro", "Financeiro"],
   ["/agenda", "Agenda"],

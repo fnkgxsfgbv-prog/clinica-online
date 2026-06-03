@@ -132,6 +132,34 @@ export async function listFrequenciasResumo(userId: string, limit = 800) {
     .limit(limit);
 }
 
+/** Comparecimento do mês calendário (sem limite artificial de linhas). */
+export async function resumoComparecimentoMes(
+  userId: string,
+  mesAAAAmm: string
+) {
+  const { data, error } = await supabase
+    .from(TABLES.FREQUENCIA)
+    .select("id,status,sessao_id,data")
+    .eq("user_id", userId)
+    .like("data", `${mesAAAAmm}%`);
+
+  if (error) {
+    return { presencas: 0, faltas: 0, error };
+  }
+
+  const deduplicadas = deduplicarFrequenciasPorSessao(data || []);
+  let presencas = 0;
+  let faltas = 0;
+
+  for (const item of deduplicadas) {
+    const status = String(item.status || "").trim();
+    if (status === "Presente") presencas += 1;
+    else if (status === "Faltou") faltas += 1;
+  }
+
+  return { presencas, faltas, error: null };
+}
+
 export async function listFrequenciasPresentes(userId: string) {
   return supabase
     .from(TABLES.FREQUENCIA)

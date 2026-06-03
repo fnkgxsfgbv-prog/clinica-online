@@ -9088,6 +9088,49 @@ td {
   background: rgba(61, 56, 101, 0.12);
 }
 
+.patient-sessoes-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.patient-sessoes-subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.patient-sessoes-subtab span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 11px;
+}
+
+.patient-sessoes-subtab.is-active {
+  background: rgba(143, 212, 199, 0.18);
+  border-color: rgba(143, 212, 199, 0.45);
+  color: #8fd4c7;
+}
+
+.patient-sessoes-subtab.is-active span {
+  background: rgba(143, 212, 199, 0.22);
+}
+
 .patient-session-card,
 .patient-document-row {
   border-radius: 10px !important;
@@ -9547,6 +9590,15 @@ td {
 [data-theme="light"] .patient-tab.is-active span {
   background: rgba(20, 90, 77, 0.12) !important;
   color: #145a4d !important;
+}
+
+[data-theme="light"] .patient-sessoes-subtab.is-active {
+  color: #0f766e;
+}
+
+[data-theme="light"] .patient-sessoes-subtab {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(15, 23, 42, 0.1);
 }
 
 [data-theme="light"] .clinic-inner-menu button:hover,
@@ -10518,6 +10570,66 @@ td {
 }
 
 [data-theme="light"] .clinic-insight-cta {
+  color: #0f766e;
+}
+
+.frequencia-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.frequencia-subnav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.frequencia-subnav-link.is-active {
+  background: rgba(143, 212, 199, 0.18);
+  border-color: rgba(143, 212, 199, 0.45);
+  color: #8fd4c7;
+}
+
+.clinic-insight-footer {
+  margin: 14px 0 0;
+}
+
+.clinic-insight-footer a {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #8fd4c7;
+  text-decoration: none;
+}
+
+.clinic-insight-footer a:hover {
+  text-decoration: underline;
+}
+
+.financeiro-alertas-mais-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.conta-em-breve {
+  font-style: normal;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+[data-theme="light"] .frequencia-subnav-link.is-active,
+[data-theme="light"] .clinic-insight-footer a {
   color: #0f766e;
 }
 

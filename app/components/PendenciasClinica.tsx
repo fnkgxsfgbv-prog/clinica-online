@@ -101,6 +101,14 @@ export default function PendenciasClinica({
           );
         })}
       </div>
+
+      {pendencias.length > visiveis.length ? (
+        <p className="clinic-insight-footer">
+          <Link href="/minha-clinica?aba=dados">
+            Ver todas as pendências em Minha clínica →
+          </Link>
+        </p>
+      ) : null}
     </section>
   );
 }

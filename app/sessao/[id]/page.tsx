@@ -45,6 +45,7 @@ export default function SessaoPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const modoAnotacoes = searchParams.get("modo") === "anotacoes";
+  const modoEvolucao = searchParams.get("modo") === "evolucao";
   const idParam = params.id;
   const id =
     typeof idParam === "string"
@@ -118,6 +119,11 @@ export default function SessaoPage() {
     // carregarEvolucoes deve rodar quando a sessão carregada muda.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessao]);
+
+  useEffect(() => {
+    if (modoAnotacoes) setAbaRegistro("anotacoes");
+    else if (modoEvolucao) setAbaRegistro("evolucao-clinica");
+  }, [modoAnotacoes, modoEvolucao]);
 
   useEffect(() => {
     setAnotacoesInicializadas(false);

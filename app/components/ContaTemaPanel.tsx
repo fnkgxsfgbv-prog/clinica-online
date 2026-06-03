@@ -59,6 +59,27 @@ export default function ContaTemaPanel({ email }: Props) {
           </span>
         </label>
 
+        <label className="context-prefs-check">
+          <input
+            type="checkbox"
+            checked={preferencias.emailResumoSemanal}
+            onChange={(e) =>
+              void atualizarPreferencias(
+                { emailResumoSemanal: e.target.checked },
+                { salvarNuvem: true }
+              )
+            }
+          />
+          <span>
+            Resumo semanal por e-mail{" "}
+            <em className="conta-em-breve">(em breve)</em>
+          </span>
+        </label>
+        <span className="context-prefs-hint">
+          Sua preferência já fica salva; o envio automático será ativado em uma
+          próxima atualização.
+        </span>
+
         <div className="conta-actions-row">
           <button
             type="button"

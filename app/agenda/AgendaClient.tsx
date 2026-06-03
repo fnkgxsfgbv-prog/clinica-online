@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Calendar, momentLocalizer, Views } from "react-big-calendar";
 import type { EventProps, ToolbarProps, View } from "react-big-calendar";
 import moment from "moment";
@@ -95,9 +95,7 @@ type SessaoParaCriar = {
 
 export default function AgendaClient() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { preferencias } = usePreferencias();
-  const simularGrupo = searchParams.get("simulacao-grupo") === "1";
   const [dataAtual, setDataAtual] = useState(new Date());
   const [visualizacao, setVisualizacao] = useState<View>(() => {
     if (preferencias.agendaVisualizacao === "day") return Views.DAY;
@@ -296,14 +294,7 @@ export default function AgendaClient() {
       },
     ];
   });
-  const eventosSimulacao: AgendaEvent[] =
-    simularGrupo && ["todos", "agendada"].includes(situacaoFiltro)
-      ? criarEventosSimulacaoGrupo(criarDataHora)
-      : [];
-  const eventos = agruparEventosParaCalendario([
-    ...eventosBanco,
-    ...eventosSimulacao,
-  ]);
+  const eventos = agruparEventosParaCalendario(eventosBanco);
 
   const dataAtualISO = formatarDataISO(dataAtual);
   const sessoesDoDia = sessoes
@@ -413,11 +404,6 @@ export default function AgendaClient() {
       setMensagem(
         `${evento.eventosAgrupados.length} sessões neste mesmo horário.`
       );
-      return;
-    }
-
-    if (String(evento.id).startsWith("simulacao-grupo-")) {
-      setMensagem("Este é um exemplo visual. Nenhum dado foi salvo.");
       return;
     }
 
@@ -875,12 +861,6 @@ export default function AgendaClient() {
         <FlashMessage kind="success">{mensagem}</FlashMessage>
       ) : null}
 
-      {simularGrupo ? (
-        <FlashMessage kind="success">
-          Simulação visual ativa: pacientes fictícios no mesmo horário.
-        </FlashMessage>
-      ) : null}
-
       {sessoes.length > 0 &&
       sessoesVisiveisNoCalendario === 0 &&
       modoAgenda === "geral" ? (
@@ -1265,39 +1245,6 @@ function organizarEventosDaAgenda({
         height: `calc(${range.height}% - 2px)`,
         width: `calc(${tamanhoGrupo}% - ${totalGrupo > 1 ? 3 : 0}px)`,
         xOffset: `calc(${deslocamento}% + ${posicaoGrupo > 1 ? 3 : 0}px)`,
-      },
-    };
-  });
-}
-
-function criarEventosSimulacaoGrupo(
-  criarDataHora: (dataSessao: string, horaSessao: string) => Date
-): AgendaEvent[] {
-  const nomes = [
-    "Simulação - Arthur Almeida",
-    "Simulação - Pedro Antônio",
-    "Simulação - Hadryan Castro",
-    "Simulação - Flavia de Jesus",
-  ];
-
-  return nomes.map((nome, index) => {
-    const inicio = criarDataHora("2026-05-21", "10:00");
-    const fim = new Date(inicio);
-    fim.setMinutes(fim.getMinutes() + 50);
-
-    return {
-      id: `simulacao-grupo-${index}`,
-      title: nome,
-      start: inicio,
-      end: fim,
-      resource: {
-        id: `simulacao-grupo-${index}`,
-        paciente_id: `simulacao-${index}`,
-        paciente_nome: nome,
-        data: "2026-05-21",
-        hora: "10:00",
-        valor: 0,
-        status: "Agendada",
       },
     };
   });

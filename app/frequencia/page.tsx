@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import FlashMessage from "../components/FlashMessage";
 import AvisoViradaMesBanner from "../components/AvisoViradaMesBanner";
+import FrequenciaSubnav from "../components/FrequenciaSubnav";
 import Janela from "../components/Janela";
+import PreferenciasMesPanel from "../components/PreferenciasMesPanel";
 import { getCurrentUser } from "../lib/auth";
 import { carregarFrequenciasCompleto } from "../lib/db/frequencia";
 import {
@@ -295,6 +297,7 @@ export default function FrequenciaPage() {
   return (
     <div className="frequency-page">
       <Janela titulo="Frequência e Financeiro">
+        <FrequenciaSubnav />
         <AvisoViradaMesBanner
           aviso={avisoViradaMes}
           onDispensar={dispensarAvisoViradaMes}
@@ -434,6 +437,10 @@ export default function FrequenciaPage() {
           >
             Este mês
           </button>
+        </div>
+
+        <div style={{ marginBottom: "22px" }}>
+          <PreferenciasMesPanel />
         </div>
 
         <div

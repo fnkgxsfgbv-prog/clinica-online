@@ -12,7 +12,6 @@ import { getPacienteById, updatePaciente } from "../../../lib/db/pacientes";
 import {
   extrairDataInicioAtendimento,
   limparObservacoesPaciente,
-  salvarDataInicioNasObservacoes,
 } from "../../../lib/paciente-metadata";
 import { requireUserClient } from "../../../lib/require-user-client";
 import { mensagemErroSupabase } from "../../../lib/supabase-error";
@@ -79,13 +78,11 @@ export default function EditarPacientePage() {
     const { error } = await updatePaciente(user.id, id, {
       nome,
       data_nascimento: dataNascimento,
+      data_inicio_atendimento: dataInicioAtendimento || null,
       telefone,
       responsavel,
       diagnostico,
-      observacoes: salvarDataInicioNasObservacoes(
-        observacoes,
-        dataInicioAtendimento
-      ),
+      observacoes: limparObservacoesPaciente(observacoes),
       convenio,
       cid,
       valor_sessao: valorSessao,

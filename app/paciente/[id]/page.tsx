@@ -28,11 +28,20 @@ import { prepararVisualizacaoDocumento } from "../../lib/documento-visualizacao"
 import type { VisualizacaoDocumento } from "../../lib/documento-visualizacao";
 import VisualizadorDocumentoModal from "../../components/VisualizadorDocumentoModal";
 import EvolucaoHistoricoCard from "../../components/EvolucaoHistoricoCard";
+import PacienteSessoesLista from "../../components/PacienteSessoesLista";
 import { listEvolucoesPorPacientePorId } from "../../lib/db/evolucoes";
 import { listDocumentoModelos } from "../../lib/db/modelos";
 import { listSessoesPorPaciente } from "../../lib/db/sessoes";
 import { ordenarCronologico } from "../../lib/ordenar-datas";
 import { extrairDataInicioAtendimento } from "../../lib/paciente-metadata";
+import {
+  agruparSessoesPaciente,
+  type GrupoSessaoPaciente,
+} from "../../lib/sessao-paciente";
+import {
+  resolverSessaoParaEvolucao,
+  urlEvolucaoSessao,
+} from "../../lib/evolucao-sessao";
 import { requireUserClient } from "../../lib/require-user-client";
 import type {
   DocumentoModelo,
@@ -110,6 +119,7 @@ export default function PacientePage() {
   const [documentoModelos, setDocumentoModelos] = useState<DocumentoModelo[]>([]);
   const [documentoModeloSelecionado, setDocumentoModeloSelecionado] = useState("");
   const [aba, setAba] = useState("sessoes");
+  const [abaSessoes, setAbaSessoes] = useState<GrupoSessaoPaciente>("realizadas");
   const [carregando, setCarregando] = useState(true);
   const [enviandoDocumento, setEnviandoDocumento] = useState(false);
   const [gerandoDocumento, setGerandoDocumento] = useState(false);
@@ -442,6 +452,27 @@ export default function PacientePage() {
     [sessoes]
   );
 
+  const sessoesPorGrupo = useMemo(() => {
+    const grupos = agruparSessoesPaciente(sessoes);
+    return {
+      realizadas: ordenarCronologico(
+        grupos.realizadas,
+        (s) => ({ data: s.data, hora: s.hora }),
+        "desc"
+      ),
+      futuras: ordenarCronologico(
+        grupos.futuras,
+        (s) => ({ data: s.data, hora: s.hora }),
+        "asc"
+      ),
+      canceladas: ordenarCronologico(
+        grupos.canceladas,
+        (s) => ({ data: s.data, hora: s.hora }),
+        "desc"
+      ),
+    };
+  }, [sessoes]);
+
   const evolucoesClinicas = useMemo(
     () =>
       ordenarCronologico(
@@ -583,10 +614,13 @@ export default function PacientePage() {
           <button
             type="button"
             className={aba === "sessoes" ? "patient-tab is-active" : "patient-tab"}
-            onClick={() => setAba("sessoes")}
+            onClick={() => {
+              setAba("sessoes");
+              setAbaSessoes("realizadas");
+            }}
           >
             Sessões
-            <span>{sessoes.length}</span>
+            <span>{sessoesPorGrupo.realizadas.length}</span>
           </button>
 
           <button
@@ -624,104 +658,82 @@ export default function PacientePage() {
           <button
             type="button"
             className="btn btn-green"
-            onClick={() =>
-              router.push(`/paciente/${idPaciente}/nova-evolucao`)
-            }
+            onClick={() => {
+              const sessaoId = resolverSessaoParaEvolucao(sessoes, evolucoes);
+              if (!sessaoId) {
+                setErro(
+                  "Agende uma sessão na agenda para registrar a evolução clínica."
+                );
+                setAba("sessoes");
+                return;
+              }
+              router.push(urlEvolucaoSessao(sessaoId));
+            }}
           >
-            + Registrar evolução
+            Evolução na sessão
           </button>
         </div>
 
-        {aba === "sessoes" && (
-          <div className="session-list">
-            {sessoes.length === 0 ? (
-              <p className="empty-text">Nenhuma sessão registrada.</p>
-            ) : (
-              sessoesOrdenadas.map((s) => {
-                const anotacoes = anotacoesPorSessao[String(s.id)];
-                const preSessao = textoResumoAnotacao(anotacoes?.objetivo);
-                const anotacaoSessao = textoResumoAnotacao(anotacoes?.observacoes);
-                const observacaoSessao = textoResumoAnotacao(anotacoes?.plano);
-                const temAnotacoes =
-                  preSessao || anotacaoSessao || observacaoSessao;
+        {aba === "sessoes" ? (
+          <>
+            <div className="patient-sessoes-subnav" role="tablist" aria-label="Tipos de sessão">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={abaSessoes === "realizadas"}
+                className={
+                  abaSessoes === "realizadas"
+                    ? "patient-sessoes-subtab is-active"
+                    : "patient-sessoes-subtab"
+                }
+                onClick={() => setAbaSessoes("realizadas")}
+              >
+                Realizadas
+                <span>{sessoesPorGrupo.realizadas.length}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={abaSessoes === "futuras"}
+                className={
+                  abaSessoes === "futuras"
+                    ? "patient-sessoes-subtab is-active"
+                    : "patient-sessoes-subtab"
+                }
+                onClick={() => setAbaSessoes("futuras")}
+              >
+                Futuras
+                <span>{sessoesPorGrupo.futuras.length}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={abaSessoes === "canceladas"}
+                className={
+                  abaSessoes === "canceladas"
+                    ? "patient-sessoes-subtab is-active"
+                    : "patient-sessoes-subtab"
+                }
+                onClick={() => setAbaSessoes("canceladas")}
+              >
+                Canceladas
+                <span>{sessoesPorGrupo.canceladas.length}</span>
+              </button>
+            </div>
 
-                return (
-                  <div key={s.id} className="lista-card patient-session-card">
-                    <div className="patient-session-main">
-                      <div>
-                        <strong>
-                          {(() => {
-                            const t = String(s.data ?? "").trim();
-                            const iso = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
-                            const br = t.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-                            let dia: string;
-                            let mes: string;
-                            let ano: string;
-                            if (iso) {
-                              ano = iso[1];
-                              mes = iso[2];
-                              dia = iso[3];
-                            } else if (br) {
-                              dia = br[1];
-                              mes = br[2];
-                              ano = br[3];
-                            } else {
-                              return t || "Data não informada";
-                            }
-                            const dataPt = `${dia}/${mes}/${ano}`;
-                            const h = String(s.hora ?? "").trim();
-                            return h ? `${dataPt} às ${h}` : dataPt;
-                          })()}
-                        </strong>
-                        <p>Status: {s.status || "Agendada"}</p>
-                      </div>
-
-                      {temAnotacoes ? (
-                        <div className="patient-session-notes-preview">
-                          <strong>Anotações salvas nesta sessão</strong>
-                          {preSessao ? (
-                            <p>
-                              <span>Pré-sessão:</span> {preSessao}
-                            </p>
-                          ) : null}
-                          {anotacaoSessao ? (
-                            <p>
-                              <span>Anotações:</span> {anotacaoSessao}
-                            </p>
-                          ) : null}
-                          {observacaoSessao ? (
-                            <p>
-                              <span>Observações:</span> {observacaoSessao}
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <p className="patient-session-no-notes">
-                          Nenhuma anotação salva nesta sessão.
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="patient-session-actions">
-                      <button
-                        className="btn btn-outline"
-                        onClick={() => router.push(`/sessao/${s.id}`)}
-                      >
-                        Abrir sessão
-                      </button>
-                      <button
-                        className="btn btn-green"
-                        onClick={() => router.push(`/sessao/${s.id}?modo=anotacoes`)}
-                      >
-                        Ver anotações
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        )}
+            <PacienteSessoesLista
+              sessoes={sessoesPorGrupo[abaSessoes]}
+              anotacoesPorSessao={anotacoesPorSessao}
+              vazio={
+                abaSessoes === "realizadas"
+                  ? "Nenhuma sessão realizada ainda."
+                  : abaSessoes === "futuras"
+                    ? "Nenhuma sessão futura agendada."
+                    : "Nenhuma sessão cancelada."
+              }
+            />
+          </>
+        ) : null}
 
         {aba === "evolucoes" && (
           <div className="session-list">
@@ -959,20 +971,4 @@ function formatarDataHora(valor: string) {
     dateStyle: "short",
     timeStyle: "short",
   }).format(data);
-}
-
-function textoResumoAnotacao(valor?: string | null) {
-  if (!valor) return "";
-
-  const texto = valor
-    .replace(/&nbsp;/gi, " ")
-    .replace(/<br\s*\/?>/gi, " ")
-    .replace(/<\/(p|div|li|h\d)>/gi, " ")
-    .replace(/<[^>]*>/g, "")
-    .replace(/\u00a0/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (texto.length <= 180) return texto;
-  return `${texto.slice(0, 180).trim()}...`;
 }

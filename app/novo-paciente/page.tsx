@@ -9,7 +9,6 @@ import Janela from "../components/Janela";
 import { usePreferencias } from "../components/PreferenciasProvider";
 import { getCurrentUser } from "../lib/auth";
 import { createPaciente } from "../lib/db/pacientes";
-import { salvarDataInicioNasObservacoes } from "../lib/paciente-metadata";
 import { requireUserClient } from "../lib/require-user-client";
 import { mensagemErroSupabase } from "../lib/supabase-error";
 
@@ -55,9 +54,9 @@ export default function NovoPaciente() {
     const { error } = await createPaciente(user.id, {
       nome,
       data_nascimento: dataNascimento,
+      data_inicio_atendimento: dataInicioAtendimento || null,
       telefone,
       cid,
-      observacoes: salvarDataInicioNasObservacoes("", dataInicioAtendimento),
       valor_sessao: valorSessao,
     });
 

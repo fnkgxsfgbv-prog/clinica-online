@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import FlashMessage from "../../components/FlashMessage";
 import AvisoViradaMesBanner from "../../components/AvisoViradaMesBanner";
+import FrequenciaSubnav from "../../components/FrequenciaSubnav";
 import Janela from "../../components/Janela";
+import PreferenciasMesPanel from "../../components/PreferenciasMesPanel";
 import { getCurrentUser } from "../../lib/auth";
 import {
   FREQUENCIA_HISTORICO_PAGE_SIZE,
@@ -202,6 +204,7 @@ export default function HistoricoFrequenciaPage() {
   return (
     <div>
       <Janela titulo="Histórico de Frequência">
+        <FrequenciaSubnav />
         <AvisoViradaMesBanner
           aviso={avisoViradaMes}
           onDispensar={dispensarAvisoViradaMes}
@@ -267,6 +270,8 @@ export default function HistoricoFrequenciaPage() {
             </button>
           </div>
         </div>
+
+        <PreferenciasMesPanel />
 
         {carregando ? (
           <p className="empty-text">Carregando histórico...</p>

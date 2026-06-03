@@ -43,6 +43,7 @@ import {
   persistirMesSelecionado,
 } from "../lib/preferencias";
 import { diagnosticarIntegracaoFinanceiro } from "../lib/financeiro-diagnostico";
+import { hrefPendencia } from "../lib/checklist-clinica";
 import { extrairDadosClinicaDeUsuario, type DadosClinica } from "../lib/dados-clinica";
 import {
   calcularFechamentoMes,
@@ -782,10 +783,29 @@ export default function FinanceiroPage() {
               ))}
             </ul>
             {alertasFinanceiro.length > 8 ? (
-              <p className="financeiro-alertas-mais">
-                + {alertasFinanceiro.length - 8} aviso(s). Ajuste na agenda ou no
-                cadastro do paciente.
-              </p>
+              <div className="financeiro-alertas-mais">
+                <p>
+                  + {alertasFinanceiro.length - 8} aviso(s) não exibidos aqui.
+                </p>
+                <div className="financeiro-alertas-mais-links">
+                  {alertasFinanceiro.some((a) => a.tipo === "sem_vinculo") ? (
+                    <Link
+                      className="btn btn-outline btn-sm"
+                      href={hrefPendencia("integracao-sem-vinculo")}
+                    >
+                      Ver presenças sem vínculo
+                    </Link>
+                  ) : null}
+                  {alertasFinanceiro.some((a) => a.tipo === "sem_valor") ? (
+                    <Link
+                      className="btn btn-outline btn-sm"
+                      href={hrefPendencia("integracao-sem-valor")}
+                    >
+                      Ver presenças sem valor
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
             ) : null}
           </section>
         ) : null}

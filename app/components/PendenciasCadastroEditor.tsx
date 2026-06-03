@@ -15,7 +15,6 @@ import { updatePaciente } from "../lib/db/pacientes";
 import {
   extrairDataInicioAtendimento,
   limparObservacoesPaciente,
-  salvarDataInicioNasObservacoes,
 } from "../lib/paciente-metadata";
 import { requireUserClient } from "../lib/require-user-client";
 import { mensagemErroSupabase } from "../lib/supabase-error";
@@ -257,10 +256,8 @@ function montarPayloadPendencia(
       return { cid: valor };
     case "cadastro-sem-inicio":
       return {
-        observacoes: salvarDataInicioNasObservacoes(
-          limparObservacoesPaciente(paciente.observacoes),
-          valor
-        ),
+        data_inicio_atendimento: valor,
+        observacoes: limparObservacoesPaciente(paciente.observacoes),
       };
     case "cadastro-sem-valor":
       return { valor_sessao: valor };
