@@ -1,0 +1,37 @@
+# Publica em produÃ§Ã£o a cada push na main (fnkgxsfgbv-prog/clinica-online).
+# Configure uma vez no GitHub: Settings â Secrets â VERCEL_TOKEN
+# Token: https://vercel.com/account/settings/tokens (escopo do projeto)
+
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: vercel-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Deploy to Vercel
+        run: npx --yes vercel@48.8.0 deploy --prod --yes --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: team_f8MK2DHLMBi06WESUWYAtTL2
+          VERCEL_PROJECT_ID: prj_AkahqQNTWwn8p4DToIOHn3hBEgPo
