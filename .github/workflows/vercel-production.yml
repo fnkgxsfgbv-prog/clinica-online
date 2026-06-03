@@ -1,6 +1,6 @@
-# Publica em produÃ§Ã£o a cada push na main (fnkgxsfgbv-prog/clinica-online).
-# Configure uma vez no GitHub: Settings â Secrets â VERCEL_TOKEN
-# Token: https://vercel.com/account/settings/tokens (escopo do projeto)
+# Deploy to production on every push to main
+# Setup once: GitHub repo Secrets -> VERCEL_TOKEN
+# Token: https://vercel.com/account/settings/tokens
 
 name: Deploy production
 
