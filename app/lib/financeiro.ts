@@ -132,6 +132,36 @@ export function labelSemana(
   return `${diaInicio}/${mesInicio}–${diaFim}/${mesFim}/${ano}`;
 }
 
+const MES_ABREV_CHIP = [
+  "jan",
+  "fev",
+  "mar",
+  "abr",
+  "mai",
+  "jun",
+  "jul",
+  "ago",
+  "set",
+  "out",
+  "nov",
+  "dez",
+] as const;
+
+/** Rótulo mínimo para chip horizontal: `1–7/jun`, `31/5–6`. */
+export function labelSemanaChip(inicioSemana: string): string {
+  const fim = fimSemanaISO(inicioSemana);
+  const [, mesInicio, diaInicio] = inicioSemana.split("-");
+  const [, mesFim, diaFim] = fim.split("-");
+  const dia = (v: string) => String(Number(v));
+  const mesAbrev = MES_ABREV_CHIP[Number(mesInicio) - 1] ?? mesInicio;
+
+  if (mesInicio === mesFim) {
+    return `${dia(diaInicio)}–${dia(diaFim)}/${mesAbrev}`;
+  }
+
+  return `${dia(diaInicio)}/${Number(mesInicio)}–${dia(diaFim)}`;
+}
+
 /** Semana anterior àquela cujo início é `inicioSemana` (segunda-feira). */
 export function semanaAnterior(inicioSemana: string): string {
   const [ano, mes, dia] = inicioSemana.split("-").map(Number);

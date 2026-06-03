@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseValorBr } from "./moeda";
+import { formatarMoedaChip, parseValorBr } from "./moeda";
 
 describe("parseValorBr", () => {
   it("aceita número", () => {
@@ -20,5 +20,15 @@ describe("parseValorBr", () => {
 
   it("remove prefixo R$", () => {
     expect(parseValorBr("R$ 200,00")).toBe(200);
+  });
+});
+
+describe("formatarMoedaChip", () => {
+  it("formata valores compactos para chips", () => {
+    expect(formatarMoedaChip(795)).toBe("R$795");
+    expect(formatarMoedaChip(980)).toBe("R$980");
+    expect(formatarMoedaChip(1200)).toBe("R$1,2k");
+    expect(formatarMoedaChip(10000)).toBe("R$10k");
+    expect(formatarMoedaChip(0)).toBe("R$0");
   });
 });

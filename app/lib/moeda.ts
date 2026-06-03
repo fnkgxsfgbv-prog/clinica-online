@@ -15,3 +15,25 @@ export function parseValorBr(valor: unknown): number {
   const n = Number(texto);
   return Number.isFinite(n) ? n : 0;
 }
+
+/** Valor compacto para chips horizontais: `R$795`, `R$1,2k`. */
+export function formatarMoedaChip(valor: number) {
+  const n = Number(valor);
+  if (!Number.isFinite(n) || n <= 0) return "R$0";
+
+  if (n >= 1000) {
+    const milhares = n / 1000;
+    const texto =
+      milhares >= 10
+        ? String(Math.round(milhares))
+        : milhares.toFixed(1).replace(".", ",");
+    return `R$${texto}k`;
+  }
+
+  if (Number.isInteger(n)) return `R$${n}`;
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0,
+  }).format(n);
+}

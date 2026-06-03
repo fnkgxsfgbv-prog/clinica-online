@@ -7,6 +7,7 @@ import {
   filtrarPorSemanaReferencia,
   inicioSemanaISO,
   labelSemana,
+  labelSemanaChip,
   semanaIntersectsMes,
 } from "./financeiro";
 import type { Frequencia, Paciente, Sessao } from "../types";
@@ -76,6 +77,12 @@ describe("inicioSemanaISO, filtrarPorSemanaReferencia e labelSemana", () => {
     expect(labelSemana("2026-05-29")).toBe("29/05–04/06/2026");
     expect(labelSemana("2026-05-18", { curto: true })).toBe("18–24/05");
     expect(labelSemana("2026-05-29", { curto: true })).toBe("29/05–4/06");
+  });
+
+  it("formata rótulo compacto para chips", () => {
+    expect(labelSemanaChip("2026-06-01")).toBe("1–7/jun");
+    expect(labelSemanaChip("2026-05-26")).toBe("26/5–1");
+    expect(labelSemanaChip("2026-05-19")).toBe("19–25/mai");
   });
 });
 

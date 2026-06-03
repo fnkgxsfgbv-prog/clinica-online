@@ -5436,99 +5436,73 @@ button:hover {
   font-weight: 700;
 }
 
-.financeiro-semanas-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+.financeiro-semanas-scroll {
+  display: flex;
   gap: 10px;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
-button.financeiro-semana-card,
-.financeiro-semana-card {
-  display: flex !important;
+.financeiro-semanas-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.financeiro-semanas-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.28);
+}
+
+button.financeiro-semana-chip,
+.financeiro-semana-chip {
+  display: inline-flex !important;
+  flex: 0 0 auto;
   flex-direction: column !important;
-  align-items: stretch !important;
-  justify-content: flex-start !important;
-  gap: 10px;
-  width: 100%;
-  min-width: 0;
-  padding: 14px 16px;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  gap: 6px;
+  min-width: 104px;
+  min-height: 72px !important;
+  height: auto !important;
+  padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: color-mix(in srgb, var(--card) 88%, transparent);
   color: inherit;
   text-align: left;
   cursor: pointer;
-  white-space: normal !important;
-  min-height: 112px !important;
-  height: auto !important;
+  white-space: nowrap !important;
+  scroll-snap-align: start;
   box-shadow: none !important;
   transform: none !important;
-  line-height: 1.2;
   transition:
     border-color 0.16s ease,
     background 0.16s ease,
     transform 0.16s ease;
 }
 
-.financeiro-semana-card:hover {
+.financeiro-semana-chip:hover {
   transform: translateY(-1px) !important;
   border-color: rgba(232, 229, 255, 0.34);
 }
 
-.financeiro-semana-card.is-active {
+.financeiro-semana-chip.is-active {
   border-color: rgba(232, 229, 255, 0.48);
-  background: rgba(232, 229, 255, 0.08);
+  background: rgba(232, 229, 255, 0.1);
 }
 
-.financeiro-semana-card-label {
-  display: block;
-  width: 100%;
-  font-size: 13px;
+.financeiro-semana-chip-period {
+  color: var(--muted);
+  font-size: 12px;
   font-weight: 800;
-  line-height: 1.2;
-  letter-spacing: 0.01em;
-  color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.financeiro-semana-card-valor {
-  display: block;
-  width: 100%;
-  font-size: 24px;
-  font-weight: 900;
   line-height: 1;
+}
+
+.financeiro-semana-chip-valor {
   color: var(--text);
-}
-
-.financeiro-semana-card-meta {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  width: 100%;
-  margin: 0;
-  margin-top: auto;
-}
-
-.financeiro-semana-card-stat {
-  display: block;
-  min-width: 0;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.financeiro-semana-card-stat em {
-  display: block;
-  margin-bottom: 1px;
-  color: var(--text);
-  font-style: normal;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 900;
   line-height: 1;
 }
@@ -10150,39 +10124,34 @@ td {
   color: #17212b !important;
 }
 
-[data-theme="light"] .financeiro-semana-card {
+[data-theme="light"] .financeiro-semana-chip {
   background: #ffffff !important;
   border-color: rgba(15, 23, 42, 0.14) !important;
   color: #17212b !important;
 }
 
-[data-theme="light"] .financeiro-semana-card:hover {
+[data-theme="light"] .financeiro-semana-chip:hover {
   background: #f8fafc !important;
   border-color: rgba(47, 155, 135, 0.28) !important;
 }
 
-[data-theme="light"] .financeiro-semana-card.is-active {
+[data-theme="light"] .financeiro-semana-chip.is-active {
   background: linear-gradient(135deg, #e8f7f2, #f0fdf9) !important;
   border-color: rgba(47, 155, 135, 0.45) !important;
   box-shadow: 0 0 0 1px rgba(47, 155, 135, 0.14) !important;
 }
 
-[data-theme="light"] .financeiro-semana-card-label,
-[data-theme="light"] .financeiro-semana-card-valor {
-  color: #17212b !important;
-}
-
-[data-theme="light"] .financeiro-semana-card-stat em {
-  color: #17212b !important;
-}
-
-[data-theme="light"] .financeiro-semana-card-label {
+[data-theme="light"] .financeiro-semana-chip-period {
   color: #667085 !important;
 }
 
-[data-theme="light"] .financeiro-semana-card-meta,
+[data-theme="light"] .financeiro-semana-chip-valor,
 [data-theme="light"] .financeiro-semanas-resumo-header span {
   color: #475467 !important;
+}
+
+[data-theme="light"] .financeiro-semana-chip-valor {
+  color: #17212b !important;
 }
 
 [data-theme="light"] .financeiro-week-chip.is-active {

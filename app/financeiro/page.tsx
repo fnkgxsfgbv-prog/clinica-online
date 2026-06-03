@@ -23,11 +23,13 @@ import {
   filtrarPorSemanaReferencia,
   inicioSemanaISO,
   labelSemana,
+  labelSemanaChip,
   semanaAnterior,
   semanaIntersectsMes,
   type ResumoFinanceiro,
 } from "../lib/financeiro";
 import { dataIsoHoje } from "../lib/datas-paciente";
+import { formatarMoedaChip } from "../lib/moeda";
 import {
   detectarViradaMesCalendario,
   labelMesAno,
@@ -903,32 +905,27 @@ export default function FinanceiroPage() {
               </span>
             </div>
 
-            <div className="financeiro-semanas-grid">
+            <div
+              className="financeiro-semanas-scroll"
+              role="list"
+              aria-label="Semanas com ganhos"
+            >
               {resumosSemanais.map((semana) => (
                 <button
                   key={semana.inicio}
                   type="button"
-                  className={`financeiro-semana-card${
+                  role="listitem"
+                  className={`financeiro-semana-chip${
                     semanaSelecionada === semana.inicio ? " is-active" : ""
                   }`}
                   onClick={() => selecionarSemana(semana.inicio)}
-                  title={`Semana ${labelSemana(semana.inicio)} · ${semana.presencas} presenças · ${semana.pacientes} pacientes`}
+                  title={`Semana ${labelSemana(semana.inicio)} · ${formatarMoeda(semana.total)} · ${semana.presencas} presenças · ${semana.pacientes} pacientes`}
                 >
-                  <span className="financeiro-semana-card-label">
-                    {labelSemana(semana.inicio, { curto: true })}
+                  <span className="financeiro-semana-chip-period">
+                    {labelSemanaChip(semana.inicio)}
                   </span>
-                  <strong className="financeiro-semana-card-valor">
-                    {formatarMoeda(semana.total)}
-                  </strong>
-                  <span className="financeiro-semana-card-meta">
-                    <span className="financeiro-semana-card-stat">
-                      <em>{semana.presencas}</em>
-                      {semana.presencas === 1 ? "presença" : "presenças"}
-                    </span>
-                    <span className="financeiro-semana-card-stat">
-                      <em>{semana.pacientes}</em>
-                      {semana.pacientes === 1 ? "paciente" : "pacientes"}
-                    </span>
+                  <span className="financeiro-semana-chip-valor">
+                    {formatarMoedaChip(semana.total)}
                   </span>
                 </button>
               ))}
