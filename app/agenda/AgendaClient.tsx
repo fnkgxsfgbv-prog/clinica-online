@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Calendar, momentLocalizer, Views } from "react-big-calendar";
@@ -114,6 +114,7 @@ export default function AgendaClient() {
   const [sessoes, setSessoes] = useState<Sessao[]>([]);
   const [preSessoes, setPreSessoes] = useState<Record<string, string>>({});
   const [menuFrequenciaAberto, setMenuFrequenciaAberto] = useState("");
+  const [menuFrequenciaAcima, setMenuFrequenciaAcima] = useState(false);
   const [exclusaoSessaoPendente, setExclusaoSessaoPendente] =
     useState<Sessao | null>(null);
   const [excluirTodasSessoesDoPacienteNoDia, setExcluirTodasSessoesDoPacienteNoDia] =
@@ -277,6 +278,32 @@ export default function AgendaClient() {
       document.removeEventListener("mousedown", fecharMenuAoClicarFora);
       document.removeEventListener("keydown", fecharMenuComEscape);
     };
+  }, [menuFrequenciaAberto]);
+
+  useLayoutEffect(() => {
+    if (!menuFrequenciaAberto) {
+      setMenuFrequenciaAcima(false);
+      return;
+    }
+
+    const menu = document.querySelector(
+      `.agenda-frequency-menu[data-sessao="${menuFrequenciaAberto}"]`
+    );
+    const trigger = menu?.parentElement?.querySelector(".agenda-presence-button");
+
+    if (!(menu instanceof HTMLElement) || !(trigger instanceof HTMLElement)) {
+      setMenuFrequenciaAcima(false);
+      return;
+    }
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const menuHeight = menu.offsetHeight;
+    const spaceBelow = window.innerHeight - triggerRect.bottom;
+    const spaceAbove = triggerRect.top;
+
+    setMenuFrequenciaAcima(
+      spaceBelow < menuHeight + 12 && spaceAbove >= menuHeight + 12
+    );
   }, [menuFrequenciaAberto]);
 
   function criarDataHora(dataSessao: string, horaSessao: string) {
@@ -988,7 +1015,12 @@ export default function AgendaClient() {
                         <small>⌄</small>
                       </button>
                       {menuFrequenciaAberto === String(sessao.id) ? (
-                        <div className="agenda-frequency-menu">
+                        <div
+                          className={`agenda-frequency-menu${
+                            menuFrequenciaAcima ? " is-above" : ""
+                          }`}
+                          data-sessao={sessao.id}
+                        >
                           <button
                             type="button"
                             className="is-present"
