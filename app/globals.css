@@ -5438,16 +5438,17 @@ button:hover {
 
 .financeiro-semanas-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 10px;
 }
 
+button.financeiro-semana-card,
 .financeiro-semana-card {
   display: flex !important;
   flex-direction: column !important;
   align-items: stretch !important;
   justify-content: flex-start !important;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
   min-width: 0;
   padding: 14px 16px;
@@ -5458,10 +5459,11 @@ button:hover {
   text-align: left;
   cursor: pointer;
   white-space: normal !important;
-  min-height: auto !important;
+  min-height: 112px !important;
   height: auto !important;
   box-shadow: none !important;
   transform: none !important;
+  line-height: 1.2;
   transition:
     border-color 0.16s ease,
     background 0.16s ease,
@@ -5480,9 +5482,10 @@ button:hover {
 
 .financeiro-semana-card-label {
   display: block;
-  font-size: 12px;
+  width: 100%;
+  font-size: 13px;
   font-weight: 800;
-  line-height: 1.25;
+  line-height: 1.2;
   letter-spacing: 0.01em;
   color: var(--muted);
   white-space: nowrap;
@@ -5492,25 +5495,42 @@ button:hover {
 
 .financeiro-semana-card-valor {
   display: block;
-  font-size: 22px;
+  width: 100%;
+  font-size: 24px;
   font-weight: 900;
-  line-height: 1.1;
+  line-height: 1;
   color: var(--text);
 }
 
 .financeiro-semana-card-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
   margin: 0;
+  margin-top: auto;
+}
+
+.financeiro-semana-card-stat {
+  display: block;
+  min-width: 0;
   font-size: 11px;
   font-weight: 700;
   line-height: 1.25;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.financeiro-semana-card-meta span {
-  white-space: nowrap;
+.financeiro-semana-card-stat em {
+  display: block;
+  margin-bottom: 1px;
+  color: var(--text);
+  font-style: normal;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .financeiro-date-row {
@@ -10149,6 +10169,10 @@ td {
 
 [data-theme="light"] .financeiro-semana-card-label,
 [data-theme="light"] .financeiro-semana-card-valor {
+  color: #17212b !important;
+}
+
+[data-theme="light"] .financeiro-semana-card-stat em {
   color: #17212b !important;
 }
 

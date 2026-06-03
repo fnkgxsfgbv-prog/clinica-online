@@ -912,20 +912,21 @@ export default function FinanceiroPage() {
                     semanaSelecionada === semana.inicio ? " is-active" : ""
                   }`}
                   onClick={() => selecionarSemana(semana.inicio)}
+                  title={`Semana ${labelSemana(semana.inicio)} · ${semana.presencas} presenças · ${semana.pacientes} pacientes`}
                 >
                   <span className="financeiro-semana-card-label">
-                    {semana.label}
+                    {labelSemana(semana.inicio, { curto: true })}
                   </span>
                   <strong className="financeiro-semana-card-valor">
                     {formatarMoeda(semana.total)}
                   </strong>
                   <span className="financeiro-semana-card-meta">
-                    <span>
-                      {semana.presencas}{" "}
+                    <span className="financeiro-semana-card-stat">
+                      <em>{semana.presencas}</em>
                       {semana.presencas === 1 ? "presença" : "presenças"}
                     </span>
-                    <span>
-                      {semana.pacientes}{" "}
+                    <span className="financeiro-semana-card-stat">
+                      <em>{semana.pacientes}</em>
                       {semana.pacientes === 1 ? "paciente" : "pacientes"}
                     </span>
                   </span>

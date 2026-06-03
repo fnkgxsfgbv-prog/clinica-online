@@ -74,6 +74,8 @@ describe("inicioSemanaISO, filtrarPorSemanaReferencia e labelSemana", () => {
   it("formata rótulo da semana", () => {
     expect(labelSemana("2026-05-18")).toBe("18–24/05/2026");
     expect(labelSemana("2026-05-29")).toBe("29/05–04/06/2026");
+    expect(labelSemana("2026-05-18", { curto: true })).toBe("18–24/05");
+    expect(labelSemana("2026-05-29", { curto: true })).toBe("29/05–4/06");
   });
 });
 

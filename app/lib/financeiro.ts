@@ -109,11 +109,23 @@ export function semanaIntersectsMes(
 }
 
 /** Rótulo curto para exibição: `19–25/05/2026` (cabe em uma linha nos cards). */
-export function labelSemana(inicioSemana: string): string {
+export function labelSemana(
+  inicioSemana: string,
+  opts?: { curto?: boolean }
+): string {
   const fim = fimSemanaISO(inicioSemana);
   const [, mesInicio, diaInicio] = inicioSemana.split("-");
   const [, mesFim, diaFim] = fim.split("-");
   const ano = inicioSemana.slice(0, 4);
+  const dia = (v: string) => String(Number(v));
+
+  if (opts?.curto) {
+    if (mesInicio === mesFim) {
+      return `${dia(diaInicio)}–${dia(diaFim)}/${mesInicio}`;
+    }
+    return `${dia(diaInicio)}/${mesInicio}–${dia(diaFim)}/${mesFim}`;
+  }
+
   if (mesInicio === mesFim) {
     return `${diaInicio}–${diaFim}/${mesInicio}/${ano}`;
   }
