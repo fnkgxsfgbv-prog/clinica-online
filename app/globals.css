@@ -251,6 +251,14 @@ textarea {
   transition: 0.2s ease;
 }
 
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  min-height: auto;
+  padding: 0;
+  border-radius: 4px;
+}
+
 input:focus,
 select:focus,
 textarea:focus {
@@ -2077,6 +2085,14 @@ textarea {
     background 0.18s ease;
 
   backdrop-filter: blur(10px);
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  min-height: auto;
+  padding: 0;
+  border-radius: 4px;
 }
 
 input:focus,
@@ -7763,6 +7779,17 @@ select:focus,
   box-shadow: 0 0 0 3px rgba(207, 214, 255, 0.12) !important;
 }
 
+input[type="checkbox"],
+input[type="radio"] {
+  width: 16px !important;
+  height: 16px !important;
+  min-height: 16px !important;
+  max-width: 16px !important;
+  padding: 0 !important;
+  border-radius: 4px !important;
+  flex: 0 0 auto !important;
+}
+
 .topbar-search input,
 .topbar-search input:focus,
 .topbar-search input:focus-visible {
@@ -9897,96 +9924,231 @@ td {
 }
 
 /* Preferências e pendências */
-.preferencias-page .preferencias-intro {
-  margin: 0 0 16px;
-  color: var(--muted, #94a3b8);
-  max-width: 720px;
+.preferencias-page .clinic-content > .app-flash,
+.preferencias-page .clinic-content > .empty-text {
+  width: calc(100% - 36px);
+  margin-right: 18px !important;
+  margin-left: 18px !important;
 }
 
-.preferencias-actions-top,
-.preferencias-actions-bottom {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 16px;
+.preferencias-hero {
+  margin-bottom: 0 !important;
+}
+
+.preferencias-hero .clinic-edit-banner > span {
+  margin: 0;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.preferencias-page .preferencias-intro {
+  margin: 0;
+  padding: 0 22px 18px;
+  color: #c9d0da;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+  max-width: 760px;
 }
 
 .preferencias-saved-hint {
-  font-size: 0.9rem;
-  color: var(--muted, #94a3b8);
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #c9d0da;
 }
 
-.preferencias-grid {
+.preferencias-page .clinic-tools-grid.preferencias-grid {
+  margin-top: 16px;
+  grid-template-columns: minmax(0, 1fr) !important;
+  max-width: 920px;
+}
+
+.preferencias-page .clinic-layout {
+  overflow: visible;
+}
+
+.preferencias-page .clinic-tool-card {
+  min-width: 0;
+  overflow: visible;
+}
+
+.preferencias-page .clinic-card .preferencias-field-label,
+.preferencias-page .clinic-card .preferencias-check-label {
+  display: block !important;
+  margin: 0 !important;
+  color: #dce2ea;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.preferencias-page .clinic-card .preferencias-check-label {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  width: auto !important;
+  max-width: none !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  white-space: normal !important;
+  color: #f4f7fb !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 1.45 !important;
+}
+
+.preferencias-fields {
   display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  min-width: 0;
 }
 
-.preferencias-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.preferencias-card-wide {
-  grid-column: 1 / -1;
-}
-
-.preferencias-card h2 {
-  margin: 0;
-}
-
-.preferencias-card > p {
-  margin: 0;
-  color: var(--muted, #94a3b8);
-  font-size: 0.92rem;
-}
-
-.preferencias-field {
-  display: flex;
-  flex-direction: column;
+.preferencias-fields label:not(.preferencias-check) {
+  display: grid;
   gap: 6px;
 }
 
-.preferencias-field span {
-  font-size: 0.88rem;
-  color: var(--muted, #94a3b8);
-}
-
-.preferencias-field select,
-.preferencias-field input {
+.preferencias-fields select,
+.preferencias-fields input[type="text"] {
   width: 100%;
+  min-height: 40px;
 }
 
-.preferencias-check {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 0.92rem;
+.preferencias-fields-actions {
+  gap: 16px;
 }
 
-.preferencias-check-inline {
+.preferencias-page .preferencias-check {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 0 12px;
   margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
+.preferencias-page .preferencias-check input[type="checkbox"] {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 2px 0 0 !important;
+  width: 16px !important;
+  height: 16px !important;
+  min-height: 16px !important;
+  max-width: 16px !important;
+  padding: 0 !important;
+  border-radius: 4px !important;
+  accent-color: #3ecf8e;
+}
+
+.preferencias-soon {
+  color: #94a3b8;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.preferencias-status {
+  padding-top: 4px;
+}
+
+.preferencias-status > strong {
+  display: block;
+  margin: 0 0 8px;
+  color: #ffffff !important;
+  font-size: 13px;
 }
 
 .preferencias-status ul {
-  margin: 8px 0 0;
+  margin: 0;
   padding-left: 18px;
-  color: var(--muted, #94a3b8);
-  font-size: 0.92rem;
+  color: #c9d0da;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
 }
 
-.preferencias-help-grid {
+.preferencias-help {
+  margin: 0;
+  color: #c9d0da;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.preferencias-help a {
+  color: #b8efdd;
+  text-decoration: underline;
+}
+
+.preferencias-guide-grid {
   display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.preferencias-help-grid p {
-  margin: 4px 0 0;
-  color: var(--muted, #94a3b8);
-  font-size: 0.92rem;
+@media (min-width: 1100px) {
+  .preferencias-guide-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.preferencias-guide-grid article {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: #202428;
+}
+
+.preferencias-guide-grid strong {
+  display: block;
+  margin: 0 0 6px;
+  color: #ffffff !important;
+  font-size: 13px;
+}
+
+.preferencias-guide-grid p {
+  margin: 0;
+  color: #c9d0da;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+[data-theme="light"] .preferencias-page .preferencias-intro,
+[data-theme="light"] .preferencias-saved-hint,
+[data-theme="light"] .preferencias-status ul,
+[data-theme="light"] .preferencias-help,
+[data-theme="light"] .preferencias-guide-grid p {
+  color: #475467;
+}
+
+[data-theme="light"] .preferencias-page .clinic-card .preferencias-field-label,
+[data-theme="light"] .preferencias-page .clinic-card .preferencias-check-label {
+  color: #344054;
+}
+
+[data-theme="light"] .preferencias-page .preferencias-check {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+[data-theme="light"] .preferencias-guide-grid article {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+[data-theme="light"] .preferencias-help a {
+  color: #0f766e;
+}
+
+@media (max-width: 900px) {
+  .preferencias-guide-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .sync-dados-wrap {
