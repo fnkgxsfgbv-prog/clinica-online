@@ -79,6 +79,7 @@ const routeTitles: Array<[string, string]> = [
   ["/pacientes", "Pacientes"],
   ["/paciente", "Paciente"],
   ["/sessao", "Sessão"],
+  ["/minha-clinica/pendencias", "Pendências"],
   ["/minha-clinica", "Minha clínica"],
   ["/preferencias", "Minha clínica"],
 ];

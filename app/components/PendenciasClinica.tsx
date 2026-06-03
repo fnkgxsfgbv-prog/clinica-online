@@ -72,6 +72,9 @@ export default function PendenciasClinica({
               <div>
                 <span>{item.titulo}</span>
                 <p>{item.descricao}</p>
+                {item.href ? (
+                  <span className="clinic-insight-cta">Ver lista e corrigir →</span>
+                ) : null}
               </div>
             </>
           );
