@@ -65,11 +65,7 @@ const menuItems: MenuItem[] = [
     href: "/minha-clinica",
     label: "Minha clínica",
     icon: "clinica",
-  },
-  {
-    href: "/preferencias",
-    label: "Preferências",
-    icon: "preferencias",
+    activePaths: ["/minha-clinica", "/preferencias"],
   },
 ];
 
@@ -84,7 +80,7 @@ const routeTitles: Array<[string, string]> = [
   ["/paciente", "Paciente"],
   ["/sessao", "Sessão"],
   ["/minha-clinica", "Minha clínica"],
-  ["/preferencias", "Preferências"],
+  ["/preferencias", "Minha clínica"],
 ];
 
 function isMenuItemActive(pathname: string, item: MenuItem) {
@@ -332,9 +328,6 @@ function AppShellFrame({
                 </button>
                 <Link href="/minha-clinica" onClick={() => setProfileOpen(false)}>
                   <span>▤</span> Minha clínica
-                </Link>
-                <Link href="/preferencias" onClick={() => setProfileOpen(false)}>
-                  <span>⚙</span> Preferências
                 </Link>
                 <button type="button" onClick={sair}>
                   <span>↪</span> Sair

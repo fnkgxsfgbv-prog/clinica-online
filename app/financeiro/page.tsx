@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import FlashMessage from "../components/FlashMessage";
 import AvisoViradaMesBanner from "../components/AvisoViradaMesBanner";
 import Janela from "../components/Janela";
+import PreferenciasMesPanel from "../components/PreferenciasMesPanel";
 import { getCurrentUser } from "../lib/auth";
 import { carregarFrequenciasCompleto } from "../lib/db/frequencia";
 import {
@@ -619,6 +620,8 @@ export default function FinanceiroPage() {
                   </button>
                 </div>
               </div>
+
+              <PreferenciasMesPanel />
             </section>
 
             <section className="financeiro-filter-group">

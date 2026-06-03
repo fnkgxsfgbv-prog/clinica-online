@@ -58,8 +58,8 @@ export default function PendenciasClinica({
           </p>
         </div>
         {linkPreferencias ? (
-          <Link className="btn btn-outline" href="/preferencias">
-            Preferências
+          <Link className="btn btn-outline" href="/minha-clinica?aba=dados">
+            Ver dados
           </Link>
         ) : null}
       </div>

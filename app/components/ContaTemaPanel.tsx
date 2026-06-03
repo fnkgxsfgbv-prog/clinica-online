@@ -1,0 +1,81 @@
+"use client";
+
+import Link from "next/link";
+
+import { usePreferencias } from "./PreferenciasProvider";
+import { aplicarTemaNoDocumento, preferenciasPadrao } from "../lib/preferencias";
+
+type Props = {
+  email?: string;
+};
+
+export default function ContaTemaPanel({ email }: Props) {
+  const { preferencias, salvando, atualizarPreferencias } = usePreferencias();
+
+  function alterarTema(tema: "light" | "dark") {
+    aplicarTemaNoDocumento(tema);
+    void atualizarPreferencias({ tema }, { salvarNuvem: true });
+  }
+
+  function restaurarPadroes() {
+    const padrao = preferenciasPadrao();
+    aplicarTemaNoDocumento(padrao.tema);
+    void atualizarPreferencias(padrao, { salvarNuvem: true });
+  }
+
+  return (
+    <section className="clinic-card clinic-tool-card">
+      <div className="clinic-tool-header">
+        <div>
+          <h2>Aparência e conta</h2>
+          <p>
+            Tema do PsicoDesk e informações da sua sessão.
+            {salvando ? " Salvando…" : null}
+          </p>
+        </div>
+      </div>
+
+      <div className="context-prefs-fields">
+        {email ? (
+          <div className="conta-info-row">
+            <span className="context-prefs-label">E-mail da conta</span>
+            <strong>{email}</strong>
+          </div>
+        ) : null}
+
+        <label>
+          <span className="context-prefs-label">Tema</span>
+          <select
+            value={preferencias.tema}
+            onChange={(e) =>
+              alterarTema(e.target.value === "light" ? "light" : "dark")
+            }
+          >
+            <option value="dark">Escuro</option>
+            <option value="light">Claro</option>
+          </select>
+          <span className="context-prefs-hint">
+            Também disponível no menu do seu perfil (canto superior).
+          </span>
+        </label>
+
+        <div className="conta-actions-row">
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={restaurarPadroes}
+            disabled={salvando}
+          >
+            Restaurar padrões do app
+          </button>
+        </div>
+
+        <p className="conta-legal-links">
+          <Link href="/termos">Termos de uso</Link>
+          <span aria-hidden="true"> · </span>
+          <Link href="/privacidade">Privacidade</Link>
+        </p>
+      </div>
+    </section>
+  );
+}

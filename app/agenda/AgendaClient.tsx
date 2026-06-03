@@ -11,6 +11,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import ConfirmacaoModal from "../components/ConfirmacaoModal";
 import FlashMessage from "../components/FlashMessage";
 import { usePreferencias } from "../components/PreferenciasProvider";
+import PreferenciasAgendaPanel from "../components/PreferenciasAgendaPanel";
 import { getCurrentUser } from "../lib/auth";
 import {
   excluirSessaoCompleta,
@@ -117,6 +118,7 @@ export default function AgendaClient() {
   const [excluirTodasSessoesDoPacienteNoDia, setExcluirTodasSessoesDoPacienteNoDia] =
     useState(false);
   const [excluindoSessao, setExcluindoSessao] = useState(false);
+  const [configAgendaAberta, setConfigAgendaAberta] = useState(false);
   const [mensagem, setMensagem] = useState("");
   const [erro, setErro] = useState("");
 
@@ -705,14 +707,28 @@ export default function AgendaClient() {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="btn btn-green"
-          onClick={() => setAbrirForm((aberto) => !aberto)}
-        >
-          {abrirForm ? "Fechar agendamento" : "+ Agendar sessão"}
-        </button>
+        <div className="agenda-hero-actions">
+          <button
+            type="button"
+            className={`btn btn-outline${configAgendaAberta ? " is-active" : ""}`}
+            onClick={() => setConfigAgendaAberta((aberto) => !aberto)}
+            aria-expanded={configAgendaAberta}
+          >
+            {configAgendaAberta ? "Fechar configurações" : "Configurar agenda"}
+          </button>
+          <button
+            type="button"
+            className="btn btn-green"
+            onClick={() => setAbrirForm((aberto) => !aberto)}
+          >
+            {abrirForm ? "Fechar agendamento" : "+ Agendar sessão"}
+          </button>
+        </div>
       </div>
+
+      {configAgendaAberta ? (
+        <PreferenciasAgendaPanel compact />
+      ) : null}
 
       <div className="agenda-mode-tabs">
         <button

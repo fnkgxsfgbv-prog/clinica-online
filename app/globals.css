@@ -10511,3 +10511,188 @@ td {
 [data-theme="light"] .sync-dados-msg {
   color: #0f766e;
 }
+
+/* Conta (Minha clínica) — abas e prefs contextuais */
+
+.conta-tabs-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.conta-tab {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.conta-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.conta-tab.is-active {
+  background: rgba(47, 155, 135, 0.22);
+  border-color: rgba(47, 155, 135, 0.55);
+}
+
+.conta-tab-grid {
+  grid-template-columns: 1fr;
+}
+
+.conta-context-links {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.92rem;
+}
+
+.conta-context-links strong {
+  color: inherit;
+}
+
+.conta-info-row {
+  display: grid;
+  gap: 4px;
+}
+
+.conta-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.conta-legal-links {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.conta-legal-links a {
+  color: #5fd4bc;
+}
+
+.context-prefs-panel {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.context-prefs-panel-compact {
+  margin-top: 4px;
+}
+
+.context-prefs-panel-inline {
+  margin-top: 14px;
+  margin-bottom: 0;
+}
+
+.context-prefs-header {
+  margin-bottom: 12px;
+}
+
+.context-prefs-header strong {
+  display: block;
+  font-size: 0.98rem;
+  margin-bottom: 4px;
+}
+
+.context-prefs-header p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.context-prefs-fields {
+  display: grid;
+  gap: 14px;
+}
+
+.context-prefs-fields-row {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-items: end;
+}
+
+.context-prefs-fields label:not(.context-prefs-check) {
+  display: grid;
+  gap: 6px;
+}
+
+.context-prefs-label {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.context-prefs-hint {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.context-prefs-fields select,
+.context-prefs-fields input[type="text"] {
+  width: 100%;
+  max-width: 320px;
+}
+
+.context-prefs-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.context-prefs-check input {
+  margin-top: 3px;
+}
+
+.agenda-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.agenda-hero-actions .btn.is-active {
+  border-color: rgba(47, 155, 135, 0.65);
+  background: rgba(47, 155, 135, 0.15);
+}
+
+[data-theme="light"] .conta-tab {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: rgba(15, 23, 42, 0.03);
+}
+
+[data-theme="light"] .conta-tab.is-active {
+  background: rgba(15, 118, 110, 0.12);
+  border-color: rgba(15, 118, 110, 0.35);
+}
+
+[data-theme="light"] .conta-context-links,
+[data-theme="light"] .context-prefs-header p,
+[data-theme="light"] .context-prefs-hint,
+[data-theme="light"] .conta-legal-links {
+  color: rgba(15, 23, 42, 0.65);
+}
+
+[data-theme="light"] .context-prefs-label {
+  color: rgba(15, 23, 42, 0.78);
+}
+
+[data-theme="light"] .context-prefs-panel {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: rgba(15, 23, 42, 0.02);
+}
+
+[data-theme="light"] .conta-legal-links a {
+  color: #0f766e;
+}

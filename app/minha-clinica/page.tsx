@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
+import ContaTemaPanel from "../components/ContaTemaPanel";
 import FlashMessage from "../components/FlashMessage";
 import BackupClinicaPanel from "../components/BackupClinicaPanel";
 import PendenciasClinica from "../components/PendenciasClinica";
@@ -42,6 +43,19 @@ type UserProfile = {
 
 type ProfileForm = Omit<UserProfile, "email" | "fotoUrl" | "fotoPath" | "criadoEm">;
 
+type AbaConta = "perfil" | "dados" | "conta";
+
+const ABAS_CONTA: Array<{ id: AbaConta; label: string }> = [
+  { id: "perfil", label: "Perfil" },
+  { id: "dados", label: "Dados" },
+  { id: "conta", label: "Conta" },
+];
+
+function normalizarAbaConta(valor: string | null): AbaConta {
+  if (valor === "dados" || valor === "conta") return valor;
+  return "perfil";
+}
+
 function formatarData(data?: string | null) {
   const formatada = formatarDataPaciente(data);
   return formatada === "Não informada" ? "-" : formatada;
@@ -68,7 +82,23 @@ function pacienteAtivo(paciente: Paciente) {
 }
 
 export default function MinhaClinicaPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="clinic-page">
+          <p className="empty-text">Carregando…</p>
+        </div>
+      }
+    >
+      <MinhaClinicaConteudo />
+    </Suspense>
+  );
+}
+
+function MinhaClinicaConteudo() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const aba = normalizarAbaConta(searchParams.get("aba"));
   const [perfil, setPerfil] = useState<UserProfile | null>(null);
   const [form, setForm] = useState<ProfileForm>({
     nome: "",
@@ -412,9 +442,29 @@ export default function MinhaClinicaPage() {
             <p className="empty-text">Carregando dados da clínica...</p>
           ) : (
             <>
+            <div className="conta-tabs-bar" role="tablist" aria-label="Seções da conta">
+              {ABAS_CONTA.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={aba === item.id}
+                  className={aba === item.id ? "conta-tab is-active" : "conta-tab"}
+                  onClick={() =>
+                    router.replace(`/minha-clinica?aba=${item.id}`, {
+                      scroll: false,
+                    })
+                  }
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
+            {aba === "perfil" ? (
             <section className="clinic-card clinic-data-card clinic-summary-card">
               <div className="clinic-data-banner clinic-edit-banner">
-                <span>Dados da clínica e da conta profissional</span>
+                <span>Perfil profissional e identidade da clínica</span>
                 {editando ? (
                   <div className="clinic-edit-actions">
                     <button
@@ -568,12 +618,14 @@ export default function MinhaClinicaPage() {
                 </div>
               )}
             </section>
+            ) : null}
 
+            {aba === "dados" ? (
             <div className="clinic-tools-grid">
               <PendenciasClinica
                 itens={checklistCompleto}
                 titulo="Pendências da clínica"
-                linkPreferencias
+                linkPreferencias={false}
               />
 
               <section className="clinic-card clinic-tool-card clinic-tool-card-wide">
@@ -656,6 +708,35 @@ export default function MinhaClinicaPage() {
                 </div>
               </section>
             </div>
+            ) : null}
+
+            {aba === "conta" ? (
+              <div className="clinic-tools-grid conta-tab-grid">
+                <ContaTemaPanel email={perfil?.email} />
+                <section className="clinic-card clinic-tool-card">
+                  <div className="clinic-tool-header">
+                    <div>
+                      <h2>Onde configurar o restante</h2>
+                      <p>Preferências ficam perto de onde você usa.</p>
+                    </div>
+                  </div>
+                  <ul className="conta-context-links">
+                    <li>
+                      <strong>Agenda</strong> — visualização, duração e valor padrão
+                      (botão Configurar na própria Agenda).
+                    </li>
+                    <li>
+                      <strong>Financeiro</strong> — comportamento do filtro de mês
+                      (em Período do relatório).
+                    </li>
+                    <li>
+                      <strong>Perfil e backup</strong> — abas Perfil e Dados desta
+                      tela.
+                    </li>
+                  </ul>
+                </section>
+              </div>
+            ) : null}
             </>
           )}
         </main>
