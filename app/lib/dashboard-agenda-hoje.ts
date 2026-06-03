@@ -1,4 +1,6 @@
 import { criarDataHoraSessao } from "./agenda-sessao";
+import { dataReferenciaISO } from "./financeiro";
+import { criarDataLocalISO } from "./datas-paciente";
 import { visualFrequenciaAgenda } from "./status";
 import type { Sessao } from "../types";
 
@@ -91,6 +93,102 @@ export function rotuloResumoDia(
   }
 
   return chips;
+}
+
+export type GrupoProximasSessoes = {
+  dataIso: string;
+  titulo: string;
+  subtitulo: string;
+  sessoes: Sessao[];
+};
+
+function diferencaDias(dataIso: string, hojeIso: string) {
+  const data = criarDataLocalISO(dataIso);
+  const hoje = criarDataLocalISO(hojeIso);
+  if (!data || !hoje) return null;
+  return Math.round((data.getTime() - hoje.getTime()) / 86400000);
+}
+
+function formatarSubtituloGrupo(dataIso: string) {
+  const data = criarDataLocalISO(dataIso);
+  if (!data) return "";
+  return new Intl.DateTimeFormat("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(data);
+}
+
+function formatarDataCurta(dataIso: string) {
+  const data = criarDataLocalISO(dataIso);
+  if (!data) return "";
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(data);
+}
+
+/** Título do bloco por dia: Amanhã, Quarta-feira, 12 de jun. de 2026… */
+export function rotuloGrupoProximasSessoes(dataIso: string, hojeIso: string) {
+  const diff = diferencaDias(dataIso, hojeIso);
+  const subtituloCompleto = formatarSubtituloGrupo(dataIso);
+
+  if (diff === 1) {
+    return { titulo: "Amanhã", subtitulo: subtituloCompleto };
+  }
+
+  if (diff != null && diff > 1 && diff <= 6) {
+    const data = criarDataLocalISO(dataIso);
+    const titulo = data
+      ? new Intl.DateTimeFormat("pt-BR", { weekday: "long" }).format(data)
+      : subtituloCompleto;
+    const subtitulo = data
+      ? new Intl.DateTimeFormat("pt-BR", {
+          day: "numeric",
+          month: "long",
+        }).format(data)
+      : "";
+    return { titulo, subtitulo };
+  }
+
+  return {
+    titulo: formatarDataCurta(dataIso),
+    subtitulo: subtituloCompleto,
+  };
+}
+
+/** Sessões futuras agrupadas por dia, excluindo hoje (já na agenda do dia). */
+export function agruparProximasSessoes(
+  sessoes: Sessao[],
+  hojeIso: string,
+  limiteSessoes = 8
+): GrupoProximasSessoes[] {
+  const filtradas = ordenarSessoesPorHorario(sessoes).filter((sessao) => {
+    const data = dataReferenciaISO(sessao.data);
+    return Boolean(data && data !== hojeIso);
+  });
+
+  const limitadas: Sessao[] = [];
+  for (const sessao of filtradas) {
+    if (limitadas.length >= limiteSessoes) break;
+    limitadas.push(sessao);
+  }
+
+  const grupos = new Map<string, Sessao[]>();
+  for (const sessao of limitadas) {
+    const dataIso = dataReferenciaISO(sessao.data);
+    if (!dataIso) continue;
+    const lista = grupos.get(dataIso);
+    if (lista) lista.push(sessao);
+    else grupos.set(dataIso, [sessao]);
+  }
+
+  return [...grupos.entries()].map(([dataIso, lista]) => ({
+    dataIso,
+    ...rotuloGrupoProximasSessoes(dataIso, hojeIso),
+    sessoes: lista,
+  }));
 }
 
 function minutosDesdeMeiaNoite(hora?: string | null) {

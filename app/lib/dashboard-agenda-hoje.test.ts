@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  agruparProximasSessoes,
   proximaSessaoHojeId,
   resumoDia,
   rotuloResumoDia,
@@ -74,5 +75,39 @@ describe("proximaSessaoHojeId", () => {
     );
 
     expect(id).toBe(2);
+  });
+});
+
+describe("agruparProximasSessoes", () => {
+  it("exclui hoje e agrupa por dia", () => {
+    const grupos = agruparProximasSessoes(
+      [
+        { ...sessao(1, "09:00"), data: "2026-05-26" },
+        { ...sessao(2, "10:00"), data: "2026-05-27" },
+        { ...sessao(3, "14:00"), data: "2026-05-27" },
+        { ...sessao(4, "11:00"), data: "2026-05-29" },
+      ],
+      "2026-05-26",
+      8
+    );
+
+    expect(grupos).toHaveLength(2);
+    expect(grupos[0].titulo).toBe("Amanhã");
+    expect(grupos[0].sessoes).toHaveLength(2);
+    expect(grupos[1].sessoes).toHaveLength(1);
+  });
+
+  it("respeita limite total de sessões", () => {
+    const grupos = agruparProximasSessoes(
+      [
+        { ...sessao(1, "09:00"), data: "2026-05-27" },
+        { ...sessao(2, "10:00"), data: "2026-05-27" },
+        { ...sessao(3, "11:00"), data: "2026-05-28" },
+      ],
+      "2026-05-26",
+      2
+    );
+
+    expect(grupos.flatMap((g) => g.sessoes)).toHaveLength(2);
   });
 });

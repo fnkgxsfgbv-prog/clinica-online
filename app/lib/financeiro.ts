@@ -108,15 +108,16 @@ export function semanaIntersectsMes(
   );
 }
 
-/** Rótulo curto para exibição: `19/05 – 25/05/2026`. */
+/** Rótulo curto para exibição: `19–25/05/2026` (cabe em uma linha nos cards). */
 export function labelSemana(inicioSemana: string): string {
   const fim = fimSemanaISO(inicioSemana);
-  const curto = (iso: string) => {
-    const [, mes, dia] = iso.split("-");
-    return `${dia}/${mes}`;
-  };
+  const [, mesInicio, diaInicio] = inicioSemana.split("-");
+  const [, mesFim, diaFim] = fim.split("-");
   const ano = inicioSemana.slice(0, 4);
-  return `${curto(inicioSemana)} – ${curto(fim)}/${ano}`;
+  if (mesInicio === mesFim) {
+    return `${diaInicio}–${diaFim}/${mesInicio}/${ano}`;
+  }
+  return `${diaInicio}/${mesInicio}–${diaFim}/${mesFim}/${ano}`;
 }
 
 /** Semana anterior àquela cujo início é `inicioSemana` (segunda-feira). */

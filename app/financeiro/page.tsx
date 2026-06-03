@@ -920,8 +920,14 @@ export default function FinanceiroPage() {
                     {formatarMoeda(semana.total)}
                   </strong>
                   <span className="financeiro-semana-card-meta">
-                    {semana.presencas} presença(s) · {semana.pacientes}{" "}
-                    paciente(s)
+                    <span>
+                      {semana.presencas}{" "}
+                      {semana.presencas === 1 ? "presença" : "presenças"}
+                    </span>
+                    <span>
+                      {semana.pacientes}{" "}
+                      {semana.pacientes === 1 ? "paciente" : "pacientes"}
+                    </span>
                   </span>
                 </button>
               ))}

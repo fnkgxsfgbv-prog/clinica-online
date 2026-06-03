@@ -5418,9 +5418,10 @@ button:hover {
 
 .financeiro-semanas-resumo-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: 4px 12px;
 }
 
 .financeiro-semanas-resumo-header strong {
@@ -5437,16 +5438,16 @@ button:hover {
 
 .financeiro-semanas-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 10px;
 }
 
 .financeiro-semana-card {
-  display: grid !important;
-  grid-template-columns: 1fr;
-  align-items: start !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
   justify-content: flex-start !important;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
   min-width: 0;
   padding: 14px 16px;
@@ -5456,7 +5457,7 @@ button:hover {
   color: inherit;
   text-align: left;
   cursor: pointer;
-  white-space: normal;
+  white-space: normal !important;
   min-height: auto !important;
   height: auto !important;
   box-shadow: none !important;
@@ -5479,28 +5480,37 @@ button:hover {
 
 .financeiro-semana-card-label {
   display: block;
-  font-size: 13px;
-  font-weight: 900;
-  line-height: 1.35;
-  color: var(--text);
-  overflow-wrap: anywhere;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .financeiro-semana-card-valor {
   display: block;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 900;
-  line-height: 1.2;
+  line-height: 1.1;
   color: var(--text);
 }
 
 .financeiro-semana-card-meta {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.25;
   color: var(--muted);
+}
+
+.financeiro-semana-card-meta span {
+  white-space: nowrap;
 }
 
 .financeiro-date-row {
@@ -5806,8 +5816,189 @@ button:hover {
   flex: 0 0 auto !important;
 }
 
-.dashboard-amanha-link {
-  margin-top: 12px;
+.dashboard-proximas-intro {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.dashboard-proximas-grupos {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboard-proximas-grupo {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(18, 27, 38, 0.55),
+      rgba(12, 19, 28, 0.72)
+    );
+}
+
+.dashboard-proximas-grupo-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dashboard-proximas-grupo-heading {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dashboard-proximas-grupo-heading strong {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.dashboard-proximas-grupo-heading span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-transform: capitalize;
+}
+
+.dashboard-proximas-grupo-count {
+  flex-shrink: 0;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(63, 191, 154, 0.18);
+  background: rgba(63, 191, 154, 0.1);
+  color: #a8eadb;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 26px;
+}
+
+.dashboard-proximas-grupo-list {
+  display: grid;
+  gap: 8px;
+}
+
+.dashboard-proximas-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.dashboard-proximas-row-time strong {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.dashboard-proximas-row-info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dashboard-proximas-row-info > strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.dashboard-proximas-row-status {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dashboard-proximas-row-meta {
+  color: #c9d0da;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.dashboard-proximas-row-action {
+  width: auto !important;
+  min-width: 72px;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+}
+
+.dashboard-proximas-link {
+  margin-top: 14px;
+}
+
+@media (max-width: 720px) {
+  .dashboard-proximas-row {
+    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-areas:
+      "time info"
+      "meta action";
+  }
+
+  .dashboard-proximas-row-time {
+    grid-area: time;
+  }
+
+  .dashboard-proximas-row-info {
+    grid-area: info;
+  }
+
+  .dashboard-proximas-row-meta {
+    grid-area: meta;
+  }
+
+  .dashboard-proximas-row-action {
+    grid-area: action;
+    justify-self: end;
+  }
+}
+
+[data-theme="light"] .dashboard-proximas-grupo {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+[data-theme="light"] .dashboard-proximas-grupo-heading strong,
+[data-theme="light"] .dashboard-proximas-row-time strong,
+[data-theme="light"] .dashboard-proximas-row-info > strong {
+  color: #17212b;
+}
+
+[data-theme="light"] .dashboard-proximas-grupo-count {
+  background: rgba(47, 155, 135, 0.1);
+  border-color: rgba(47, 155, 135, 0.22);
+  color: #1f6f62;
+}
+
+[data-theme="light"] .dashboard-proximas-row {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .dashboard-proximas-row-meta {
+  color: #475467;
 }
 
 .financeiro-totais {
@@ -9959,6 +10150,10 @@ td {
 [data-theme="light"] .financeiro-semana-card-label,
 [data-theme="light"] .financeiro-semana-card-valor {
   color: #17212b !important;
+}
+
+[data-theme="light"] .financeiro-semana-card-label {
+  color: #667085 !important;
 }
 
 [data-theme="light"] .financeiro-semana-card-meta,
