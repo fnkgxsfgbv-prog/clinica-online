@@ -7412,6 +7412,149 @@ button:disabled:hover,
   padding: 0 14px !important;
 }
 
+.backup-clinica-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.backup-clinica-help {
+  margin: 0;
+  color: #c9d0da;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.backup-clinica-help code {
+  color: #e2e8f0;
+}
+
+.backup-clinica-feedback {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.backup-clinica-erro {
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(127, 29, 29, 0.25);
+  color: #fecaca;
+}
+
+.backup-clinica-ok {
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  background: rgba(20, 83, 45, 0.25);
+  color: #bbf7d0;
+}
+
+.backup-clinica-progresso {
+  border: 1px solid rgba(147, 197, 253, 0.25);
+  background: rgba(30, 58, 138, 0.22);
+  color: #dbeafe;
+}
+
+.backup-clinica-restore {
+  display: grid;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.backup-clinica-restore h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.backup-clinica-file {
+  width: 100%;
+  min-height: auto !important;
+  padding: 10px 12px !important;
+  border-radius: 10px !important;
+  font-size: 13px !important;
+}
+
+.backup-clinica-preview {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.backup-clinica-preview > strong {
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.backup-clinica-preview > p {
+  margin: 0;
+  color: #dce2ea;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.backup-clinica-modos {
+  display: grid;
+  gap: 8px;
+}
+
+.backup-clinica-modo {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  margin: 0;
+  color: #dce2ea;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.backup-clinica-modo input[type="checkbox"],
+.backup-clinica-modo input[type="radio"] {
+  margin-top: 2px;
+}
+
+.backup-clinica-confirm {
+  display: grid;
+  gap: 6px;
+}
+
+.backup-clinica-confirm span {
+  margin: 0 !important;
+  color: #fecaca;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+[data-theme="light"] .backup-clinica-help {
+  color: #475467;
+}
+
+[data-theme="light"] .backup-clinica-preview {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+[data-theme="light"] .backup-clinica-preview > strong,
+[data-theme="light"] .backup-clinica-restore h3 {
+  color: #17212b;
+}
+
+[data-theme="light"] .backup-clinica-preview > p,
+[data-theme="light"] .backup-clinica-modo {
+  color: #344054;
+}
+
 .clinic-insight-list {
   display: grid;
   gap: 10px;

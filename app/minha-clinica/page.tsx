@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import FlashMessage from "../components/FlashMessage";
+import BackupClinicaPanel from "../components/BackupClinicaPanel";
 import PendenciasClinica from "../components/PendenciasClinica";
 import SincronizarDadosButton from "../components/SincronizarDadosButton";
 import { getCurrentUser } from "../lib/auth";
-import { baixarBackupClinica, montarBackupClinica } from "../lib/backup-clinica";
+import type { BackupClinicaPerfil } from "../lib/backup-clinica";
 import { montarChecklistUnificado } from "../lib/checklist-clinica";
 import { listFrequenciasResumo } from "../lib/db/frequencia";
 import { listPacientes } from "../lib/db/pacientes";
@@ -20,7 +21,7 @@ import {
 import { listSessoes } from "../lib/db/sessoes";
 import { baixarBlob } from "../lib/download";
 import { extrairDataInicioAtendimento } from "../lib/paciente-metadata";
-import { dataIsoHoje, formatarDataPaciente } from "../lib/datas-paciente";
+import { formatarDataPaciente } from "../lib/datas-paciente";
 import { requireUserClient } from "../lib/require-user-client";
 import supabase from "../lib/supabase";
 import type { Frequencia, Paciente, Sessao } from "../types";
@@ -81,6 +82,7 @@ export default function MinhaClinicaPage() {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [sessoes, setSessoes] = useState<Sessao[]>([]);
   const [frequencias, setFrequencias] = useState<Frequencia[]>([]);
+  const [userId, setUserId] = useState("");
   const [erro, setErro] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [carregando, setCarregando] = useState(true);
@@ -98,6 +100,8 @@ export default function MinhaClinicaPage() {
         setCarregando(false);
         return;
       }
+
+      setUserId(user.id);
 
       const [pacientesRes, sessoesRes, frequenciasRes] = await Promise.all([
         listPacientes(user.id),
@@ -159,6 +163,36 @@ export default function MinhaClinicaPage() {
   const lembretesRotina = checklistCompleto.filter(
     (item) => item.categoria === "rotina"
   );
+
+  const perfilBackup: BackupClinicaPerfil | undefined = perfil
+    ? {
+        nome: form.nome || perfil.nome,
+        telefone: form.telefone || perfil.telefone,
+        nomeClinica: form.nomeClinica || perfil.nomeClinica,
+        crp: form.crp || perfil.crp,
+        endereco: form.endereco || perfil.endereco,
+        cidade: form.cidade || perfil.cidade,
+        observacoes: form.observacoes || perfil.observacoes,
+      }
+    : undefined;
+
+  async function recarregarDadosClinica() {
+    if (!userId) return;
+    const [pacientesRes, sessoesRes, frequenciasRes] = await Promise.all([
+      listPacientes(userId),
+      listSessoes(userId),
+      listFrequenciasResumo(userId),
+    ]);
+    if (!pacientesRes.error) {
+      setPacientes((pacientesRes.data || []) as Paciente[]);
+    }
+    if (!sessoesRes.error) {
+      setSessoes((sessoesRes.data || []) as Sessao[]);
+    }
+    if (!frequenciasRes.error) {
+      setFrequencias((frequenciasRes.data || []) as Frequencia[]);
+    }
+  }
 
   function atualizarCampo(campo: keyof ProfileForm, valor: string) {
     setForm((atual) => ({ ...atual, [campo]: valor }));
@@ -367,12 +401,6 @@ export default function MinhaClinicaPage() {
     ]);
   }
 
-  function exportarBackupCompleto() {
-    baixarBackupClinica(
-      montarBackupClinica(pacientes, sessoes, frequencias)
-    );
-  }
-
   return (
     <div className="clinic-page">
       <div className="clinic-layout clinic-layout-single">
@@ -548,11 +576,14 @@ export default function MinhaClinicaPage() {
                 linkPreferencias
               />
 
-              <section className="clinic-card clinic-tool-card">
+              <section className="clinic-card clinic-tool-card clinic-tool-card-wide">
                 <div className="clinic-tool-header">
                   <div>
                     <h2>Backup e exportação</h2>
-                    <p>Baixe cópias dos dados principais para guardar ou migrar.</p>
+                    <p>
+                      Baixe cópias completas dos dados ou restaure um backup
+                      anterior.
+                    </p>
                   </div>
                 </div>
                 <div className="clinic-export-actions">
@@ -562,7 +593,7 @@ export default function MinhaClinicaPage() {
                     onClick={exportarPacientes}
                     disabled={pacientes.length === 0}
                   >
-                    Baixar pacientes
+                    Baixar pacientes (CSV)
                   </button>
                   <button
                     type="button"
@@ -570,21 +601,21 @@ export default function MinhaClinicaPage() {
                     onClick={exportarSessoes}
                     disabled={sessoes.length === 0}
                   >
-                    Baixar sessões
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-green"
-                    onClick={exportarBackupCompleto}
-                    disabled={
-                      pacientes.length === 0 &&
-                      sessoes.length === 0 &&
-                      frequencias.length === 0
-                    }
-                  >
-                    Backup completo (JSON)
+                    Baixar sessões (CSV)
                   </button>
                 </div>
+                {userId ? (
+                  <BackupClinicaPanel
+                    userId={userId}
+                    perfil={perfilBackup}
+                    temDadosBasicos={
+                      pacientes.length > 0 ||
+                      sessoes.length > 0 ||
+                      frequencias.length > 0
+                    }
+                    onConcluido={recarregarDadosClinica}
+                  />
+                ) : null}
               </section>
 
               <section className="clinic-card clinic-tool-card">
