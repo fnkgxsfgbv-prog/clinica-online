@@ -5755,12 +5755,82 @@ button.financeiro-semana-chip,
 }
 
 .financeiro-fechamento,
-.financeiro-alertas {
+.financeiro-alertas,
+.financeiro-previsao {
   margin-bottom: 20px;
   padding: 16px 18px;
   border-radius: 16px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--card) 92%, transparent);
+}
+
+.financeiro-previsao {
+  border-color: rgba(74, 222, 128, 0.22);
+  background: color-mix(in srgb, rgba(74, 222, 128, 0.08) 40%, var(--card));
+}
+
+.financeiro-previsao-header {
+  margin-bottom: 14px;
+}
+
+.financeiro-previsao-header strong {
+  display: block;
+  font-size: 16px;
+  color: var(--text);
+}
+
+.financeiro-previsao-header span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.financeiro-previsao-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.financeiro-previsao-card {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+
+.financeiro-previsao-card.is-destaque {
+  border-color: rgba(74, 222, 128, 0.35);
+  background: color-mix(in srgb, rgba(74, 222, 128, 0.12) 50%, var(--card));
+}
+
+.financeiro-previsao-card.is-desconto strong {
+  color: #f5b8ae;
+}
+
+.financeiro-previsao-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.financeiro-previsao-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 20px;
+  color: var(--green);
+}
+
+.financeiro-previsao-card em {
+  display: block;
+  margin-top: 6px;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  line-height: 1.35;
 }
 
 .financeiro-fechamento-header,

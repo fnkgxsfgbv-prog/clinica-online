@@ -49,6 +49,7 @@ import {
   calcularFechamentoMes,
   rotuloVariacao,
 } from "../lib/financeiro-fechamento";
+import { calcularPrevisaoRecebimentoMes } from "../lib/financeiro-previsao";
 import {
   exportarFechamentoMesXlsx,
   exportarFinanceiroXlsx,
@@ -383,6 +384,23 @@ export default function FinanceiroPage() {
   const fechamento = useMemo(() => {
     if (!mesSelecionado.trim() || intervaloAtivo || semanaAtiva) return null;
     return calcularFechamentoMes(
+      pacientes,
+      frequencias,
+      sessoes,
+      mesSelecionado
+    );
+  }, [
+    pacientes,
+    frequencias,
+    sessoes,
+    mesSelecionado,
+    intervaloAtivo,
+    semanaAtiva,
+  ]);
+
+  const previsaoMes = useMemo(() => {
+    if (!mesSelecionado.trim() || intervaloAtivo || semanaAtiva) return null;
+    return calcularPrevisaoRecebimentoMes(
       pacientes,
       frequencias,
       sessoes,
@@ -807,6 +825,79 @@ export default function FinanceiroPage() {
                 </div>
               </div>
             ) : null}
+          </section>
+        ) : null}
+
+        {!carregando && previsaoMes ? (
+          <section
+            className="financeiro-previsao"
+            aria-label="Previsão de recebimento no fim do mês"
+          >
+            <div className="financeiro-previsao-header">
+              <div>
+                <strong>
+                  {previsaoMes.mesEmCurso
+                    ? `Previsão no fim de ${previsaoMes.label}`
+                    : `Recebimento em ${previsaoMes.label}`}
+                </strong>
+                <span>
+                  Soma o que já foi confirmado (presente) com as sessões ainda
+                  agendadas. Cancelamentos e faltas não entram na previsão.
+                </span>
+              </div>
+            </div>
+
+            <div className="financeiro-previsao-grid">
+              <div className="financeiro-previsao-card is-destaque">
+                <span>Total previsto</span>
+                <strong>{formatarMoeda(previsaoMes.previsaoTotal)}</strong>
+                <em>
+                  {formatarMoeda(previsaoMes.confirmado)} confirmado +{" "}
+                  {formatarMoeda(previsaoMes.agendado)} agendado
+                </em>
+              </div>
+
+              <div className="financeiro-previsao-card">
+                <span>Já confirmado</span>
+                <strong>{formatarMoeda(previsaoMes.confirmado)}</strong>
+                <em>{previsaoMes.confirmadoPresencas} presença(s)</em>
+              </div>
+
+              <div className="financeiro-previsao-card">
+                <span>A receber (agendadas)</span>
+                <strong>{formatarMoeda(previsaoMes.agendado)}</strong>
+                <em>
+                  {previsaoMes.agendadoSessoes} sessão(ões)
+                  {previsaoMes.agendadoFuturoSessoes > 0
+                    ? ` · ${previsaoMes.agendadoFuturoSessoes} futura(s)`
+                    : ""}
+                  {previsaoMes.agendadoPassadoSessoes > 0
+                    ? ` · ${previsaoMes.agendadoPassadoSessoes} passada(s) sem registro`
+                    : ""}
+                </em>
+              </div>
+
+              {previsaoMes.canceladoSessoes > 0 || previsaoMes.faltouSessoes > 0 ? (
+                <div className="financeiro-previsao-card is-desconto">
+                  <span>Fora da previsão</span>
+                  <strong>
+                    −{formatarMoeda(previsaoMes.cancelado + previsaoMes.faltou)}
+                  </strong>
+                  <em>
+                    {previsaoMes.canceladoSessoes > 0
+                      ? `${previsaoMes.canceladoSessoes} cancelamento(s) (${formatarMoeda(previsaoMes.cancelado)})`
+                      : ""}
+                    {previsaoMes.canceladoSessoes > 0 &&
+                    previsaoMes.faltouSessoes > 0
+                      ? " · "
+                      : ""}
+                    {previsaoMes.faltouSessoes > 0
+                      ? `${previsaoMes.faltouSessoes} falta(s) (${formatarMoeda(previsaoMes.faltou)})`
+                      : ""}
+                  </em>
+                </div>
+              ) : null}
+            </div>
           </section>
         ) : null}
 
