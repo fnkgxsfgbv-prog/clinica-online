@@ -135,7 +135,6 @@ function AppShellFrame({
   const [busca, setBusca] = useState("");
   const [buscandoPacientes, setBuscandoPacientes] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [navAberto, setNavAberto] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [profilePhotoUrl, setProfilePhotoUrl] = useState("");
 
@@ -149,8 +148,12 @@ function AppShellFrame({
   }, []);
 
   useEffect(() => {
-    setNavAberto(false);
-  }, [pathname]);
+    document.body.classList.add("has-app-shell");
+
+    return () => {
+      document.body.classList.remove("has-app-shell");
+    };
+  }, []);
 
   useEffect(() => {
     const pref = preferenciasCtx?.preferencias.tema;
@@ -249,18 +252,7 @@ function AppShellFrame({
 
   return (
     <div className="app-shell psicomanager-shell">
-      {navAberto ? (
-        <button
-          type="button"
-          className="mobile-nav-backdrop"
-          aria-label="Fechar menu"
-          onClick={() => setNavAberto(false)}
-        />
-      ) : null}
-
-      <aside
-        className={`app-sidebar psicomanager-sidebar${navAberto ? " is-open" : ""}`}
-      >
+      <aside className="app-sidebar psicomanager-sidebar">
         <Link href="/" className="app-brand psicomanager-brand">
           <span>Psico</span>Desk
         </Link>
@@ -291,22 +283,6 @@ function AppShellFrame({
       <main className="main-content psicomanager-main">
         <div className="topbar psicomanager-topbar">
           <div className="topbar-left">
-            <button
-              type="button"
-              className="mobile-nav-toggle"
-              aria-label={navAberto ? "Fechar menu" : "Abrir menu"}
-              aria-expanded={navAberto}
-              onClick={() => setNavAberto((aberto) => !aberto)}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d="M4 7h16M4 12h16M4 17h16"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
             <span className="topbar-page-pill">{tituloPagina}</span>
             <div className="topbar-search">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">

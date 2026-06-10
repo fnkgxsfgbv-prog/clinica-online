@@ -79,9 +79,9 @@ a {
   background: var(--green);
 }
 
-/* SIDEBAR */
+/* SIDEBAR (legado — não aplicar ao menu principal) */
 
-aside {
+aside:not(.app-sidebar) {
   width: 250px;
   min-height: 100vh;
   background: rgba(10, 15, 30, 0.72);
@@ -2397,7 +2397,7 @@ a:hover {
   opacity: 0.92;
 }/* SIDEBAR PREMIUM FINAL */
 
-aside {
+aside:not(.app-sidebar) {
   background:
     linear-gradient(
       180deg,
@@ -2408,7 +2408,7 @@ aside {
   border-right: 1px solid rgba(255,255,255,0.07) !important;
 }
 
-aside h1 {
+aside:not(.app-sidebar) h1 {
   font-size: 30px !important;
   letter-spacing: -0.05em !important;
 }
@@ -2643,7 +2643,7 @@ body::before {
 
 /* MENU MAIS SOFISTICADO */
 
-aside {
+aside:not(.app-sidebar) {
   backdrop-filter: blur(28px) !important;
 
   box-shadow:
@@ -2783,7 +2783,7 @@ table th,
   color: #f8fafc;
 }
 
-.app-sidebar {
+.app-sidebar:not(.psicomanager-sidebar) {
   flex: 0 0 250px;
 }
 
@@ -2864,11 +2864,11 @@ table th,
     grid-template-columns: 1fr;
   }
 
-  .app-shell {
+  .app-shell:not(.psicomanager-shell) {
     display: block;
   }
 
-  .app-sidebar {
+  .app-sidebar:not(.psicomanager-sidebar) {
     position: relative;
     width: 100%;
     min-height: auto;
@@ -3135,8 +3135,8 @@ button:hover {
     );
 }
 
-[data-theme="light"] aside,
-[data-theme="light"] .app-sidebar {
+[data-theme="light"] aside:not(.app-sidebar),
+[data-theme="light"] .app-sidebar:not(.psicomanager-sidebar) {
   background:
     linear-gradient(
       180deg,
@@ -6445,6 +6445,8 @@ button.financeiro-semana-chip,
 }
 
 .psicomanager-main {
+  flex: 1 1 auto !important;
+  min-width: 0;
   padding: 12px 18px 18px !important;
   background: #202428 !important;
   overflow: auto !important;
@@ -8165,27 +8167,6 @@ button:disabled:hover,
 }
 
 @media (max-width: 900px) {
-  .psicomanager-shell {
-    display: block !important;
-  }
-
-  .psicomanager-sidebar {
-    width: 100% !important;
-    min-height: auto;
-    flex: none !important;
-  }
-
-  .psicomanager-sidebar .sidebar-nav {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
-    gap: 6px;
-  }
-
-  .psicomanager-sidebar .menu-link {
-    min-height: 50px !important;
-    padding: 7px 4px !important;
-  }
-
   .psicomanager-topbar,
   .psico-agenda-toolbar,
   .clinic-layout,
