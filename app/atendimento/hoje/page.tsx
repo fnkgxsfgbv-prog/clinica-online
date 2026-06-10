@@ -350,6 +350,7 @@ export default function ModoSessaoHojePage() {
           />
         ) : (
           <div className="modo-sessao-layout">
+            <div className="modo-sessao-col-fila">
             <div className="modo-sessao-fila" role="region" aria-label="Sessões de hoje">
               <div className="modo-sessao-fila-header">
                 <strong>Hoje · {sessoes.length} sessões</strong>
@@ -401,9 +402,15 @@ export default function ModoSessaoHojePage() {
                 Progresso: {concluidas}/{sessoes.length} concluídas
               </p>
             </div>
+            </div>
 
             {sessaoAtiva ? (
-              <main className="modo-sessao-main">
+              <div className="modo-sessao-col-conteudo">
+              <div
+                className="modo-sessao-main"
+                role="region"
+                aria-label="Sessão em atendimento"
+              >
                 <div className="modo-sessao-main-header">
                   <div>
                     <span className="modo-sessao-eyebrow">Modo sessão</span>
@@ -477,9 +484,13 @@ export default function ModoSessaoHojePage() {
                   </section>
                 )}
 
-                <section className="modo-sessao-status">
+                <section className="modo-sessao-status modo-sessao-status-card">
                   <strong>Comparecimento</strong>
-                  <div className="modo-sessao-status-btns">
+                  <div
+                    className="modo-sessao-status-btns"
+                    role="group"
+                    aria-label="Comparecimento da sessão"
+                  >
                     <button
                       type="button"
                       className={`btn btn-outline${visualFrequenciaAgenda(sessaoAtiva.status).classe === "is-present" ? " is-active" : ""}`}
@@ -544,7 +555,8 @@ export default function ModoSessaoHojePage() {
                     Gerar documento
                   </Link>
                 </div>
-              </main>
+              </div>
+              </div>
             ) : null}
           </div>
         )}
