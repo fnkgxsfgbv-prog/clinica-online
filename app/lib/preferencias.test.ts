@@ -40,6 +40,11 @@ describe("mesclarPreferencias", () => {
     expect(prefs.duracaoSessaoMinutos).toBe(50);
     expect(prefs.mesUltimo).toBe("2026-05");
   });
+
+  it("aceita tema system", () => {
+    const prefs = mesclarPreferencias({ tema: "system" });
+    expect(prefs.tema).toBe("system");
+  });
 });
 
 describe("lerPreferenciasDeMetadata", () => {

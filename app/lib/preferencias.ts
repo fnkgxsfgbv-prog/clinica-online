@@ -15,7 +15,8 @@ export const DASHBOARD_LAYOUT_KEY = "psicodesk-dashboard-layout";
 export const THEME_STORAGE_KEY = "psicodesk-theme";
 export const AVISO_VIRADA_MES_KEY = "psicodesk-aviso-virada-mes";
 
-export type TemaPreferencia = "light" | "dark";
+export type TemaPreferencia = "light" | "dark" | "system";
+export type TemaEfetivo = "light" | "dark";
 export type MesModoPreferencia = "automatico" | "ultimo";
 export type AgendaVisualizacao = "day" | "week" | "month";
 export type AgendaModo = "geral" | "dia";
@@ -43,7 +44,10 @@ export type DashboardLayoutPreferencias = Pick<
 const DURACOES_VALIDAS = [30, 40, 45, 50, 60, 90] as const;
 
 function normalizarTema(valor: unknown): TemaPreferencia {
-  return valor === "light" ? "light" : "dark";
+  if (valor === "light" || valor === "dark" || valor === "system") {
+    return valor;
+  }
+  return "dark";
 }
 
 function normalizarMesModo(valor: unknown): MesModoPreferencia {
@@ -220,9 +224,32 @@ function mesclarLayoutDashboard(
   });
 }
 
+export function temaEfetivoDoSistema(): TemaEfetivo {
+  if (typeof window === "undefined") return "dark";
+  return window.matchMedia("(prefers-color-scheme: light)").matches
+    ? "light"
+    : "dark";
+}
+
+export function resolverTemaEfetivo(tema: TemaPreferencia): TemaEfetivo {
+  if (tema === "system") return temaEfetivoDoSistema();
+  return tema;
+}
+
 export function aplicarTemaNoDocumento(tema: TemaPreferencia): void {
   if (typeof document === "undefined") return;
-  document.documentElement.dataset.theme = tema;
+  document.documentElement.dataset.theme = resolverTemaEfetivo(tema);
+}
+
+export function inscreverMudancaTemaSistema(
+  callback: () => void
+): () => void {
+  if (typeof window === "undefined") return () => {};
+
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  const handler = () => callback();
+  media.addEventListener("change", handler);
+  return () => media.removeEventListener("change", handler);
 }
 
 export function mesInicialPreferido(): string {

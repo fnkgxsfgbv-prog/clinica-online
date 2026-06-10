@@ -61,9 +61,11 @@ export default function RootLayout({
                   var prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
                   var theme = saved === "light" || saved === "dark"
                     ? saved
-                    : prefersLight
-                      ? "light"
-                      : "dark";
+                    : saved === "system"
+                      ? (prefersLight ? "light" : "dark")
+                      : prefersLight
+                        ? "light"
+                        : "dark";
 
                   document.documentElement.dataset.theme = theme;
                 } catch (error) {

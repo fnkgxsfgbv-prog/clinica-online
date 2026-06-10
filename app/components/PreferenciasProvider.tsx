@@ -18,6 +18,7 @@ import {
   carregarPreferenciasUsuario,
   gravarLayoutDashboardLocal,
   gravarPreferenciasLocal,
+  inscreverMudancaTemaSistema,
   mesclarPreferencias,
   preferenciasPadrao,
   salvarPreferenciasUsuario,
@@ -88,6 +89,15 @@ export function PreferenciasProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, [aplicarUsuario]);
+
+  useEffect(() => {
+    aplicarTemaNoDocumento(preferencias.tema);
+    if (preferencias.tema !== "system") return;
+
+    return inscreverMudancaTemaSistema(() => {
+      aplicarTemaNoDocumento("system");
+    });
+  }, [preferencias.tema]);
 
   const atualizarPreferencias = useCallback<
     PreferenciasContextValue["atualizarPreferencias"]

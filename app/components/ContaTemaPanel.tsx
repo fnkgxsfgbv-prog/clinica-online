@@ -3,7 +3,11 @@
 import Link from "next/link";
 
 import { usePreferencias } from "./PreferenciasProvider";
-import { aplicarTemaNoDocumento, preferenciasPadrao } from "../lib/preferencias";
+import {
+  aplicarTemaNoDocumento,
+  preferenciasPadrao,
+  type TemaPreferencia,
+} from "../lib/preferencias";
 
 type Props = {
   email?: string;
@@ -12,7 +16,7 @@ type Props = {
 export default function ContaTemaPanel({ email }: Props) {
   const { preferencias, salvando, atualizarPreferencias } = usePreferencias();
 
-  function alterarTema(tema: "light" | "dark") {
+  function alterarTema(tema: TemaPreferencia) {
     aplicarTemaNoDocumento(tema);
     void atualizarPreferencias({ tema }, { salvarNuvem: true });
   }
@@ -47,10 +51,9 @@ export default function ContaTemaPanel({ email }: Props) {
           <span className="context-prefs-label">Tema</span>
           <select
             value={preferencias.tema}
-            onChange={(e) =>
-              alterarTema(e.target.value === "light" ? "light" : "dark")
-            }
+            onChange={(e) => alterarTema(e.target.value as TemaPreferencia)}
           >
+            <option value="system">Padrão do sistema</option>
             <option value="dark">Escuro</option>
             <option value="light">Claro</option>
           </select>

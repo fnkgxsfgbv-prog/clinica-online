@@ -10,6 +10,8 @@ import { buscarPacientesPorNome } from "../lib/db/pacientes";
 import { resolverUrlFotoPerfil } from "../lib/db/profile-photo";
 import {
   THEME_STORAGE_KEY,
+  resolverTemaEfetivo,
+  type TemaEfetivo,
   type TemaPreferencia,
 } from "../lib/preferencias";
 import supabase from "../lib/supabase";
@@ -20,7 +22,7 @@ import {
   usePreferenciasOpcional,
 } from "./PreferenciasProvider";
 
-type ThemeMode = "light" | "dark";
+type ThemeMode = TemaEfetivo;
 
 type MenuItem = {
   href: string;
@@ -145,8 +147,9 @@ function AppShellFrame({
   }, []);
 
   useEffect(() => {
-    if (!preferenciasCtx?.preferencias.tema) return;
-    setTheme(preferenciasCtx.preferencias.tema);
+    const pref = preferenciasCtx?.preferencias.tema;
+    if (!pref) return;
+    setTheme(resolverTemaEfetivo(pref));
   }, [preferenciasCtx?.preferencias.tema]);
 
   useEffect(() => {
@@ -207,7 +210,7 @@ function AppShellFrame({
     return () => window.clearTimeout(timer);
   }, [busca]);
 
-  function atualizarTema(novoTema: ThemeMode) {
+  function atualizarTema(novoTema: TemaEfetivo) {
     setTheme(novoTema);
     document.documentElement.dataset.theme = novoTema;
     localStorage.setItem(THEME_STORAGE_KEY, novoTema);
