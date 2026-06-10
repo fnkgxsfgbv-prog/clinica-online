@@ -14,6 +14,42 @@ export async function listSessoes(userId: string) {
     .order("id", { ascending: true });
 }
 
+/** Sessões em intervalo inclusivo `AAAA-MM-DD`. */
+export async function listSessoesPorIntervalo(
+  userId: string,
+  inicio: string,
+  fim: string
+) {
+  let a = inicio.trim();
+  let b = fim.trim();
+  if (!a || !b) {
+    return { data: [] as Sessao[], error: null };
+  }
+  if (a > b) [a, b] = [b, a];
+
+  return supabase
+    .from(TABLES.SESSOES)
+    .select("*")
+    .eq("user_id", userId)
+    .gte("data", a)
+    .lte("data", b)
+    .order("data", { ascending: true })
+    .order("hora", { ascending: true })
+    .order("id", { ascending: true });
+}
+
+/** Sessões a partir de uma data (inclusiva). */
+export async function listSessoesDesde(userId: string, dataIso: string) {
+  return supabase
+    .from(TABLES.SESSOES)
+    .select("id,paciente_id,paciente_nome,data,hora,status,valor")
+    .eq("user_id", userId)
+    .gte("data", dataIso)
+    .order("data", { ascending: true })
+    .order("hora", { ascending: true })
+    .order("id", { ascending: true });
+}
+
 export async function listSessoesAgendadasFuturas(
   userId: string,
   hoje: string,

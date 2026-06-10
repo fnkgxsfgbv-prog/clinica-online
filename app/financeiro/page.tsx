@@ -12,12 +12,14 @@ import PreferenciasMesPanel from "../components/PreferenciasMesPanel";
 import { getCurrentUser } from "../lib/auth";
 import { carregarFrequenciasCompleto } from "../lib/db/frequencia";
 import {
-  deveExecutarManutencaoFrequencia,
+  carregarFinanceiroPeriodo,
+  listarMesesDisponiveisFinanceiro,
+  type FiltroFinanceiroPeriodo,
+} from "../lib/db/financeiro-load";
+import {
   limparFlagManutencaoFrequencia,
   marcarManutencaoFrequenciaExecutada,
 } from "../lib/manutencao-frequencia";
-import { chaveMes } from "../lib/frequencia-utils";
-import { ordenarChavesMes } from "../lib/ordenar-datas";
 import {
   calcularResumoFinanceiro,
   calcularResumosSemanais,
@@ -29,6 +31,7 @@ import {
   labelSemanaChip,
   semanaAnterior,
   semanaIntersectsMes,
+  semanasComPresencaDeRegistros,
   type ResumoFinanceiro,
 } from "../lib/financeiro";
 import { dataIsoHoje } from "../lib/datas-paciente";
@@ -37,6 +40,7 @@ import {
   detectarViradaMesCalendario,
   labelMesAno,
   mesAtualChave,
+  mesesComMesAtual,
 } from "../lib/mes";
 import { criarAvisoViradaMes, type AvisoViradaMes } from "../lib/aviso-virada-mes";
 import {
@@ -69,65 +73,6 @@ function formatarMoeda(valor: number) {
 }
 
 
-function mesesComPresenca(
-  frequencias: Frequencia[],
-  sessoes: Sessao[]
-): string[] {
-  const chaves = new Set<string>();
-
-  for (const f of frequencias) {
-    if (!isStatusPresente(f.status)) continue;
-    const m = chaveMes(f.data);
-    if (m && m !== "sem-data") chaves.add(m);
-  }
-
-  const sessoesComFreq = new Set(
-    frequencias
-      .filter((f) => f.sessao_id != null && f.sessao_id !== "")
-      .map((f) => String(f.sessao_id))
-  );
-
-  for (const s of sessoes) {
-    if (sessoesComFreq.has(String(s.id))) continue;
-    if (!isStatusPresente(s.status)) continue;
-    const m = chaveMes(s.data);
-    if (m && m !== "sem-data") chaves.add(m);
-  }
-
-  const atual = mesAtualChave();
-  if (atual) chaves.add(atual);
-
-  return ordenarChavesMes(Array.from(chaves), "asc");
-}
-
-function semanasComPresenca(
-  frequencias: Frequencia[],
-  sessoes: Sessao[]
-): string[] {
-  const chaves = new Set<string>();
-
-  for (const f of frequencias) {
-    if (!isStatusPresente(f.status)) continue;
-    const semana = inicioSemanaISO(f.data);
-    if (semana) chaves.add(semana);
-  }
-
-  const sessoesComFreq = new Set(
-    frequencias
-      .filter((f) => f.sessao_id != null && f.sessao_id !== "")
-      .map((f) => String(f.sessao_id))
-  );
-
-  for (const s of sessoes) {
-    if (sessoesComFreq.has(String(s.id))) continue;
-    if (!isStatusPresente(s.status)) continue;
-    const semana = inicioSemanaISO(s.data);
-    if (semana) chaves.add(semana);
-  }
-
-  return Array.from(chaves).sort((a, b) => b.localeCompare(a));
-}
-
 function sufixoArquivoFinanceiro(
   mes: string,
   semana: string,
@@ -152,6 +97,8 @@ export default function FinanceiroPage() {
   const [frequencias, setFrequencias] = useState<Frequencia[]>([]);
 
   const [mesSelecionado, setMesSelecionado] = useState(mesInicialPreferido);
+  const [mesesDisponiveis, setMesesDisponiveis] = useState<string[]>([]);
+  const [metadadosProntos, setMetadadosProntos] = useState(false);
   const [avisoViradaMes, setAvisoViradaMes] = useState<AvisoViradaMes | null>(
     null
   );
@@ -173,62 +120,113 @@ export default function FinanceiroPage() {
     : "";
   const mesAtual = mesAtualChave();
 
-  const carregar = useCallback(async (forcarManutencao = false) => {
-    setCarregando(true);
-    setErro("");
-
-    const user = await requireUserClient(router, getCurrentUser);
-    if (!user) {
-      setCarregando(false);
-      return;
+  const filtroPeriodoAtual = useMemo((): FiltroFinanceiroPeriodo => {
+    if (intervaloAtivo) {
+      return { tipo: "intervalo", inicio: dataInicio, fim: dataFim };
     }
-
-    setDadosClinica(extrairDadosClinicaDeUsuario(user));
-
-    const manutencao =
-      forcarManutencao || deveExecutarManutencaoFrequencia(user.id);
-
-    const {
-      pacientes: pList,
-      sessoes: sList,
-      frequencias: fList,
-      error: loadError,
-    } = await carregarFrequenciasCompleto(user.id, { manutencao });
-
-    if (manutencao && !loadError) {
-      marcarManutencaoFrequenciaExecutada(user.id);
+    if (semanaAtiva) {
+      return { tipo: "semana", inicioSemana: semanaSelecionada };
     }
-
-    if (loadError) {
-      setErro(loadError.message);
-      setPacientes([]);
-      setSessoes([]);
-      setFrequencias([]);
-      setCarregando(false);
-      return;
+    if (mesSelecionado.trim()) {
+      return { tipo: "mes", mes: mesSelecionado };
     }
+    return { tipo: "todos" };
+  }, [
+    intervaloAtivo,
+    semanaAtiva,
+    dataInicio,
+    dataFim,
+    semanaSelecionada,
+    mesSelecionado,
+  ]);
 
-    setPacientes(pList);
-    setSessoes(sList);
-    setFrequencias(fList);
-
-    if (
-      calcularResumoFinanceiro(pList, fList, sList).length === 0 &&
-      (fList || []).some((f) => isStatusPresente(f.status))
-    ) {
-      setErro(
-        "Há presenças na frequência, mas sem vínculo com pacientes. Tente sair e entrar de novo; se persistir, confira se está na conta correta."
-      );
-    } else {
+  const carregar = useCallback(
+    async (forcarManutencao = false) => {
+      setCarregando(true);
       setErro("");
-    }
 
-    setCarregando(false);
+      const user = await requireUserClient(router, getCurrentUser);
+      if (!user) {
+        setCarregando(false);
+        return;
+      }
+
+      setDadosClinica(extrairDadosClinicaDeUsuario(user));
+
+      if (forcarManutencao) {
+        const manut = await carregarFrequenciasCompleto(user.id, {
+          manutencao: true,
+        });
+        if (manut.error) {
+          setErro(manut.error.message);
+          setCarregando(false);
+          return;
+        }
+        marcarManutencaoFrequenciaExecutada(user.id);
+
+        const mesesRes = await listarMesesDisponiveisFinanceiro(user.id);
+        if (!mesesRes.error) {
+          setMesesDisponiveis(mesesComMesAtual(mesesRes.meses));
+        }
+      }
+
+      const periodo = await carregarFinanceiroPeriodo(
+        user.id,
+        filtroPeriodoAtual
+      );
+
+      if (periodo.error) {
+        setErro(periodo.error.message);
+        setPacientes([]);
+        setSessoes([]);
+        setFrequencias([]);
+        setCarregando(false);
+        return;
+      }
+
+      const pList = periodo.pacientes;
+      const sList = periodo.sessoes;
+      const fList = periodo.frequencias;
+
+      setPacientes(pList);
+      setSessoes(sList);
+      setFrequencias(fList);
+
+      if (
+        calcularResumoFinanceiro(pList, fList, sList).length === 0 &&
+        (fList || []).some((f) => isStatusPresente(f.status))
+      ) {
+        setErro(
+          "Há presenças na frequência, mas sem vínculo com pacientes. Tente sair e entrar de novo; se persistir, confira se está na conta correta."
+        );
+      } else {
+        setErro("");
+      }
+
+      setCarregando(false);
+    },
+    [router, filtroPeriodoAtual]
+  );
+
+  useEffect(() => {
+    void (async () => {
+      const user = await requireUserClient(router, getCurrentUser);
+      if (!user) return;
+
+      setDadosClinica(extrairDadosClinicaDeUsuario(user));
+
+      const mesesRes = await listarMesesDisponiveisFinanceiro(user.id);
+      if (!mesesRes.error) {
+        setMesesDisponiveis(mesesComMesAtual(mesesRes.meses));
+      }
+      setMetadadosProntos(true);
+    })();
   }, [router]);
 
   useEffect(() => {
-    void carregar();
-  }, [carregar]);
+    if (!metadadosProntos) return;
+    void carregar(false);
+  }, [metadadosProntos, carregar]);
 
   useEffect(() => {
     const { mudou, mesAtual, mesAnterior } = detectarViradaMesCalendario();
@@ -287,13 +285,8 @@ export default function FinanceiroPage() {
     };
   }, [mesSelecionado, intervaloAtivo, semanaAtiva]);
 
-  const mesesDisponiveis = useMemo(
-    () => mesesComPresenca(frequencias, sessoes),
-    [frequencias, sessoes]
-  );
-
   const semanasDisponiveis = useMemo(
-    () => semanasComPresenca(frequencias, sessoes),
+    () => semanasComPresencaDeRegistros(frequencias, sessoes),
     [frequencias, sessoes]
   );
 

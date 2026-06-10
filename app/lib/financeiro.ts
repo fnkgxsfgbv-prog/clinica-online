@@ -7,6 +7,7 @@ import {
   resolverPaciente,
 } from "./frequencia-utils";
 import { parseValorBr } from "./moeda";
+import { ordenarChavesMes } from "./ordenar-datas";
 import { isStatusFaltou, isStatusPresente } from "./status";
 
 export type ResumoFinanceiro = {
@@ -402,4 +403,62 @@ export function calcularResumoFinanceiro(
     }))
     .filter((item) => item.presencas > 0)
     .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
+/** Meses com presença (frequência ou sessão), ordenados asc. */
+export function mesesComPresencaDeRegistros(
+  frequencias: Frequencia[],
+  sessoes: Sessao[]
+): string[] {
+  const chaves = new Set<string>();
+
+  for (const f of frequencias) {
+    if (!isStatusPresente(f.status)) continue;
+    const m = chaveMes(f.data);
+    if (m && m !== "sem-data") chaves.add(m);
+  }
+
+  const sessoesComFreq = new Set(
+    frequencias
+      .filter((f) => f.sessao_id != null && f.sessao_id !== "")
+      .map((f) => String(f.sessao_id))
+  );
+
+  for (const s of sessoes) {
+    if (sessoesComFreq.has(String(s.id))) continue;
+    if (!isStatusPresente(s.status)) continue;
+    const m = chaveMes(s.data);
+    if (m && m !== "sem-data") chaves.add(m);
+  }
+
+  return ordenarChavesMes(Array.from(chaves), "asc");
+}
+
+/** Semanas (início segunda) com presença, ordenadas asc. */
+export function semanasComPresencaDeRegistros(
+  frequencias: Frequencia[],
+  sessoes: Sessao[]
+): string[] {
+  const chaves = new Set<string>();
+
+  for (const f of frequencias) {
+    if (!isStatusPresente(f.status)) continue;
+    const semana = inicioSemanaISO(f.data);
+    if (semana) chaves.add(semana);
+  }
+
+  const sessoesComFreq = new Set(
+    frequencias
+      .filter((f) => f.sessao_id != null && f.sessao_id !== "")
+      .map((f) => String(f.sessao_id))
+  );
+
+  for (const s of sessoes) {
+    if (sessoesComFreq.has(String(s.id))) continue;
+    if (!isStatusPresente(s.status)) continue;
+    const semana = inicioSemanaISO(s.data);
+    if (semana) chaves.add(semana);
+  }
+
+  return Array.from(chaves).sort((a, b) => b.localeCompare(a));
 }

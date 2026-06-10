@@ -11,6 +11,9 @@ import {
   rotuloStatusFrequencia,
 } from "../status";
 import { toFiniteNumberId } from "../id";
+import {
+  mesesComPresencaDeRegistros,
+} from "../financeiro";
 import { listPacientes } from "./pacientes";
 import { listSessoes, updateSessao } from "./sessoes";
 import { TABLES } from "./tables";
@@ -118,6 +121,56 @@ export async function listFrequencias(userId: string) {
     .order("data", { ascending: true })
     .order("hora", { ascending: true })
     .order("id", { ascending: true });
+}
+
+/** Frequências em intervalo inclusivo `AAAA-MM-DD`. */
+export async function listFrequenciasPorIntervalo(
+  userId: string,
+  inicio: string,
+  fim: string
+) {
+  let a = inicio.trim();
+  let b = fim.trim();
+  if (!a || !b) {
+    return { data: [] as Frequencia[], error: null };
+  }
+  if (a > b) [a, b] = [b, a];
+
+  return supabase
+    .from(TABLES.FREQUENCIA)
+    .select("*")
+    .eq("user_id", userId)
+    .gte("data", a)
+    .lte("data", b)
+    .order("data", { ascending: true })
+    .order("hora", { ascending: true })
+    .order("id", { ascending: true });
+}
+
+/** Meses com presença registrada (para filtros do financeiro). */
+export async function listMesesComPresencaFinanceiro(userId: string) {
+  const [freqRes, sessRes] = await Promise.all([
+    supabase
+      .from(TABLES.FREQUENCIA)
+      .select("data,status")
+      .eq("user_id", userId),
+    supabase
+      .from(TABLES.SESSOES)
+      .select("data,status")
+      .eq("user_id", userId),
+  ]);
+
+  const error = freqRes.error || sessRes.error;
+  if (error) {
+    return { meses: [] as string[], error };
+  }
+
+  const meses = mesesComPresencaDeRegistros(
+    (freqRes.data || []) as Frequencia[],
+    (sessRes.data || []) as Sessao[]
+  );
+
+  return { meses, error: null };
 }
 
 /** Payload reduzido para o painel (últimos registros). */

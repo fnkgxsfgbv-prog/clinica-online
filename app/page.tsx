@@ -8,10 +8,8 @@ import {
   rotuloDistanciaAniversario,
 } from "./lib/datas-paciente";
 import { requireUserClient } from "./lib/require-user-client";
-import { listFrequenciasResumo, resumoComparecimentoMes } from "./lib/db/frequencia";
-import { deduplicarFrequenciasPorSessao } from "./lib/frequencia-utils";
-import { listPacientes } from "./lib/db/pacientes";
-import { listSessoesAgendadasFuturas, listSessoesDoDia } from "./lib/db/sessoes";
+import { carregarDashboardHome } from "./lib/db/dashboard-load";
+import type { ResumoContagemPacientes } from "./lib/db/pacientes";
 import DashboardAgendaHoje, {
   ordenarSessoesPorHorario,
 } from "./components/DashboardAgendaHoje";
@@ -34,7 +32,6 @@ import {
   type DashboardGrupoRender,
 } from "./lib/dashboard-blocos";
 import { montarChecklistUnificado } from "./lib/checklist-clinica";
-import { pacienteEstaAtivo } from "./lib/status-paciente";
 import { useDashboardLayout } from "./lib/use-dashboard-layout";
 import { DashboardSkeleton } from "./components/ui/Skeleton";
 import type { Frequencia, Paciente, Sessao } from "./types";
@@ -61,10 +58,16 @@ export default function Home() {
     preferencias,
     atualizarPreferencias
   );
-  const [pacientes, setPacientes] = useState<Paciente[]>([]);
-  const [sessoes, setSessoes] = useState<Sessao[]>([]);
+  const [contagemPacientes, setContagemPacientes] =
+    useState<ResumoContagemPacientes>({ total: 0, ativos: 0, listaEspera: 0 });
+  const [pacientesChecklist, setPacientesChecklist] = useState<Paciente[]>([]);
+  const [aniversariantesPacientes, setAniversariantesPacientes] = useState<
+    Paciente[]
+  >([]);
+  const [sessoesFuturas, setSessoesFuturas] = useState<Sessao[]>([]);
   const [sessoesHojeLista, setSessoesHojeLista] = useState<Sessao[]>([]);
-  const [frequencias, setFrequencias] = useState<Frequencia[]>([]);
+  const [sessoesChecklist, setSessoesChecklist] = useState<Sessao[]>([]);
+  const [frequenciasMes, setFrequenciasMes] = useState<Frequencia[]>([]);
   const [comparecimentoMes, setComparecimentoMes] = useState({
     presencas: 0,
     faltas: 0,
@@ -129,44 +132,35 @@ export default function Home() {
     const horaAtual = agora.toTimeString().slice(0, 5);
     const mesAtualChave = hoje.slice(0, 7);
 
-    const [pRes, sRes, fRes, hojeRes, comparecimentoRes] = await Promise.all([
-      listPacientes(user.id),
-      listSessoesAgendadasFuturas(user.id, hoje, horaAtual),
-      listFrequenciasResumo(user.id),
-      listSessoesDoDia(user.id, hoje),
-      resumoComparecimentoMes(user.id, mesAtualChave),
-    ]);
+    const resultado = await carregarDashboardHome(user.id, {
+      hoje,
+      horaAtual,
+      mesAtualChave,
+    });
 
-    const loadError =
-      pRes.error?.message ||
-      sRes.error?.message ||
-      fRes.error?.message ||
-      hojeRes.error?.message ||
-      comparecimentoRes.error?.message;
-
-    if (loadError) {
-      setErro("Erro ao carregar o dashboard: " + loadError);
-      setPacientes([]);
-      setSessoes([]);
+    if (resultado.error || !resultado.data) {
+      setErro("Erro ao carregar o dashboard: " + (resultado.error || "desconhecido"));
+      setContagemPacientes({ total: 0, ativos: 0, listaEspera: 0 });
+      setPacientesChecklist([]);
+      setAniversariantesPacientes([]);
+      setSessoesFuturas([]);
       setSessoesHojeLista([]);
-      setFrequencias([]);
+      setSessoesChecklist([]);
+      setFrequenciasMes([]);
       setComparecimentoMes({ presencas: 0, faltas: 0 });
       setCarregando(false);
       return;
     }
 
-    setPacientes((pRes.data || []) as Paciente[]);
-    setSessoes((sRes.data || []) as Sessao[]);
-    setSessoesHojeLista(
-      ordenarSessoesPorHorario((hojeRes.data || []) as Sessao[])
-    );
-    setFrequencias(
-      deduplicarFrequenciasPorSessao((fRes.data || []) as Frequencia[])
-    );
-    setComparecimentoMes({
-      presencas: comparecimentoRes.presencas,
-      faltas: comparecimentoRes.faltas,
-    });
+    const dados = resultado.data;
+    setContagemPacientes(dados.contagemPacientes);
+    setPacientesChecklist(dados.pacientesChecklist);
+    setAniversariantesPacientes(dados.aniversariantesPacientes);
+    setSessoesFuturas(dados.sessoesFuturas);
+    setSessoesHojeLista(ordenarSessoesPorHorario(dados.sessoesHoje));
+    setSessoesChecklist(dados.sessoesChecklist);
+    setFrequenciasMes(dados.frequenciasMes);
+    setComparecimentoMes(dados.comparecimentoMes);
     setCarregando(false);
   }, [router]);
 
@@ -175,13 +169,12 @@ export default function Home() {
   }, [carregarDados]);
 
   const hoje = formatarDataISO(new Date());
-  const pacientesAtivos = pacientes.filter((p) =>
-    pacienteEstaAtivo(p.status)
-  ).length;
+  const mesAtualChave = hoje.slice(0, 7);
+  const pacientesAtivos = contagemPacientes.ativos;
   const sessoesHoje = sessoesHojeLista;
   const presencas = comparecimentoMes.presencas;
   const faltas = comparecimentoMes.faltas;
-  const receitaPrevista = sessoes.reduce(
+  const receitaPrevista = sessoesFuturas.reduce(
     (total, sessao) => total + Number(sessao.valor || 0),
     0
   );
@@ -190,7 +183,7 @@ export default function Home() {
     totalFrequencias > 0
       ? Math.round((presencas / totalFrequencias) * 100)
       : 0;
-  const aniversariantesMes = listarAniversariantesDoMes(pacientes);
+  const aniversariantesMes = listarAniversariantesDoMes(aniversariantesPacientes);
   const mesAtual = new Intl.DateTimeFormat("pt-BR", {
     month: "long",
   }).format(new Date());
@@ -226,7 +219,7 @@ export default function Home() {
           <DashboardMetric
             label="Pacientes ativos"
             value={pacientesAtivos}
-            detail={`${pacientes.length} cadastrados`}
+            detail={`${contagemPacientes.total} cadastrados`}
             variant="patients"
           />
         );
@@ -236,8 +229,8 @@ export default function Home() {
             label="Sessões hoje"
             value={sessoesHoje.length}
             detail={
-              sessoes.length > 0
-                ? `${sessoes.length} futuras agendadas`
+              sessoesFuturas.length > 0
+                ? `${sessoesFuturas.length} futuras agendadas`
                 : "Nenhuma sessão futura"
             }
             variant="sessions"
@@ -257,7 +250,7 @@ export default function Home() {
           <DashboardMetric
             label="Receita próximas"
             value={formatarMoeda(receitaPrevista)}
-            detail={`${sessoes.length} sessões agendadas`}
+            detail={`${sessoesFuturas.length} sessões agendadas`}
             variant="revenue"
           />
         );
@@ -273,7 +266,12 @@ export default function Home() {
       case "pendencias":
         return (
           <PendenciasClinica
-            itens={montarChecklistUnificado(pacientes, sessoes, frequencias)}
+            itens={montarChecklistUnificado(
+              pacientesChecklist,
+              sessoesChecklist,
+              frequenciasMes,
+              mesAtualChave
+            )}
             titulo="Pendências da clínica"
           />
         );
@@ -281,7 +279,7 @@ export default function Home() {
         return (
           <section className="dashboard-secao">
             <h2 className="dashboard-secao-titulo">Próximas sessões</h2>
-            <DashboardProximasSessoes hojeIso={hoje} sessoes={sessoes} />
+            <DashboardProximasSessoes hojeIso={hoje} sessoes={sessoesFuturas} />
           </section>
         );
       case "aniversariantes":

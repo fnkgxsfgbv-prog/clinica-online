@@ -86,6 +86,18 @@ export function mesAnteriorChave(chave: string): string | null {
   return `${ano}-${String(mes).padStart(2, "0")}`;
 }
 
+/** Último dia do mês civil (`AAAA-MM-DD`). */
+export function ultimoDiaMesChave(mesAAAAmm: string): string {
+  const [anoStr, mesStr] = mesAAAAmm.split("-");
+  const ano = Number(anoStr);
+  const mes = Number(mesStr);
+  if (!Number.isFinite(ano) || !Number.isFinite(mes)) return `${mesAAAAmm}-28`;
+
+  const ultimo = new Date(ano, mes, 0);
+  const dia = String(ultimo.getDate()).padStart(2, "0");
+  return `${anoStr}-${mesStr}-${dia}`;
+}
+
 export function labelMesAno(chave: string): string {
   if (!chave) return "Todos os meses";
   if (chave === "sem-data") return "Sem data";

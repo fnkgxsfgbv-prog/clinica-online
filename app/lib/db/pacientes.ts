@@ -88,6 +88,45 @@ export async function listPacientes(userId: string) {
     .order("nome", { ascending: true });
 }
 
+const CAMPOS_PACIENTE_CHECKLIST =
+  "id,nome,status,telefone,data_nascimento,cid,observacoes,valor_sessao,valor,data_inicio_atendimento";
+
+const CAMPOS_PACIENTE_FINANCEIRO = "id,nome,valor_sessao,valor,status";
+
+/** Campos mínimos para pendências do dashboard (cadastro + rotina). */
+export async function listPacientesResumoChecklist(userId: string) {
+  return supabase
+    .from(TABLES.PACIENTES)
+    .select(CAMPOS_PACIENTE_CHECKLIST)
+    .eq("user_id", userId)
+    .order("nome", { ascending: true });
+}
+
+/** Campos mínimos para resolver paciente no financeiro. */
+export async function listPacientesResumoFinanceiro(userId: string) {
+  return supabase
+    .from(TABLES.PACIENTES)
+    .select(CAMPOS_PACIENTE_FINANCEIRO)
+    .eq("user_id", userId)
+    .order("nome", { ascending: true });
+}
+
+/** Aniversariantes do mês civil (pacientes ativos com data de nascimento). */
+export async function listPacientesAniversariantesDoMes(
+  userId: string,
+  mesCivil = new Date().getMonth() + 1
+) {
+  const mesPad = String(mesCivil).padStart(2, "0");
+
+  return supabase
+    .from(TABLES.PACIENTES)
+    .select("id,nome,data_nascimento,status")
+    .eq("user_id", userId)
+    .or("status.eq.ativo,status.is.null")
+    .like("data_nascimento", `%-${mesPad}-%`)
+    .order("nome", { ascending: true });
+}
+
 /** Busca rápida para a barra do topo (evita carregar todos os pacientes no shell). */
 export async function buscarPacientesPorNome(
   userId: string,
