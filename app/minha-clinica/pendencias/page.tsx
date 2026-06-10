@@ -5,7 +5,6 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import FlashMessage from "../../components/FlashMessage";
-import EmptyState from "../../components/ui/EmptyState";
 import { PageSkeleton } from "../../components/ui/Skeleton";
 import PendenciasCadastroEditor from "../../components/PendenciasCadastroEditor";
 import PendenciasIntegracaoLista from "../../components/PendenciasIntegracaoLista";
