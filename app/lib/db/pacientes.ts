@@ -89,9 +89,9 @@ export async function listPacientes(userId: string) {
 }
 
 const CAMPOS_PACIENTE_CHECKLIST =
-  "id,nome,status,telefone,data_nascimento,cid,observacoes,valor_sessao,valor,data_inicio_atendimento";
+  "id,nome,status,telefone,data_nascimento,cid,observacoes,valor_sessao,data_inicio_atendimento";
 
-const CAMPOS_PACIENTE_FINANCEIRO = "id,nome,valor_sessao,valor,status";
+const CAMPOS_PACIENTE_FINANCEIRO = "id,nome,valor_sessao,status";
 
 /** Campos mínimos para pendências do dashboard (cadastro + rotina). */
 export async function listPacientesResumoChecklist(userId: string) {
