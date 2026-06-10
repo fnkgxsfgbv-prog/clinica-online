@@ -313,6 +313,25 @@ export default function Home() {
 
   return (
     <div className="dashboard-page">
+      <div className="dashboard-edit-banner">
+        <button
+          type="button"
+          className={`btn ${editandoDashboard ? "btn-outline" : "btn-green"} dashboard-edit-banner-btn`}
+          onClick={() => setEditandoDashboard((atual) => !atual)}
+        >
+          {editandoDashboard ? "Concluir edição do dashboard" : "Editar dashboard"}
+        </button>
+        {editandoDashboard ? (
+          <button
+            type="button"
+            className="btn btn-outline dashboard-edit-banner-btn"
+            onClick={restaurarPadraoDashboard}
+          >
+            Restaurar layout padrão
+          </button>
+        ) : null}
+      </div>
+
       <Janela
         titulo="Dashboard"
         acoes={
