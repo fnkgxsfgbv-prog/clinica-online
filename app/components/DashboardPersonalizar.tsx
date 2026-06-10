@@ -78,10 +78,25 @@ export default function DashboardPersonalizar({
   onToggleEditando,
   onMostrar,
   onRestaurarPadrao,
-}: Props) {
+  compacto = false,
+}: Props & { compacto?: boolean }) {
   const blocosParaRestaurar = DASHBOARD_BLOCO_IDS.filter((id) =>
     blocosOcultos.includes(id)
   );
+
+  if (compacto) {
+    return (
+      <button
+        type="button"
+        className={`btn btn-outline dashboard-editar-btn${
+          editando ? " is-active" : ""
+        }`}
+        onClick={onToggleEditando}
+      >
+        {editando ? "Concluir" : "Editar dashboard"}
+      </button>
+    );
+  }
 
   return (
     <div className="dashboard-personalizar-bar">

@@ -313,10 +313,22 @@ export default function Home() {
 
   return (
     <div className="dashboard-page">
-      <Janela titulo="Dashboard">
+      <Janela
+        titulo="Dashboard"
+        acoes={
+          <DashboardPersonalizar
+            compacto
+            editando={editandoDashboard}
+            blocosOcultos={blocosOcultos}
+            onToggleEditando={() => setEditandoDashboard((atual) => !atual)}
+            onMostrar={mostrarBloco}
+            onRestaurarPadrao={restaurarPadraoDashboard}
+          />
+        }
+      >
         {erro ? <FlashMessage kind="error">{erro}</FlashMessage> : null}
 
-        {!carregando ? (
+        {editandoDashboard ? (
           <DashboardPersonalizar
             editando={editandoDashboard}
             blocosOcultos={blocosOcultos}
