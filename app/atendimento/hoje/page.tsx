@@ -350,7 +350,7 @@ export default function ModoSessaoHojePage() {
           />
         ) : (
           <div className="modo-sessao-layout">
-            <aside className="modo-sessao-fila" aria-label="Sessões de hoje">
+            <div className="modo-sessao-fila" role="region" aria-label="Sessões de hoje">
               <div className="modo-sessao-fila-header">
                 <strong>Hoje · {sessoes.length} sessões</strong>
                 <span>{rotuloDiaHoje(hoje)}</span>
@@ -400,7 +400,7 @@ export default function ModoSessaoHojePage() {
               <p className="modo-sessao-progresso">
                 Progresso: {concluidas}/{sessoes.length} concluídas
               </p>
-            </aside>
+            </div>
 
             {sessaoAtiva ? (
               <main className="modo-sessao-main">

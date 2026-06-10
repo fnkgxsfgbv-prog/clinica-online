@@ -79,9 +79,9 @@ a {
   background: var(--green);
 }
 
-/* SIDEBAR (legado — não aplicar ao menu principal) */
+/* SIDEBAR (legado — não aplicar ao menu principal nem à fila do modo sessão) */
 
-aside:not(.app-sidebar) {
+aside:not(.app-sidebar):not(.modo-sessao-fila) {
   width: 250px;
   min-height: 100vh;
   background: rgba(10, 15, 30, 0.72);
@@ -2397,7 +2397,7 @@ a:hover {
   opacity: 0.92;
 }/* SIDEBAR PREMIUM FINAL */
 
-aside:not(.app-sidebar) {
+aside:not(.app-sidebar):not(.modo-sessao-fila) {
   background:
     linear-gradient(
       180deg,
@@ -2408,7 +2408,7 @@ aside:not(.app-sidebar) {
   border-right: 1px solid rgba(255,255,255,0.07) !important;
 }
 
-aside:not(.app-sidebar) h1 {
+aside:not(.app-sidebar):not(.modo-sessao-fila) h1 {
   font-size: 30px !important;
   letter-spacing: -0.05em !important;
 }
@@ -2643,7 +2643,7 @@ body::before {
 
 /* MENU MAIS SOFISTICADO */
 
-aside:not(.app-sidebar) {
+aside:not(.app-sidebar):not(.modo-sessao-fila) {
   backdrop-filter: blur(28px) !important;
 
   box-shadow:
@@ -3135,7 +3135,7 @@ button:hover {
     );
 }
 
-[data-theme="light"] aside:not(.app-sidebar),
+[data-theme="light"] aside:not(.app-sidebar):not(.modo-sessao-fila),
 [data-theme="light"] .app-sidebar:not(.psicomanager-sidebar) {
   background:
     linear-gradient(
@@ -4938,11 +4938,16 @@ button:hover {
 .modo-sessao-fila {
   position: relative;
   z-index: 2;
+  width: 100%;
   min-width: 0;
+  min-height: 0;
+  top: auto;
   padding: 14px;
   border: 1px solid rgba(63, 191, 154, 0.16);
   border-radius: 16px;
   background: rgba(12, 19, 28, 0.94);
+  backdrop-filter: none;
+  box-shadow: none;
 }
 
 .modo-sessao-fila-header {
