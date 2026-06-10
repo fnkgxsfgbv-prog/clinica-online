@@ -16,6 +16,7 @@ type Props = {
 
 export function DashboardBlocoAcoes({
   id,
+  label,
   editando,
   podeSubir,
   podeDescer,
@@ -24,6 +25,7 @@ export function DashboardBlocoAcoes({
   onMoverBaixo,
 }: {
   id: DashboardBlocoId;
+  label?: string;
   editando: boolean;
   podeSubir: boolean;
   podeDescer: boolean;
@@ -33,18 +35,18 @@ export function DashboardBlocoAcoes({
 }) {
   if (!editando) return null;
 
+  const titulo = label ?? DASHBOARD_BLOCO_LABELS[id];
+
   return (
     <div className="dashboard-bloco-acoes">
-      <span className="dashboard-bloco-acoes-label">
-        {DASHBOARD_BLOCO_LABELS[id]}
-      </span>
+      <span className="dashboard-bloco-acoes-label">{titulo}</span>
       <div className="dashboard-bloco-acoes-botoes">
         <button
           type="button"
           className="btn btn-outline btn-sm dashboard-bloco-mover"
           disabled={!podeSubir}
           onClick={() => onMoverCima(id)}
-          aria-label={`Mover ${DASHBOARD_BLOCO_LABELS[id]} para cima`}
+          aria-label={`Mover ${titulo} para cima`}
           title="Mover para cima"
         >
           ↑
@@ -54,7 +56,7 @@ export function DashboardBlocoAcoes({
           className="btn btn-outline btn-sm dashboard-bloco-mover"
           disabled={!podeDescer}
           onClick={() => onMoverBaixo(id)}
-          aria-label={`Mover ${DASHBOARD_BLOCO_LABELS[id]} para baixo`}
+          aria-label={`Mover ${titulo} para baixo`}
           title="Mover para baixo"
         >
           ↓
@@ -63,7 +65,7 @@ export function DashboardBlocoAcoes({
           type="button"
           className="btn btn-outline btn-sm dashboard-bloco-ocultar"
           onClick={() => onOcultar(id)}
-          aria-label={`Ocultar ${DASHBOARD_BLOCO_LABELS[id]}`}
+          aria-label={`Ocultar ${titulo}`}
         >
           Ocultar
         </button>

@@ -25,9 +25,10 @@ import PendenciasClinica from "./components/PendenciasClinica";
 import { usePreferencias } from "./components/PreferenciasProvider";
 import {
   agruparBlocosDashboard,
-  blocoPodeDescer,
-  blocoPodeSubir,
-  moverBlocoDashboard,
+  grupoPodeDescer,
+  grupoPodeSubir,
+  idsDoGrupoDashboard,
+  moverGrupoDashboard,
   ordemPadraoDashboard,
   type DashboardBlocoId,
   type DashboardGrupoRender,
@@ -80,10 +81,12 @@ export default function Home() {
   }
 
   function ocultarBloco(id: DashboardBlocoId) {
-    if (blocosOcultos.includes(id)) return;
-    salvarDashboardPrefs({
-      dashboardBlocosOcultos: [...blocosOcultos, id],
-    });
+    const ids = idsDoGrupoDashboard(blocosOrdem, blocosOcultos, id);
+    const novos = [...blocosOcultos];
+    for (const item of ids) {
+      if (!novos.includes(item)) novos.push(item);
+    }
+    salvarDashboardPrefs({ dashboardBlocosOcultos: novos });
   }
 
   function mostrarBloco(id: DashboardBlocoId) {
@@ -101,7 +104,12 @@ export default function Home() {
 
   function moverBloco(id: DashboardBlocoId, direcao: "up" | "down") {
     salvarDashboardPrefs({
-      dashboardBlocosOrdem: moverBlocoDashboard(blocosOrdem, id, direcao),
+      dashboardBlocosOrdem: moverGrupoDashboard(
+        blocosOrdem,
+        blocosOcultos,
+        id,
+        direcao
+      ),
     });
   }
 
@@ -192,12 +200,17 @@ export default function Home() {
   );
 
   function acoesBloco(id: DashboardBlocoId) {
+    const label = id.startsWith("metric-")
+      ? "Indicadores"
+      : undefined;
+
     return (
       <DashboardBlocoAcoes
         id={id}
+        label={label}
         editando={editandoDashboard}
-        podeSubir={blocoPodeSubir(blocosOrdem, id)}
-        podeDescer={blocoPodeDescer(blocosOrdem, id)}
+        podeSubir={grupoPodeSubir(blocosOrdem, blocosOcultos, id)}
+        podeDescer={grupoPodeDescer(blocosOrdem, blocosOcultos, id)}
         onOcultar={ocultarBloco}
         onMoverCima={(blocoId) => moverBloco(blocoId, "up")}
         onMoverBaixo={(blocoId) => moverBloco(blocoId, "down")}
@@ -286,25 +299,28 @@ export default function Home() {
 
   function renderGrupo(grupo: DashboardGrupoRender, index: number) {
     if (grupo.tipo === "metrics") {
+      const idReferencia = grupo.ids[0];
       return (
         <div
           key={`metrics-${grupo.ids.join("-")}-${index}`}
-          className="dashboard-metrics-grid"
+          className="dashboard-bloco-wrap"
         >
-          {grupo.ids.map((id) => (
-            <div key={id} className="dashboard-bloco-wrap">
-              {renderBloco(id)}
-              {acoesBloco(id)}
-            </div>
-          ))}
+          {acoesBloco(idReferencia)}
+          <div className="dashboard-metrics-grid">
+            {grupo.ids.map((id) => (
+              <div key={id} className="dashboard-metric-wrap">
+                {renderBloco(id)}
+              </div>
+            ))}
+          </div>
         </div>
       );
     }
 
     return (
       <div key={grupo.id} className="dashboard-bloco-wrap">
-        {renderBloco(grupo.id)}
         {acoesBloco(grupo.id)}
+        {renderBloco(grupo.id)}
       </div>
     );
   }

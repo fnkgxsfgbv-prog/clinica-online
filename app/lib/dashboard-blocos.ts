@@ -110,6 +110,78 @@ export function blocoPodeDescer(
   return idx >= 0 && idx < ordem.length - 1;
 }
 
+function indiceGrupoDashboard(
+  ordem: DashboardBlocoId[],
+  ocultos: DashboardBlocoId[],
+  id: DashboardBlocoId
+) {
+  const grupos = agruparBlocosDashboard(ordem, ocultos);
+  return grupos.findIndex((grupo) =>
+    grupo.tipo === "metrics" ? grupo.ids.includes(id) : grupo.id === id
+  );
+}
+
+/** Move o grupo visual inteiro (ex.: linha de métricas) em vez de um card isolado. */
+export function moverGrupoDashboard(
+  ordem: DashboardBlocoId[],
+  ocultos: DashboardBlocoId[],
+  id: DashboardBlocoId,
+  direcao: "up" | "down"
+): DashboardBlocoId[] {
+  const grupos = agruparBlocosDashboard(ordem, ocultos);
+  const idx = indiceGrupoDashboard(ordem, ocultos, id);
+  if (idx < 0) return ordem;
+
+  const delta = direcao === "up" ? -1 : 1;
+  const novoIdx = idx + delta;
+  if (novoIdx < 0 || novoIdx >= grupos.length) return ordem;
+
+  const reordenados = [...grupos];
+  [reordenados[idx], reordenados[novoIdx]] = [
+    reordenados[novoIdx],
+    reordenados[idx],
+  ];
+
+  return reordenados.flatMap((grupo) =>
+    grupo.tipo === "metrics" ? grupo.ids : [grupo.id]
+  );
+}
+
+export function grupoPodeSubir(
+  ordem: DashboardBlocoId[],
+  ocultos: DashboardBlocoId[],
+  id: DashboardBlocoId
+) {
+  return indiceGrupoDashboard(ordem, ocultos, id) > 0;
+}
+
+export function grupoPodeDescer(
+  ordem: DashboardBlocoId[],
+  ocultos: DashboardBlocoId[],
+  id: DashboardBlocoId
+) {
+  const idx = indiceGrupoDashboard(ordem, ocultos, id);
+  const total = agruparBlocosDashboard(ordem, ocultos).length;
+  return idx >= 0 && idx < total - 1;
+}
+
+export function idsDoGrupoDashboard(
+  ordem: DashboardBlocoId[],
+  ocultos: DashboardBlocoId[],
+  id: DashboardBlocoId
+): DashboardBlocoId[] {
+  const grupos = agruparBlocosDashboard(ordem, ocultos);
+  for (const grupo of grupos) {
+    if (grupo.tipo === "metrics" && grupo.ids.includes(id)) {
+      return grupo.ids;
+    }
+    if (grupo.tipo === "single" && grupo.id === id) {
+      return [grupo.id];
+    }
+  }
+  return [id];
+}
+
 function isMetricBloco(id: DashboardBlocoId) {
   return id.startsWith("metric-");
 }

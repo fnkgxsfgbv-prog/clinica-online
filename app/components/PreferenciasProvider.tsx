@@ -64,7 +64,11 @@ export function PreferenciasProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // updateUser (salvar prefs) dispara USER_UPDATED com metadata ainda antiga
+      // e sobrescrevia a ordem recém-editada no dashboard.
+      if (event === "USER_UPDATED") return;
+
       void aplicarUsuario(session?.user ?? null);
     });
 
