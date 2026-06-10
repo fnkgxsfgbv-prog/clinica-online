@@ -1,0 +1,541 @@
+/* Camada unificada — tokens, botões, tipografia, skeleton, mobile */
+
+:root {
+  --brand: #2f9b87;
+  --brand-hover: #38b89f;
+  --brand-active: #278f7c;
+  --brand-soft: rgba(47, 155, 135, 0.14);
+  --brand-ring: rgba(47, 155, 135, 0.35);
+  --radius-ui: 12px;
+  --radius-ui-sm: 8px;
+  --font-body: 14px;
+}
+
+[data-theme="light"] {
+  --brand: #2f9b87;
+  --brand-hover: #278f7c;
+  --brand-active: #1f7566;
+  --brand-soft: rgba(47, 155, 135, 0.12);
+  --brand-ring: rgba(47, 155, 135, 0.28);
+}
+
+/* —— Botão primário unificado (verde em todos os temas) —— */
+
+[data-theme="dark"] .btn-green,
+[data-theme="dark"] .psicomanager-main .btn-green,
+.btn-green,
+.psicomanager-main .btn-green,
+.topbar-schedule.btn-green {
+  background: linear-gradient(135deg, var(--brand), #3aafa9) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18) !important;
+}
+
+[data-theme="dark"] .btn-green:hover,
+[data-theme="dark"] .btn-green:focus-visible,
+[data-theme="dark"] .psicomanager-main .btn-green:hover,
+[data-theme="dark"] .psicomanager-main .btn-green:focus-visible,
+.btn-green:hover,
+.btn-green:focus-visible,
+.psicomanager-main .btn-green:hover,
+.psicomanager-main .btn-green:focus-visible {
+  background: linear-gradient(135deg, var(--brand-hover), #45c4b8) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 3px var(--brand-ring) !important;
+  transform: translateY(-1px) !important;
+  filter: none !important;
+}
+
+[data-theme="light"] .btn-green,
+[data-theme="light"] .psicomanager-main .btn-green {
+  background: linear-gradient(135deg, var(--brand), #3aafa9) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .btn-green:hover,
+[data-theme="light"] .btn-green:focus-visible,
+[data-theme="light"] .psicomanager-main .btn-green:hover,
+[data-theme="light"] .psicomanager-main .btn-green:focus-visible {
+  background: linear-gradient(135deg, var(--brand-hover), #45c4b8) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 3px var(--brand-ring) !important;
+}
+
+/* —— Tipografia —— */
+
+.psicomanager-main {
+  font-size: var(--font-body) !important;
+  font-weight: 400 !important;
+}
+
+.psicomanager-main h1,
+.psicomanager-main h2,
+.psicomanager-main h3,
+.janela-premium-titulo {
+  font-weight: 600 !important;
+}
+
+.psicomanager-main strong {
+  font-weight: 600 !important;
+}
+
+.empty-text,
+.dashboard-label,
+.context-prefs-label {
+  font-weight: 500 !important;
+}
+
+th {
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+td {
+  font-weight: 400 !important;
+}
+
+.status-badge {
+  font-weight: 600 !important;
+}
+
+.btn,
+.psico-button,
+button.btn {
+  font-weight: 600 !important;
+}
+
+/* —— Focus ring brand —— */
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--brand-ring) !important;
+  border-color: var(--brand) !important;
+}
+
+/* —— Login alinhado ao app —— */
+
+.login-card {
+  border-radius: var(--radius-ui) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.login-card h1 {
+  font-weight: 700 !important;
+}
+
+[data-theme="light"] .login-card {
+  background: #ffffff !important;
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.08) !important;
+}
+
+/* —— Skeleton —— */
+
+@keyframes ds-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.ds-skeleton {
+  display: block;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: ds-shimmer 1.4s ease-in-out infinite;
+}
+
+[data-theme="light"] .ds-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(15, 23, 42, 0.05) 0%,
+    rgba(15, 23, 42, 0.1) 50%,
+    rgba(15, 23, 42, 0.05) 100%
+  );
+  background-size: 200% 100%;
+}
+
+.ds-skeleton--sm {
+  border-radius: 6px;
+}
+
+.ds-skeleton--md {
+  border-radius: var(--radius-ui-sm);
+}
+
+.ds-skeleton--lg {
+  border-radius: var(--radius-ui);
+}
+
+.ds-skeleton--full {
+  border-radius: 999px;
+}
+
+.ds-skeleton-stack {
+  display: grid;
+}
+
+.ds-skeleton-dashboard {
+  display: grid;
+  gap: 20px;
+  margin-top: 8px;
+}
+
+.ds-skeleton-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ds-skeleton-card {
+  padding: 16px;
+  border-radius: var(--radius-ui);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="light"] .ds-skeleton-card {
+  border-color: rgba(15, 23, 42, 0.08);
+  background: rgba(15, 23, 42, 0.02);
+}
+
+.ds-skeleton-card--tall {
+  min-height: 140px;
+}
+
+.ds-skeleton-patients {
+  display: grid;
+  gap: 10px;
+}
+
+.ds-skeleton-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.ds-skeleton-patient-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="light"] .ds-skeleton-patient-row {
+  border-bottom-color: rgba(15, 23, 42, 0.08);
+}
+
+.ds-skeleton-page {
+  padding: 4px 0 8px;
+}
+
+@media (max-width: 900px) {
+  .ds-skeleton-dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* —— Empty state —— */
+
+.ds-empty {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 32px 20px;
+  border-radius: var(--radius-ui);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="light"] .ds-empty {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: rgba(15, 23, 42, 0.02);
+}
+
+.ds-empty-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  margin-bottom: 4px;
+}
+
+.ds-empty-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.ds-empty-desc {
+  margin: 0;
+  max-width: 360px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ds-empty-action {
+  margin-top: 8px;
+}
+
+/* —— Pacientes: toolbar + mobile cards —— */
+
+.patients-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.patients-toolbar input {
+  max-width: 340px;
+  flex: 1 1 200px;
+}
+
+.patients-toolbar select {
+  max-width: 220px;
+  flex: 0 1 200px;
+}
+
+.patients-load-more {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.patients-mobile-list {
+  display: none;
+}
+
+.patient-mobile-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: var(--radius-ui);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+[data-theme="light"] .patient-mobile-card {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: #ffffff;
+}
+
+.patient-mobile-card:hover {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.patient-mobile-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.patient-mobile-card-header strong {
+  font-size: 15px;
+}
+
+.patient-mobile-meta {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.patient-mobile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.patient-mobile-actions .btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 10px !important;
+  font-size: 12px !important;
+}
+
+@media (max-width: 768px) {
+  .patients-table-wrap .patients-table {
+    display: none;
+  }
+
+  .patients-mobile-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .ds-skeleton-patient-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* —— Mobile nav —— */
+
+.mobile-nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-ui-sm);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+[data-theme="light"] .mobile-nav-toggle {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: rgba(15, 23, 42, 0.03);
+}
+
+.mobile-nav-backdrop {
+  display: none;
+}
+
+.topbar-version {
+  display: none;
+}
+
+.profile-dropdown-icon {
+  display: inline-flex;
+  width: 18px;
+  justify-content: center;
+  opacity: 0.72;
+}
+
+.profile-dropdown-divider {
+  height: 1px;
+  margin: 6px 0;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] .profile-dropdown-divider {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.profile-dropdown-label {
+  padding: 8px 14px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.profile-dropdown button.is-active,
+.profile-dropdown a.is-active {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+@media (max-width: 900px) {
+  .mobile-nav-toggle {
+    display: inline-flex;
+  }
+
+  .mobile-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 190;
+    border: none;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+  }
+
+  .psicomanager-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: min(280px, 86vw) !important;
+    height: 100vh !important;
+    z-index: 200 !important;
+    transform: translateX(-105%) !important;
+    transition: transform 0.22s ease !important;
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: unset !important;
+    min-height: 100vh !important;
+    padding-top: 20px !important;
+  }
+
+  .psicomanager-sidebar.is-open {
+    transform: translateX(0) !important;
+  }
+
+  .psicomanager-sidebar .menu-link {
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .topbar-search {
+    min-width: 0;
+  }
+
+  .topbar-left {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}
+
+.frequency-page-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.frequency-page-header .page-description {
+  margin: 0;
+}
+
+.dashboard-metric-icon {
+  font-weight: 700 !important;
+  font-size: 12px !important;
+}
+
+/* —— Micro-interactions —— */
+
+.psico-card,
+.janela-premium,
+.patient-mobile-card,
+.ds-skeleton-card {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-outline:hover:not(:disabled) {
+  transform: translateY(-1px);
+}

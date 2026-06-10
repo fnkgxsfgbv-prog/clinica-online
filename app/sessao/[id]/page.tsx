@@ -32,6 +32,7 @@ import {
 import { ordenarCronologico } from "../../lib/ordenar-datas";
 import { toFiniteNumberId } from "../../lib/id";
 import EvolucaoHistoricoCard from "../../components/EvolucaoHistoricoCard";
+import { PageSkeleton } from "../../components/ui/Skeleton";
 import type { Evolucao, Sessao } from "../../types";
 
 type AbaRegistroSessao =
@@ -554,11 +555,7 @@ export default function SessaoPage() {
   }
 
   if (carregandoInicial) {
-    return (
-      <p className="empty-text page-loading">
-        Carregando...
-      </p>
-    );
+    return <PageSkeleton linhas={8} />;
   }
 
   if (erroCarga) {

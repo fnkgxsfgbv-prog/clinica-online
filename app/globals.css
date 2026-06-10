@@ -7545,21 +7545,21 @@ button.financeiro-semana-chip,
 
 [data-theme="dark"] .btn-green,
 [data-theme="dark"] .psicomanager-main .btn-green {
-  background: #e8e5ff !important;
-  border-color: #e8e5ff !important;
-  color: #3d3865 !important;
+  background: linear-gradient(135deg, #2f9b87, #3aafa9) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
 }
 
 [data-theme="dark"] .btn-green:hover,
 [data-theme="dark"] .btn-green:focus-visible,
 [data-theme="dark"] .psicomanager-main .btn-green:hover,
 [data-theme="dark"] .psicomanager-main .btn-green:focus-visible {
-  background: #f1efff !important;
-  border-color: #f1efff !important;
-  color: #2f2a59 !important;
-  transform: none !important;
+  background: linear-gradient(135deg, #38b89f, #45c4b8) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
   filter: none !important;
-  box-shadow: 0 0 0 3px rgba(232, 229, 255, 0.14) !important;
+  box-shadow: 0 0 0 3px rgba(47, 155, 135, 0.35) !important;
 }
 
 [data-theme="dark"] .btn-outline:hover,
@@ -8465,11 +8465,11 @@ button.dashboard-day-card .dashboard-day-card-action {
   text-decoration: none !important;
 }
 
-.btn-green,
-.topbar-schedule {
-  background: #e8e5ff !important;
-  color: #3d3865 !important;
-  border-color: #e8e5ff !important;
+.btn-green:not(.topbar-schedule),
+.topbar-schedule.btn-green {
+  background: linear-gradient(135deg, #2f9b87, #3aafa9) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
 }
 
 .status-badge {

@@ -29,6 +29,7 @@ import type { VisualizacaoDocumento } from "../../lib/documento-visualizacao";
 import VisualizadorDocumentoModal from "../../components/VisualizadorDocumentoModal";
 import EvolucaoHistoricoCard from "../../components/EvolucaoHistoricoCard";
 import PacienteSessoesLista from "../../components/PacienteSessoesLista";
+import { PageSkeleton } from "../../components/ui/Skeleton";
 import { listEvolucoesPorPacientePorId } from "../../lib/db/evolucoes";
 import { listDocumentoModelos } from "../../lib/db/modelos";
 import { listSessoesPorPaciente } from "../../lib/db/sessoes";
@@ -490,11 +491,7 @@ export default function PacientePage() {
   );
 
   if (carregando) {
-    return (
-      <p className="empty-text page-loading">
-        Carregando paciente…
-      </p>
-    );
+    return <PageSkeleton linhas={8} />;
   }
 
   if (erro) {

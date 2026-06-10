@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import AppShell from "./components/AppShell";
 import "./globals.css";
+import "./design-system.css";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -40,7 +41,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1b6f68",
+  themeColor: "#2f9b87",
 };
 
 export default function RootLayout({

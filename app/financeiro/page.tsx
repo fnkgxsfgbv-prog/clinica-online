@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import FlashMessage from "../components/FlashMessage";
 import AvisoViradaMesBanner from "../components/AvisoViradaMesBanner";
 import Janela from "../components/Janela";
+import { PageSkeleton } from "../components/ui/Skeleton";
 import PreferenciasMesPanel from "../components/PreferenciasMesPanel";
 import { getCurrentUser } from "../lib/auth";
 import { carregarFrequenciasCompleto } from "../lib/db/frequencia";
@@ -1048,7 +1049,7 @@ export default function FinanceiroPage() {
         ) : null}
 
         {carregando ? (
-          <p className="empty-text">Carregando resumo...</p>
+          <PageSkeleton linhas={7} />
         ) : dados.length === 0 ? (
           <p className="empty-text">
             Nenhum dado financeiro para exibir neste período.

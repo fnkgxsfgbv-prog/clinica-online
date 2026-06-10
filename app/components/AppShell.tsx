@@ -10,6 +10,7 @@ import { buscarPacientesPorNome } from "../lib/db/pacientes";
 import { resolverUrlFotoPerfil } from "../lib/db/profile-photo";
 import {
   THEME_STORAGE_KEY,
+  aplicarTemaNoDocumento,
   resolverTemaEfetivo,
   type TemaEfetivo,
   type TemaPreferencia,
@@ -134,6 +135,7 @@ function AppShellFrame({
   const [busca, setBusca] = useState("");
   const [buscandoPacientes, setBuscandoPacientes] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [navAberto, setNavAberto] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [profilePhotoUrl, setProfilePhotoUrl] = useState("");
 
@@ -145,6 +147,10 @@ function AppShellFrame({
 
     setTheme(currentTheme);
   }, []);
+
+  useEffect(() => {
+    setNavAberto(false);
+  }, [pathname]);
 
   useEffect(() => {
     const pref = preferenciasCtx?.preferencias.tema;
@@ -210,14 +216,21 @@ function AppShellFrame({
     return () => window.clearTimeout(timer);
   }, [busca]);
 
-  function atualizarTema(novoTema: TemaEfetivo) {
-    setTheme(novoTema);
-    document.documentElement.dataset.theme = novoTema;
+  function definirTemaPreferencia(novoTema: TemaPreferencia) {
+    const efetivo = resolverTemaEfetivo(novoTema);
+    setTheme(efetivo);
+    aplicarTemaNoDocumento(novoTema);
     localStorage.setItem(THEME_STORAGE_KEY, novoTema);
     void preferenciasCtx?.atualizarPreferencias(
-      { tema: novoTema as TemaPreferencia },
+      { tema: novoTema },
       { salvarNuvem: true }
     );
+    setProfileOpen(false);
+  }
+
+  function alternarTemaRapido() {
+    const proximo: TemaEfetivo = theme === "dark" ? "light" : "dark";
+    definirTemaPreferencia(proximo);
   }
 
   async function sair() {
@@ -236,7 +249,18 @@ function AppShellFrame({
 
   return (
     <div className="app-shell psicomanager-shell">
-      <aside className="app-sidebar psicomanager-sidebar">
+      {navAberto ? (
+        <button
+          type="button"
+          className="mobile-nav-backdrop"
+          aria-label="Fechar menu"
+          onClick={() => setNavAberto(false)}
+        />
+      ) : null}
+
+      <aside
+        className={`app-sidebar psicomanager-sidebar${navAberto ? " is-open" : ""}`}
+      >
         <Link href="/" className="app-brand psicomanager-brand">
           <span>Psico</span>Desk
         </Link>
@@ -267,9 +291,28 @@ function AppShellFrame({
       <main className="main-content psicomanager-main">
         <div className="topbar psicomanager-topbar">
           <div className="topbar-left">
+            <button
+              type="button"
+              className="mobile-nav-toggle"
+              aria-label={navAberto ? "Fechar menu" : "Abrir menu"}
+              aria-expanded={navAberto}
+              onClick={() => setNavAberto((aberto) => !aberto)}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M4 7h16M4 12h16M4 17h16"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
             <span className="topbar-page-pill">{tituloPagina}</span>
             <div className="topbar-search">
-              <span aria-hidden="true">⌕</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+                <path d="M20 20l-3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
               <input
                 value={busca}
                 onChange={(event) => setBusca(event.target.value)}
@@ -321,27 +364,71 @@ function AppShellFrame({
 
             {profileOpen ? (
               <div className="profile-dropdown">
+                <p className="profile-dropdown-label">Tema</p>
                 <button
                   type="button"
-                  onClick={() => {
-                    atualizarTema(theme === "dark" ? "light" : "dark");
-                    setProfileOpen(false);
-                  }}
+                  className={
+                    preferenciasCtx?.preferencias.tema === "system"
+                      ? "is-active"
+                      : undefined
+                  }
+                  onClick={() => definirTemaPreferencia("system")}
                 >
-                  <span>☼</span>{" "}
-                  {theme === "dark" ? "Alterar para Modo Claro" : "Alterar para Modo Escuro"}
+                  <span className="profile-dropdown-icon" aria-hidden="true">
+                    ◐
+                  </span>
+                  Padrão do sistema
                 </button>
+                <button
+                  type="button"
+                  className={
+                    preferenciasCtx?.preferencias.tema === "dark"
+                      ? "is-active"
+                      : undefined
+                  }
+                  onClick={() => definirTemaPreferencia("dark")}
+                >
+                  <span className="profile-dropdown-icon" aria-hidden="true">
+                    ●
+                  </span>
+                  Escuro
+                </button>
+                <button
+                  type="button"
+                  className={
+                    preferenciasCtx?.preferencias.tema === "light"
+                      ? "is-active"
+                      : undefined
+                  }
+                  onClick={() => definirTemaPreferencia("light")}
+                >
+                  <span className="profile-dropdown-icon" aria-hidden="true">
+                    ○
+                  </span>
+                  Claro
+                </button>
+                <button type="button" onClick={alternarTemaRapido}>
+                  <span className="profile-dropdown-icon" aria-hidden="true">
+                    ⇄
+                  </span>
+                  {theme === "dark" ? "Alternar para claro" : "Alternar para escuro"}
+                </button>
+                <div className="profile-dropdown-divider" role="separator" />
                 <Link href="/minha-clinica" onClick={() => setProfileOpen(false)}>
-                  <span>▤</span> Minha clínica
+                  <span className="profile-dropdown-icon" aria-hidden="true">
+                    ⚙
+                  </span>
+                  Minha clínica
                 </Link>
                 <button type="button" onClick={sair}>
-                  <span>↪</span> Sair
+                  <span className="profile-dropdown-icon" aria-hidden="true">
+                    ⎋
+                  </span>
+                  Sair
                 </button>
               </div>
             ) : null}
           </div>
-
-          <span className="topbar-version">v1.0</span>
         </div>
 
         {children}

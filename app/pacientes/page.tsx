@@ -9,9 +9,7 @@ import {
   hrefPendencia,
   pendenciasCadastroPaciente,
 } from "../lib/checklist-clinica";
-import {
-  classeStatusPaciente,
-} from "../lib/status-paciente";
+import { classeStatusPaciente } from "../lib/status-paciente";
 import { requireUserClient } from "../lib/require-user-client";
 import {
   deletePacienteComDependencias,
@@ -20,8 +18,11 @@ import {
   resumoContagemPacientes,
   type ResumoContagemPacientes,
 } from "../lib/db/pacientes";
+import ConfirmacaoModal from "../components/ConfirmacaoModal";
 import FlashMessage from "../components/FlashMessage";
 import Janela from "../components/Janela";
+import EmptyState from "../components/ui/EmptyState";
+import { PatientsSkeleton } from "../components/ui/Skeleton";
 import type { Paciente } from "../types";
 
 function hrefTelefone(telefone: string | null | undefined) {
@@ -41,6 +42,7 @@ export default function PacientesPage() {
   const [status, setStatus] = useState("ativo");
   const [carregando, setCarregando] = useState(true);
   const [carregandoMais, setCarregandoMais] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
   const [erro, setErro] = useState("");
   const [exclusaoPendente, setExclusaoPendente] = useState<{
     id: string | number;
@@ -126,17 +128,7 @@ export default function PacientesPage() {
     }
 
     setCarregandoMais(false);
-  }, [
-    pacientes.length,
-    totalCount,
-    debouncedBusca,
-    status,
-    router,
-  ]);
-
-  function classeStatus(statusPaciente: string) {
-    return classeStatusPaciente(statusPaciente);
-  }
+  }, [pacientes.length, totalCount, debouncedBusca, status, router]);
 
   function solicitarExclusao(id: string | number, nome: string) {
     setExclusaoPendente({ id, nome });
@@ -146,18 +138,24 @@ export default function PacientesPage() {
     if (!exclusaoPendente) return;
 
     const { id } = exclusaoPendente;
-    setExclusaoPendente(null);
+    setExcluindo(true);
 
     const user = await requireUserClient(router, getCurrentUser);
-    if (!user) return;
+    if (!user) {
+      setExcluindo(false);
+      return;
+    }
 
     const { error } = await deletePacienteComDependencias(user.id, id);
+
+    setExcluindo(false);
 
     if (error) {
       setErro("Erro ao excluir paciente: " + error.message);
       return;
     }
 
+    setExclusaoPendente(null);
     setErro("");
     void carregarPrimeiraPagina();
   }
@@ -166,13 +164,92 @@ export default function PacientesPage() {
     router.push(`/paciente/${id}`);
   }
 
-  const temMais =
-    totalCount != null && pacientes.length < totalCount;
+  function renderAcoes(p: Paciente, compacto = false) {
+    const telHref = hrefTelefone(p.telefone);
 
+    return (
+      <div className={compacto ? "patient-mobile-actions" : "patients-actions"}>
+        <button
+          type="button"
+          className="btn btn-outline"
+          title="Agendar sessão"
+          onClick={(e) => {
+            e.stopPropagation();
+            router.push(`/agenda?paciente=${p.id}`);
+          }}
+        >
+          Agendar
+        </button>
+
+        {telHref ? (
+          <a
+            className="btn btn-outline"
+            href={telHref}
+            title={`Ligar para ${p.nome}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            Ligar
+          </a>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-outline"
+            disabled
+            title="Sem telefone cadastrado"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Ligar
+          </button>
+        )}
+
+        <button
+          type="button"
+          className="btn btn-outline"
+          onClick={(e) => {
+            e.stopPropagation();
+            router.push(`/paciente/${p.id}/editar`);
+          }}
+        >
+          Editar
+        </button>
+
+        <button
+          type="button"
+          className="btn btn-danger"
+          onClick={(e) => {
+            e.stopPropagation();
+            solicitarExclusao(p.id, p.nome);
+          }}
+        >
+          Excluir
+        </button>
+      </div>
+    );
+  }
+
+  const temMais = totalCount != null && pacientes.length < totalCount;
   const filtroAtivo = debouncedBusca.trim() || status !== "ativo";
 
   return (
     <div className="patients-page">
+      <ConfirmacaoModal
+        aberto={exclusaoPendente != null}
+        titulo="Excluir paciente"
+        perigo
+        confirmando={excluindo}
+        rotuloConfirmar="Excluir"
+        onCancelar={() => {
+          if (!excluindo) setExclusaoPendente(null);
+        }}
+        onConfirmar={() => void confirmarExclusaoPaciente()}
+      >
+        <p>
+          Tem certeza que deseja excluir{" "}
+          <strong>{exclusaoPendente?.nome}</strong>? Esta ação não pode ser
+          desfeita.
+        </p>
+      </ConfirmacaoModal>
+
       <Janela titulo="Pacientes">
         {erro ? <FlashMessage kind="error">{erro}</FlashMessage> : null}
 
@@ -200,69 +277,15 @@ export default function PacientesPage() {
           </p>
         ) : null}
 
-        {exclusaoPendente ? (
-          <div
-            className="psico-card"
-            style={{
-              marginBottom: "20px",
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: "12px 16px",
-              justifyContent: "space-between",
-            }}
-            role="status"
-            aria-live="polite"
-          >
-            <p style={{ margin: 0 }}>
-              Tem certeza que deseja excluir{" "}
-              <strong>{exclusaoPendente.nome}</strong>? Esta ação não pode ser
-              desfeita.
-            </p>
-
-            <div style={{ display: "flex", gap: "10px", flexShrink: 0 }}>
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={() => setExclusaoPendente(null)}
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                className="btn btn-danger"
-                onClick={() => void confirmarExclusaoPaciente()}
-              >
-                Excluir
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        <div
-          className="patients-toolbar"
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: "12px",
-            marginBottom: "20px",
-            flexWrap: "wrap",
-          }}
-        >
+        <div className="patients-toolbar">
           <input
             placeholder="Buscar paciente…"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            style={{ maxWidth: "340px" }}
             autoComplete="off"
           />
 
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            style={{ maxWidth: "220px" }}
-          >
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">Todos os status</option>
             <option value="ativo">Ativo</option>
             <option value="alta">Alta</option>
@@ -279,33 +302,114 @@ export default function PacientesPage() {
           </button>
         </div>
 
-        <div className="patients-table-wrap">
-          <table className="patients-table">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Status</th>
-                <th>Telefone</th>
-                <th>Convênio</th>
-                <th>CID</th>
-                <th>Valor</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
+        {carregando ? (
+          <PatientsSkeleton />
+        ) : pacientes.length === 0 ? (
+          <EmptyState
+            titulo="Nenhum paciente encontrado"
+            descricao={
+              filtroAtivo
+                ? "Tente outro termo de busca ou limpe os filtros."
+                : "Cadastre o primeiro paciente da clínica."
+            }
+            icone="👤"
+            acao={
+              filtroAtivo
+                ? undefined
+                : { rotulo: "+ Adicionar paciente", href: "/novo-paciente" }
+            }
+          />
+        ) : (
+          <div className="patients-table-wrap">
+            <table className="patients-table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Status</th>
+                  <th>Telefone</th>
+                  <th>Convênio</th>
+                  <th>CID</th>
+                  <th>Valor</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
 
-            <tbody>
+              <tbody>
+                {pacientes.map((p) => {
+                  const statusPaciente = p.status || "ativo";
+                  const pendencias = pendenciasCadastroPaciente(p);
+
+                  return (
+                    <tr
+                      key={p.id}
+                      className="patients-row-clickable"
+                      tabIndex={0}
+                      role="link"
+                      aria-label={`Abrir prontuário de ${p.nome}`}
+                      onClick={() => abrirPaciente(p.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          abrirPaciente(p.id);
+                        }
+                      }}
+                    >
+                      <td className="patients-name-cell">
+                        <div className="patients-name-wrap">
+                          <strong>{p.nome}</strong>
+                          {pendencias.length > 0 ? (
+                            <Link
+                              href={hrefPendencia(pendencias[0].tipo)}
+                              className="patients-cadastro-badge"
+                              title={pendencias
+                                .map((item) => item.titulo)
+                                .join(" · ")}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              Cadastro incompleto
+                            </Link>
+                          ) : null}
+                        </div>
+                      </td>
+
+                      <td>
+                        <span
+                          className={`status-badge ${classeStatusPaciente(statusPaciente)}`}
+                        >
+                          {statusPaciente}
+                        </span>
+                      </td>
+
+                      <td className="patients-phone-cell">
+                        {p.telefone?.trim() ? p.telefone : "—"}
+                      </td>
+                      <td>{p.convenio || "—"}</td>
+                      <td>{formatarCidParaExibicao(p.cid)}</td>
+                      <td>{p.valor_sessao ? `R$ ${p.valor_sessao}` : "—"}</td>
+
+                      <td
+                        className="patients-actions-cell"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {renderAcoes(p)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            <div className="patients-mobile-list">
               {pacientes.map((p) => {
                 const statusPaciente = p.status || "ativo";
                 const pendencias = pendenciasCadastroPaciente(p);
-                const telHref = hrefTelefone(p.telefone);
 
                 return (
-                  <tr
-                    key={p.id}
-                    className="patients-row-clickable"
+                  <article
+                    key={`mobile-${p.id}`}
+                    className="patient-mobile-card"
+                    role="button"
                     tabIndex={0}
-                    role="link"
-                    aria-label={`Abrir prontuário de ${p.nome}`}
                     onClick={() => abrirPaciente(p.id)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
@@ -314,126 +418,58 @@ export default function PacientesPage() {
                       }
                     }}
                   >
-                    <td className="patients-name-cell">
-                      <div className="patients-name-wrap">
-                        <strong>{p.nome}</strong>
-                        {pendencias.length > 0 ? (
-                          <Link
-                            href={hrefPendencia(pendencias[0].tipo)}
-                            className="patients-cadastro-badge"
-                            title={pendencias
-                              .map((item) => item.titulo)
-                              .join(" · ")}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            Cadastro incompleto
-                          </Link>
-                        ) : null}
-                      </div>
-                    </td>
-
-                    <td>
+                    <div className="patient-mobile-card-header">
+                      <strong>{p.nome}</strong>
                       <span
-                        className={`status-badge ${classeStatus(
-                          statusPaciente
-                        )}`}
+                        className={`status-badge ${classeStatusPaciente(statusPaciente)}`}
                       >
                         {statusPaciente}
                       </span>
-                    </td>
+                    </div>
 
-                    <td className="patients-phone-cell">
-                      {p.telefone?.trim() ? p.telefone : "—"}
-                    </td>
-                    <td>{p.convenio || "—"}</td>
-                    <td>{formatarCidParaExibicao(p.cid)}</td>
-                    <td>{p.valor_sessao ? `R$ ${p.valor_sessao}` : "—"}</td>
+                    {pendencias.length > 0 ? (
+                      <Link
+                        href={hrefPendencia(pendencias[0].tipo)}
+                        className="patients-cadastro-badge"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Cadastro incompleto
+                      </Link>
+                    ) : null}
 
-                    <td
-                      className="patients-actions-cell"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="patients-actions">
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          title="Agendar sessão"
-                          onClick={() =>
-                            router.push(`/agenda?paciente=${p.id}`)
-                          }
-                        >
-                          Agendar
-                        </button>
+                    <div className="patient-mobile-meta">
+                      <span>
+                        Tel.: {p.telefone?.trim() ? p.telefone : "—"}
+                      </span>
+                      <span>Convênio: {p.convenio || "—"}</span>
+                      <span>CID: {formatarCidParaExibicao(p.cid)}</span>
+                      <span>
+                        Valor: {p.valor_sessao ? `R$ ${p.valor_sessao}` : "—"}
+                      </span>
+                    </div>
 
-                        {telHref ? (
-                          <a
-                            className="btn btn-outline"
-                            href={telHref}
-                            title={`Ligar para ${p.nome}`}
-                          >
-                            Ligar
-                          </a>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn btn-outline"
-                            disabled
-                            title="Sem telefone cadastrado"
-                          >
-                            Ligar
-                          </button>
-                        )}
-
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          onClick={() =>
-                            router.push(`/paciente/${p.id}/editar`)
-                          }
-                        >
-                          Editar
-                        </button>
-
-                        <button
-                          type="button"
-                          className="btn btn-danger"
-                          onClick={() => solicitarExclusao(p.id, p.nome)}
-                        >
-                          Excluir
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                    {renderAcoes(p, true)}
+                  </article>
                 );
               })}
-            </tbody>
-          </table>
-
-          {carregando ? (
-            <p className="empty-text" style={{ marginTop: "16px" }}>
-              Carregando pacientes...
-            </p>
-          ) : pacientes.length === 0 ? (
-            <p className="empty-text" style={{ marginTop: "16px" }}>
-              Nenhum paciente encontrado com esses filtros.
-            </p>
-          ) : null}
-
-          {!carregando && temMais ? (
-            <div style={{ marginTop: "20px", textAlign: "center" }}>
-              <button
-                type="button"
-                className="btn btn-outline"
-                disabled={carregandoMais}
-                onClick={() => void carregarMais()}
-              >
-                {carregandoMais
-                  ? "Carregando…"
-                  : `Carregar mais (${pacientes.length} de ${totalCount})`}
-              </button>
             </div>
-          ) : null}
-        </div>
+
+            {temMais ? (
+              <div className="patients-load-more">
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  disabled={carregandoMais}
+                  onClick={() => void carregarMais()}
+                >
+                  {carregandoMais
+                    ? "Carregando…"
+                    : `Carregar mais (${pacientes.length} de ${totalCount})`}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        )}
       </Janela>
     </div>
   );

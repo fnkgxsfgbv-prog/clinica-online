@@ -11,6 +11,7 @@ import FormularioCamposLista from "../components/FormularioCamposLista";
 import ModeloCatalogCard from "../components/ModeloCatalogCard";
 import ModeloCatalogLista from "../components/ModeloCatalogLista";
 import Janela from "../components/Janela";
+import { PageSkeleton } from "../components/ui/Skeleton";
 import RichTextEditor, {
   normalizarConteudoEditor,
   sanitizarHtmlBasico,
@@ -558,7 +559,7 @@ export default function ModelosPage() {
         </div>
 
         {carregando ? (
-          <p className="empty-text">Carregando documentos...</p>
+          <PageSkeleton linhas={6} />
         ) : aba === "documentos" ? (
           <section className="psico-card modelos-doc-workspace">
             {documentoView === "inicio" ? (

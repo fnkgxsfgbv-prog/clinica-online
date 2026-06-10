@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 
 import FlashMessage from "../components/FlashMessage";
 import LoginLegalFooter from "../components/LoginLegalFooter";
+import { PageSkeleton } from "../components/ui/Skeleton";
 import { mensagemErroLogin } from "../lib/auth-messages";
 import supabase from "../lib/supabase";
 
@@ -109,7 +110,13 @@ function LoginForm() {
 
 export default function Login() {
   return (
-    <Suspense fallback={<div className="login-page login-page-loading">Carregando…</div>}>
+    <Suspense
+      fallback={
+        <div className="login-page login-page-loading">
+          <PageSkeleton linhas={4} />
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

@@ -36,6 +36,7 @@ import {
 import { montarChecklistUnificado } from "./lib/checklist-clinica";
 import { pacienteEstaAtivo } from "./lib/status-paciente";
 import { useDashboardLayout } from "./lib/use-dashboard-layout";
+import { DashboardSkeleton } from "./components/ui/Skeleton";
 import type { Frequencia, Paciente, Sessao } from "./types";
 
 function formatarDataISO(data: Date) {
@@ -355,9 +356,7 @@ export default function Home() {
         ) : null}
 
         {carregando ? (
-          <p className="empty-text" style={{ marginTop: "12px" }}>
-            Carregando dashboard...
-          </p>
+          <DashboardSkeleton />
         ) : (
           <>
             <p className="dashboard-subtitle">

@@ -2,15 +2,14 @@
 
 import { Suspense } from "react";
 import AgendaClient from "./AgendaClient";
+import { PageSkeleton } from "../components/ui/Skeleton";
 
 export default function AgendaPage() {
   return (
     <Suspense
       fallback={
         <div className="agenda-page-shell">
-          <p className="empty-text" style={{ padding: "32px 24px" }}>
-            Carregando agenda…
-          </p>
+          <PageSkeleton linhas={6} />
         </div>
       }
     >

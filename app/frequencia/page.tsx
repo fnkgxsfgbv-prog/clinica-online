@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import FlashMessage from "../components/FlashMessage";
+import { PageSkeleton } from "../components/ui/Skeleton";
 import AvisoViradaMesBanner from "../components/AvisoViradaMesBanner";
+import FlashMessage from "../components/FlashMessage";
 import FrequenciaSubnav from "../components/FrequenciaSubnav";
 import Janela from "../components/Janela";
 import PreferenciasMesPanel from "../components/PreferenciasMesPanel";
@@ -305,26 +306,11 @@ export default function FrequenciaPage() {
         {erro ? <FlashMessage kind="error">{erro}</FlashMessage> : null}
 
         {carregando ? (
-          <p className="empty-text" style={{ padding: "24px 0" }}>
-            Carregando frequência...
-          </p>
+          <PageSkeleton linhas={8} />
         ) : (
         <>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: "16px",
-            alignItems: "center",
-            marginBottom: "24px",
-            flexWrap: "wrap",
-          }}
-        >
+        <div className="frequency-page-header">
           <div>
-            <h1 style={{ marginBottom: "6px" }}>
-              Controle de Frequência
-            </h1>
-
             <p className="page-description">
               Acompanhe presenças, faltas e comparecimento.
               {mes ? (

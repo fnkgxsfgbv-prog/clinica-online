@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import ContaTemaPanel from "../components/ContaTemaPanel";
 import FlashMessage from "../components/FlashMessage";
+import { PageSkeleton } from "../components/ui/Skeleton";
 import BackupClinicaPanel from "../components/BackupClinicaPanel";
 import PendenciasClinica from "../components/PendenciasClinica";
 import SincronizarDadosButton from "../components/SincronizarDadosButton";
@@ -86,7 +87,7 @@ export default function MinhaClinicaPage() {
     <Suspense
       fallback={
         <div className="clinic-page">
-          <p className="empty-text">Carregando…</p>
+          <PageSkeleton linhas={5} />
         </div>
       }
     >
@@ -439,7 +440,7 @@ function MinhaClinicaConteudo() {
           {mensagem ? <FlashMessage kind="success">{mensagem}</FlashMessage> : null}
 
           {carregando ? (
-            <p className="empty-text">Carregando dados da clínica...</p>
+            <PageSkeleton linhas={6} />
           ) : (
             <>
             <div className="conta-tabs-bar" role="tablist" aria-label="Seções da conta">
