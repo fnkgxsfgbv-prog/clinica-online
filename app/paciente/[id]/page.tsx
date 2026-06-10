@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AnamneseSection from "./AnamneseSection";
 import FlashMessage from "../../components/FlashMessage";
 import Janela from "../../components/Janela";
@@ -98,9 +98,12 @@ function enriquecerSessoes(lista: Sessao[]): SessaoLista[] {
   }));
 }
 
+const ABAS_PACIENTE = ["sessoes", "evolucoes", "documentos", "formularios"] as const;
+
 export default function PacientePage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
 
   const idPaciente = useMemo(() => {
     const raw = params.id;
@@ -224,6 +227,16 @@ export default function PacientePage() {
     }
     void carregarDados();
   }, [carregarDados, idPaciente]);
+
+  useEffect(() => {
+    const param = searchParams.get("aba");
+    if (
+      param &&
+      (ABAS_PACIENTE as readonly string[]).includes(param)
+    ) {
+      setAba(param);
+    }
+  }, [searchParams]);
 
   async function carregarDocumentos() {
     const user = await requireUserClient(router, getCurrentUser);

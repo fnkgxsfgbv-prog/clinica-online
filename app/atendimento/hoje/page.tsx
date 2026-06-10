@@ -465,9 +465,16 @@ export default function ModoSessaoHojePage() {
                     </div>
                   </section>
                 ) : (
-                  <p className="modo-sessao-sem-contexto">
-                    Sem evolução clínica anterior registrada para este paciente.
-                  </p>
+                  <section className="modo-sessao-contexto modo-sessao-contexto-vazio">
+                    <div className="modo-sessao-contexto-header">
+                      <strong>Última evolução</strong>
+                      <span>—</span>
+                    </div>
+                    <p className="modo-sessao-sem-contexto">
+                      Sem evolução clínica anterior registrada para este
+                      paciente.
+                    </p>
+                  </section>
                 )}
 
                 <section className="modo-sessao-status">
@@ -531,7 +538,7 @@ export default function ModoSessaoHojePage() {
                     Salvar e ficar
                   </button>
                   <Link
-                    href={`/paciente/${sessaoAtiva.paciente_id}`}
+                    href={`/paciente/${sessaoAtiva.paciente_id}?aba=documentos`}
                     className="btn btn-outline"
                   >
                     Gerar documento
