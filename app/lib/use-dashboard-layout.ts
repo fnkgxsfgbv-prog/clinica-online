@@ -17,15 +17,13 @@ type AtualizarPreferencias = (
   opcoes?: { salvarNuvem?: boolean; imediato?: boolean }
 ) => Promise<{ error?: string }>;
 
-function layoutInicial(
+function layoutPadrao(
   preferencias: PreferenciasUsuario
 ): DashboardLayoutPreferencias {
-  return (
-    lerLayoutDashboardLocal() ?? {
-      dashboardBlocosOcultos: preferencias.dashboardBlocosOcultos,
-      dashboardBlocosOrdem: preferencias.dashboardBlocosOrdem,
-    }
-  );
+  return {
+    dashboardBlocosOcultos: preferencias.dashboardBlocosOcultos,
+    dashboardBlocosOrdem: preferencias.dashboardBlocosOrdem,
+  };
 }
 
 /** Estado local do layout do dashboard — não depende de recargas do JWT. */
@@ -35,22 +33,20 @@ export function useDashboardLayout(
 ) {
   const editadoLocalmente = useRef(false);
   const [layout, setLayout] = useState<DashboardLayoutPreferencias>(() =>
-    layoutInicial(preferencias)
+    layoutPadrao(preferencias)
   );
 
   useEffect(() => {
-    if (editadoLocalmente.current) return;
-
     const salvo = lerLayoutDashboardLocal();
     if (salvo) {
+      editadoLocalmente.current = true;
       setLayout(salvo);
       return;
     }
 
-    setLayout({
-      dashboardBlocosOcultos: preferencias.dashboardBlocosOcultos,
-      dashboardBlocosOrdem: preferencias.dashboardBlocosOrdem,
-    });
+    if (editadoLocalmente.current) return;
+
+    setLayout(layoutPadrao(preferencias));
   }, [
     preferencias.dashboardBlocosOcultos,
     preferencias.dashboardBlocosOrdem,
