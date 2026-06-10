@@ -42,7 +42,7 @@ export async function listSessoesPorIntervalo(
 export async function listSessoesDesde(userId: string, dataIso: string) {
   return supabase
     .from(TABLES.SESSOES)
-    .select("id,paciente_id,paciente_nome,data,hora,status,valor")
+    .select("id,paciente_id,paciente_nome,data,hora,status")
     .eq("user_id", userId)
     .gte("data", dataIso)
     .order("data", { ascending: true })

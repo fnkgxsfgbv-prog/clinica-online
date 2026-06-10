@@ -89,26 +89,38 @@ export async function listPacientes(userId: string) {
 }
 
 const CAMPOS_PACIENTE_CHECKLIST =
-  "id,nome,status,telefone,data_nascimento,cid,observacoes,valor_sessao,data_inicio_atendimento";
+  "id,nome,status,telefone,data_nascimento,cid,observacoes,valor_sessao";
 
 const CAMPOS_PACIENTE_FINANCEIRO = "id,nome,valor_sessao,status";
 
-/** Campos mínimos para pendências do dashboard (cadastro + rotina). */
-export async function listPacientesResumoChecklist(userId: string) {
-  return supabase
+function erroColunaInexistente(error: { message?: string; code?: string } | null) {
+  if (!error) return false;
+  const msg = String(error.message || "").toLowerCase();
+  return error.code === "42703" || msg.includes("does not exist");
+}
+
+/** Tenta colunas explícitas; se o schema divergir, usa select("*"). */
+async function listPacientesComCampos(userId: string, campos: string) {
+  const resumido = await supabase
     .from(TABLES.PACIENTES)
-    .select(CAMPOS_PACIENTE_CHECKLIST)
+    .select(campos)
     .eq("user_id", userId)
     .order("nome", { ascending: true });
+
+  if (!resumido.error) return resumido;
+  if (!erroColunaInexistente(resumido.error)) return resumido;
+
+  return listPacientes(userId);
+}
+
+/** Campos mínimos para pendências do dashboard (cadastro + rotina). */
+export async function listPacientesResumoChecklist(userId: string) {
+  return listPacientesComCampos(userId, CAMPOS_PACIENTE_CHECKLIST);
 }
 
 /** Campos mínimos para resolver paciente no financeiro. */
 export async function listPacientesResumoFinanceiro(userId: string) {
-  return supabase
-    .from(TABLES.PACIENTES)
-    .select(CAMPOS_PACIENTE_FINANCEIRO)
-    .eq("user_id", userId)
-    .order("nome", { ascending: true });
+  return listPacientesComCampos(userId, CAMPOS_PACIENTE_FINANCEIRO);
 }
 
 /** Aniversariantes do mês civil (pacientes ativos com data de nascimento). */

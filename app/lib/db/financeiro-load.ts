@@ -5,7 +5,7 @@ import {
   listFrequenciasPorIntervalo,
   listMesesComPresencaFinanceiro,
 } from "./frequencia";
-import { listPacientesResumoFinanceiro } from "./pacientes";
+import { listPacientes } from "./pacientes";
 import { listSessoes, listSessoesPorIntervalo } from "./sessoes";
 import type { Frequencia, Paciente, Sessao } from "../../types";
 
@@ -53,7 +53,7 @@ export async function carregarFinanceiroPeriodo(
   userId: string,
   filtro: FiltroFinanceiroPeriodo
 ) {
-  const pacientesRes = await listPacientesResumoFinanceiro(userId);
+  const pacientesRes = await listPacientes(userId);
   if (pacientesRes.error) {
     return {
       pacientes: [] as Paciente[],
