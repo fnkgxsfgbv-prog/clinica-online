@@ -1,6 +1,10 @@
 import supabase from "../supabase";
 import type { Paciente } from "../../types";
 import { PACIENTE_DOCUMENTOS_BUCKET } from "./documentos";
+import {
+  limparObservacoesPaciente,
+  salvarDataInicioNasObservacoes,
+} from "../paciente-metadata";
 import { valoresPacienteIdParaQuery } from "./paciente-id-query";
 import { TABLES } from "./tables";
 
@@ -163,15 +167,96 @@ export async function updatePaciente(
   id: string | number,
   payload: Partial<Paciente>
 ) {
-  const rest = { ...payload };
+  const rest = prepararPayloadUpdatePaciente(payload);
   delete rest.id;
   delete rest.user_id;
 
-  return supabase
-    .from(TABLES.PACIENTES)
-    .update(rest)
-    .eq("user_id", userId)
-    .eq("id", id);
+  const candidatos = Array.from(
+    new Map(
+      [id, String(id), ...valoresPacienteIdParaQuery(id)].map((valor) => [
+        `${typeof valor}:${String(valor)}`,
+        valor,
+      ])
+    ).values()
+  );
+
+  let ultimoErro: { message: string; code?: string } | null = null;
+
+  for (const vid of candidatos) {
+    const result = await supabase
+      .from(TABLES.PACIENTES)
+      .update(rest)
+      .eq("user_id", userId)
+      .eq("id", vid)
+      .select("id")
+      .maybeSingle();
+
+    if (result.error) {
+      ultimoErro = result.error;
+      if (colunaDataInicioAusente(result.error) && "data_inicio_atendimento" in rest) {
+        const fallback = { ...rest };
+        delete fallback.data_inicio_atendimento;
+        const retry = await supabase
+          .from(TABLES.PACIENTES)
+          .update(fallback)
+          .eq("user_id", userId)
+          .eq("id", vid)
+          .select("id")
+          .maybeSingle();
+        if (retry.error) return retry;
+        if (retry.data) return retry;
+      }
+      continue;
+    }
+
+    if (result.data) return result;
+  }
+
+  if (ultimoErro) {
+    return { data: null, error: ultimoErro };
+  }
+
+  return {
+    data: null,
+    error: {
+      message: "Paciente não encontrado ou sem permissão para alterar.",
+      code: "PGRST116",
+      details: "",
+      hint: "",
+    },
+  };
+}
+
+function colunaDataInicioAusente(error: { message?: string; code?: string }) {
+  const msg = String(error.message || "").toLowerCase();
+  return (
+    error.code === "PGRST204" ||
+    msg.includes("data_inicio_atendimento") ||
+    msg.includes("column") && msg.includes("does not exist")
+  );
+}
+
+/** Normaliza payload de update (data de início com fallback nas observações). */
+export function prepararPayloadUpdatePaciente(
+  payload: Partial<Paciente>
+): Partial<Paciente> {
+  const rest = { ...payload };
+
+  if ("data_inicio_atendimento" in rest || "observacoes" in rest) {
+    const dataInicio = rest.data_inicio_atendimento ?? null;
+    const observacoesBase = limparObservacoesPaciente(rest.observacoes);
+
+    if (dataInicio) {
+      rest.observacoes = salvarDataInicioNasObservacoes(
+        observacoesBase,
+        String(dataInicio)
+      );
+    } else if ("data_inicio_atendimento" in rest) {
+      rest.observacoes = observacoesBase;
+    }
+  }
+
+  return rest;
 }
 
 export async function deletePacienteComDependencias(

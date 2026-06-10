@@ -13,6 +13,7 @@ import {
   extrairDataInicioAtendimento,
   limparObservacoesPaciente,
 } from "../../../lib/paciente-metadata";
+import { STATUS_PACIENTE_OPCOES } from "../../../lib/status-paciente";
 import { requireUserClient } from "../../../lib/require-user-client";
 import { mensagemErroSupabase } from "../../../lib/supabase-error";
 
@@ -32,6 +33,7 @@ export default function EditarPacientePage() {
   const [cid, setCid] = useState("");
   const [valorSessao, setValorSessao] = useState("");
   const [status, setStatus] = useState("ativo");
+  const [pacienteId, setPacienteId] = useState<string | number | null>(null);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
 
@@ -63,6 +65,7 @@ export default function EditarPacientePage() {
     setCid(data.cid || "");
     setValorSessao(String(data.valor_sessao || ""));
     setStatus(data.status || "ativo");
+    setPacienteId(data.id);
   }, [id, router]);
 
   useEffect(() => {
@@ -75,7 +78,8 @@ export default function EditarPacientePage() {
     const user = await requireUserClient(router, getCurrentUser);
     if (!user) return;
 
-    const { error } = await updatePaciente(user.id, id, {
+    const idSalvar = pacienteId ?? id;
+    const { data: atualizado, error } = await updatePaciente(user.id, idSalvar, {
       nome,
       data_nascimento: dataNascimento,
       data_inicio_atendimento: dataInicioAtendimento || null,
@@ -89,8 +93,13 @@ export default function EditarPacientePage() {
       status,
     });
 
-    if (error) {
-      setErro(mensagemErroSupabase("salvar alterações", error));
+    if (error || !atualizado) {
+      setErro(
+        mensagemErroSupabase(
+          "salvar alterações",
+          error ?? { message: "Nenhuma alteração foi gravada." }
+        )
+      );
       return;
     }
 
@@ -203,11 +212,11 @@ export default function EditarPacientePage() {
               onChange={(e) => setStatus(e.target.value)}
               className="psico-input"
             >
-              <option value="ativo">Ativo</option>
-              <option value="alta">Alta</option>
-              <option value="desistente">Desistente</option>
-              <option value="inativo">Inativo</option>
-              <option value="lista de espera">Lista de espera</option>
+              {STATUS_PACIENTE_OPCOES.map((opcao) => (
+                <option key={opcao.value} value={opcao.value}>
+                  {opcao.label}
+                </option>
+              ))}
             </select>
           </CampoFormulario>
           <button type="button" className="btn btn-green" onClick={salvarAlteracoes}>

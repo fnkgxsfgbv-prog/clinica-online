@@ -9,6 +9,9 @@ import {
   hrefPendencia,
   pendenciasCadastroPaciente,
 } from "../lib/checklist-clinica";
+import {
+  classeStatusPaciente,
+} from "../lib/status-paciente";
 import { requireUserClient } from "../lib/require-user-client";
 import {
   deletePacienteComDependencias,
@@ -132,11 +135,7 @@ export default function PacientesPage() {
   ]);
 
   function classeStatus(statusPaciente: string) {
-    if (statusPaciente === "ativo") return "status-success";
-    if (statusPaciente === "alta") return "status-warning";
-    if (statusPaciente === "lista de espera") return "status-info";
-    if (statusPaciente === "desistente") return "status-danger";
-    return "status-neutral";
+    return classeStatusPaciente(statusPaciente);
   }
 
   function solicitarExclusao(id: string | number, nome: string) {

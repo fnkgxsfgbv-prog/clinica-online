@@ -35,6 +35,10 @@ import { listSessoesPorPaciente } from "../../lib/db/sessoes";
 import { ordenarCronologico } from "../../lib/ordenar-datas";
 import { extrairDataInicioAtendimento } from "../../lib/paciente-metadata";
 import {
+  classeStatusPaciente,
+  rotuloStatusPaciente,
+} from "../../lib/status-paciente";
+import {
   agruparSessoesPaciente,
   type GrupoSessaoPaciente,
 } from "../../lib/sessao-paciente";
@@ -547,7 +551,13 @@ export default function PacientePage() {
           <div className="patient-hero-content">
             <div className="patient-hero-heading">
               <div>
-                <span className="patient-status-pill">Paciente ativo</span>
+                <span
+                  className={`patient-status-pill status-badge ${classeStatusPaciente(
+                    paciente.status
+                  )}`}
+                >
+                  {rotuloStatusPaciente(paciente.status)}
+                </span>
                 <h1 className="patient-record-title">
                   {paciente.nome}
                 </h1>

@@ -4288,6 +4288,64 @@ button:hover {
   gap: 28px;
 }
 
+.dashboard-personalizar-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.dashboard-personalizar-bar .btn.is-active {
+  border-color: rgba(74, 222, 128, 0.45);
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.dashboard-blocos-ocultos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.dashboard-blocos-ocultos-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboard-bloco-wrap {
+  position: relative;
+}
+
+.dashboard-bloco-acoes {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.dashboard-bloco-ocultar,
+.dashboard-bloco-restaurar {
+  min-height: 30px !important;
+  height: 30px !important;
+  padding: 0 10px !important;
+  font-size: 11px !important;
+}
+
+.dashboard-editando-hint {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dashboard-bloco-wrap:has(.dashboard-bloco-ocultar) {
+  outline: 1px dashed rgba(74, 222, 128, 0.28);
+  outline-offset: 6px;
+  border-radius: 12px;
+  padding-bottom: 4px;
+}
+
 .dashboard-overview {
   display: grid;
   /* Layout novo: métricas em cima, agenda embaixo (sem "buraco" lateral). */

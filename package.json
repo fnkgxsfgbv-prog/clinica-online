@@ -23,6 +23,7 @@
     "db:apply-evolucoes-rls": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/008_evolucoes_rls_via_paciente.sql",
     "db:fix-evolucoes-supabase": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/009_fix_evolucoes_visibilidade_completo.sql",
     "db:fix-sessoes-delete": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/016_fix_sessoes_delete_rls.sql",
+    "db:fix-pacientes-write-rls": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/018_fix_pacientes_write_rls.sql",
     "db:apply-documentos": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/010_paciente_documentos.sql && node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/013_paciente_documentos_storage_update.sql",
     "db:apply-anamnese": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/011_paciente_anamnese.sql && node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/012_anamnese_campos_json.sql && node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/014_anamnese_nome_formulario.sql",
     "db:apply-modelos": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/015_modelos_reutilizaveis.sql",
