@@ -2,6 +2,8 @@ import type { User } from "@supabase/supabase-js";
 
 import {
   normalizarDashboardBlocosOcultos,
+  normalizarDashboardBlocosOrdem,
+  ordemPadraoDashboard,
   type DashboardBlocoId,
 } from "./dashboard-blocos";
 import { mesAtualChave } from "./mes";
@@ -29,6 +31,7 @@ export type PreferenciasUsuario = {
   avisoViradaMes: boolean;
   emailResumoSemanal: boolean;
   dashboardBlocosOcultos: DashboardBlocoId[];
+  dashboardBlocosOrdem: DashboardBlocoId[];
 };
 
 const DURACOES_VALIDAS = [30, 40, 45, 50, 60, 90] as const;
@@ -81,6 +84,7 @@ export function preferenciasPadrao(): PreferenciasUsuario {
     avisoViradaMes: true,
     emailResumoSemanal: false,
     dashboardBlocosOcultos: [],
+    dashboardBlocosOrdem: ordemPadraoDashboard(),
   };
 }
 
@@ -119,6 +123,9 @@ export function mesclarPreferencias(
     ),
     dashboardBlocosOcultos: normalizarDashboardBlocosOcultos(
       parcial.dashboardBlocosOcultos ?? padrao.dashboardBlocosOcultos
+    ),
+    dashboardBlocosOrdem: normalizarDashboardBlocosOrdem(
+      parcial.dashboardBlocosOrdem ?? padrao.dashboardBlocosOrdem
     ),
   };
 }

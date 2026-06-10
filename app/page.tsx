@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser } from "./lib/auth";
 import {
@@ -24,8 +24,13 @@ import Janela from "./components/Janela";
 import PendenciasClinica from "./components/PendenciasClinica";
 import { usePreferencias } from "./components/PreferenciasProvider";
 import {
-  dashboardBlocoVisivel,
+  agruparBlocosDashboard,
+  blocoPodeDescer,
+  blocoPodeSubir,
+  moverBlocoDashboard,
+  ordemPadraoDashboard,
   type DashboardBlocoId,
+  type DashboardGrupoRender,
 } from "./lib/dashboard-blocos";
 import { montarChecklistUnificado } from "./lib/checklist-clinica";
 import { pacienteEstaAtivo } from "./lib/status-paciente";
@@ -63,31 +68,41 @@ export default function Home() {
   const [editandoDashboard, setEditandoDashboard] = useState(false);
 
   const blocosOcultos = preferencias.dashboardBlocosOcultos;
-  const blocoVisivel = (id: DashboardBlocoId) =>
-    dashboardBlocoVisivel(id, blocosOcultos);
+  const blocosOrdem = preferencias.dashboardBlocosOrdem;
+
+  function salvarDashboardPrefs(
+    parcial: Partial<{
+      dashboardBlocosOcultos: DashboardBlocoId[];
+      dashboardBlocosOrdem: DashboardBlocoId[];
+    }>
+  ) {
+    void atualizarPreferencias(parcial, { salvarNuvem: true, imediato: true });
+  }
 
   function ocultarBloco(id: DashboardBlocoId) {
     if (blocosOcultos.includes(id)) return;
-    void atualizarPreferencias(
-      { dashboardBlocosOcultos: [...blocosOcultos, id] },
-      { salvarNuvem: true, imediato: true }
-    );
+    salvarDashboardPrefs({
+      dashboardBlocosOcultos: [...blocosOcultos, id],
+    });
   }
 
   function mostrarBloco(id: DashboardBlocoId) {
-    void atualizarPreferencias(
-      {
-        dashboardBlocosOcultos: blocosOcultos.filter((item) => item !== id),
-      },
-      { salvarNuvem: true, imediato: true }
-    );
+    salvarDashboardPrefs({
+      dashboardBlocosOcultos: blocosOcultos.filter((item) => item !== id),
+    });
   }
 
-  function restaurarTodosBlocos() {
-    void atualizarPreferencias(
-      { dashboardBlocosOcultos: [] },
-      { salvarNuvem: true, imediato: true }
-    );
+  function restaurarPadraoDashboard() {
+    salvarDashboardPrefs({
+      dashboardBlocosOcultos: [],
+      dashboardBlocosOrdem: ordemPadraoDashboard(),
+    });
+  }
+
+  function moverBloco(id: DashboardBlocoId, direcao: "up" | "down") {
+    salvarDashboardPrefs({
+      dashboardBlocosOrdem: moverBlocoDashboard(blocosOrdem, id, direcao),
+    });
   }
 
   const carregarDados = useCallback(async () => {
@@ -103,7 +118,6 @@ export default function Home() {
     const agora = new Date();
     const hoje = formatarDataISO(agora);
     const horaAtual = agora.toTimeString().slice(0, 5);
-
     const mesAtualChave = hoje.slice(0, 7);
 
     const [pRes, sRes, fRes, hojeRes, comparecimentoRes] = await Promise.all([
@@ -152,31 +166,150 @@ export default function Home() {
   }, [carregarDados]);
 
   const hoje = formatarDataISO(new Date());
-
-  const pacientesAtivos = pacientes.filter((p) => pacienteEstaAtivo(p.status)).length;
-
+  const pacientesAtivos = pacientes.filter((p) =>
+    pacienteEstaAtivo(p.status)
+  ).length;
   const sessoesHoje = sessoesHojeLista;
-
   const presencas = comparecimentoMes.presencas;
   const faltas = comparecimentoMes.faltas;
-
   const receitaPrevista = sessoes.reduce(
-    (total, sessao) => {
-      return total + Number(sessao.valor || 0);
-    },
+    (total, sessao) => total + Number(sessao.valor || 0),
     0
   );
-
   const totalFrequencias = presencas + faltas;
   const taxaComparecimento =
     totalFrequencias > 0
       ? Math.round((presencas / totalFrequencias) * 100)
       : 0;
-
   const aniversariantesMes = listarAniversariantesDoMes(pacientes);
   const mesAtual = new Intl.DateTimeFormat("pt-BR", {
     month: "long",
   }).format(new Date());
+
+  const gruposDashboard = useMemo(
+    () => agruparBlocosDashboard(blocosOrdem, blocosOcultos),
+    [blocosOrdem, blocosOcultos]
+  );
+
+  function acoesBloco(id: DashboardBlocoId) {
+    return (
+      <DashboardBlocoAcoes
+        id={id}
+        editando={editandoDashboard}
+        podeSubir={blocoPodeSubir(blocosOrdem, id)}
+        podeDescer={blocoPodeDescer(blocosOrdem, id)}
+        onOcultar={ocultarBloco}
+        onMoverCima={(blocoId) => moverBloco(blocoId, "up")}
+        onMoverBaixo={(blocoId) => moverBloco(blocoId, "down")}
+      />
+    );
+  }
+
+  function renderMetric(id: DashboardBlocoId) {
+    switch (id) {
+      case "metric-pacientes":
+        return (
+          <DashboardMetric
+            label="Pacientes ativos"
+            value={pacientesAtivos}
+            detail={`${pacientes.length} cadastrados`}
+            variant="patients"
+          />
+        );
+      case "metric-sessoes":
+        return (
+          <DashboardMetric
+            label="Sessões hoje"
+            value={sessoesHoje.length}
+            detail={
+              sessoes.length > 0
+                ? `${sessoes.length} futuras agendadas`
+                : "Nenhuma sessão futura"
+            }
+            variant="sessions"
+          />
+        );
+      case "metric-comparecimento":
+        return (
+          <DashboardMetric
+            label="Comparecimento"
+            value={`${taxaComparecimento}%`}
+            detail={`${presencas} presenças / ${faltas} faltas no mês`}
+            variant="attendance"
+          />
+        );
+      case "metric-receita":
+        return (
+          <DashboardMetric
+            label="Receita próximas"
+            value={formatarMoeda(receitaPrevista)}
+            detail={`${sessoes.length} sessões agendadas`}
+            variant="revenue"
+          />
+        );
+      default:
+        return null;
+    }
+  }
+
+  function renderBloco(id: DashboardBlocoId) {
+    switch (id) {
+      case "agenda-hoje":
+        return <DashboardAgendaHoje dataIso={hoje} sessoes={sessoesHojeLista} />;
+      case "pendencias":
+        return (
+          <PendenciasClinica
+            itens={montarChecklistUnificado(pacientes, sessoes, frequencias)}
+            titulo="Pendências da clínica"
+          />
+        );
+      case "proximas-sessoes":
+        return (
+          <section className="dashboard-secao">
+            <h2 className="dashboard-secao-titulo">Próximas sessões</h2>
+            <DashboardProximasSessoes hojeIso={hoje} sessoes={sessoes} />
+          </section>
+        );
+      case "aniversariantes":
+        return (
+          <section className="dashboard-secao">
+            <h2 className="dashboard-secao-titulo">
+              Aniversariantes de {mesAtual}
+            </h2>
+            <BirthdayReminder aniversariantes={aniversariantesMes} />
+          </section>
+        );
+      default:
+        return renderMetric(id);
+    }
+  }
+
+  function renderGrupo(grupo: DashboardGrupoRender, index: number) {
+    if (grupo.tipo === "metrics") {
+      return (
+        <div
+          key={`metrics-${grupo.ids.join("-")}-${index}`}
+          className="dashboard-metrics-grid"
+        >
+          {grupo.ids.map((id) => (
+            <div key={id} className="dashboard-bloco-wrap">
+              {renderBloco(id)}
+              {acoesBloco(id)}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div key={grupo.id} className="dashboard-bloco-wrap">
+        {renderBloco(grupo.id)}
+        {acoesBloco(grupo.id)}
+      </div>
+    );
+  }
+
+  const nenhumBlocoVisivel = gruposDashboard.length === 0;
 
   return (
     <div className="dashboard-page">
@@ -189,7 +322,7 @@ export default function Home() {
             blocosOcultos={blocosOcultos}
             onToggleEditando={() => setEditandoDashboard((atual) => !atual)}
             onMostrar={mostrarBloco}
-            onRestaurarTodos={restaurarTodosBlocos}
+            onRestaurarPadrao={restaurarPadraoDashboard}
           />
         ) : null}
 
@@ -199,141 +332,40 @@ export default function Home() {
           </p>
         ) : (
           <>
-        <p className="dashboard-subtitle">
-          Visão geral da clínica
-          {editandoDashboard ? (
-            <span className="dashboard-editando-hint">
-              {" "}
-              — clique em &quot;Ocultar bloco&quot; nos cards que não quiser ver.
-            </span>
-          ) : null}
-        </p>
+            <p className="dashboard-subtitle">
+              Visão geral da clínica
+              {editandoDashboard ? (
+                <span className="dashboard-editando-hint">
+                  {" "}
+                  — use ↑ ↓ para reordenar e &quot;Ocultar&quot; para remover
+                  blocos.
+                </span>
+              ) : null}
+            </p>
 
-        <div className="dashboard-overview">
-          {blocoVisivel("agenda-hoje") ? (
-            <div className="dashboard-bloco-wrap">
-              <DashboardAgendaHoje dataIso={hoje} sessoes={sessoesHojeLista} />
-              <DashboardBlocoAcoes
-                id="agenda-hoje"
-                editando={editandoDashboard}
-                onOcultar={ocultarBloco}
-              />
+            <div
+              className={`dashboard-blocos-stack${
+                editandoDashboard ? " is-editing" : ""
+              }`}
+            >
+              {gruposDashboard.map((grupo, index) => renderGrupo(grupo, index))}
+
+              {nenhumBlocoVisivel ? (
+                <div className="dashboard-vazio-edicao">
+                  <p>Todos os blocos estão ocultos.</p>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={restaurarPadraoDashboard}
+                  >
+                    Restaurar layout padrão
+                  </button>
+                </div>
+              ) : null}
             </div>
-          ) : null}
-
-          <div className="dashboard-metrics-grid">
-            {blocoVisivel("metric-pacientes") ? (
-              <div className="dashboard-bloco-wrap">
-                <DashboardMetric
-                  label="Pacientes ativos"
-                  value={pacientesAtivos}
-                  detail={`${pacientes.length} cadastrados`}
-                  variant="patients"
-                />
-                <DashboardBlocoAcoes
-                  id="metric-pacientes"
-                  editando={editandoDashboard}
-                  onOcultar={ocultarBloco}
-                />
-              </div>
-            ) : null}
-
-            {blocoVisivel("metric-sessoes") ? (
-              <div className="dashboard-bloco-wrap">
-                <DashboardMetric
-                  label="Sessões hoje"
-                  value={sessoesHoje.length}
-                  detail={
-                    sessoes.length > 0
-                      ? `${sessoes.length} futuras agendadas`
-                      : "Nenhuma sessão futura"
-                  }
-                  variant="sessions"
-                />
-                <DashboardBlocoAcoes
-                  id="metric-sessoes"
-                  editando={editandoDashboard}
-                  onOcultar={ocultarBloco}
-                />
-              </div>
-            ) : null}
-
-            {blocoVisivel("metric-comparecimento") ? (
-              <div className="dashboard-bloco-wrap">
-                <DashboardMetric
-                  label="Comparecimento"
-                  value={`${taxaComparecimento}%`}
-                  detail={`${presencas} presenças / ${faltas} faltas no mês`}
-                  variant="attendance"
-                />
-                <DashboardBlocoAcoes
-                  id="metric-comparecimento"
-                  editando={editandoDashboard}
-                  onOcultar={ocultarBloco}
-                />
-              </div>
-            ) : null}
-
-            {blocoVisivel("metric-receita") ? (
-              <div className="dashboard-bloco-wrap">
-                <DashboardMetric
-                  label="Receita próximas"
-                  value={formatarMoeda(receitaPrevista)}
-                  detail={`${sessoes.length} sessões agendadas`}
-                  variant="revenue"
-                />
-                <DashboardBlocoAcoes
-                  id="metric-receita"
-                  editando={editandoDashboard}
-                  onOcultar={ocultarBloco}
-                />
-              </div>
-            ) : null}
-          </div>
-        </div>
           </>
         )}
       </Janela>
-
-      {!carregando && blocoVisivel("pendencias") ? (
-        <div className="dashboard-pendencias dashboard-bloco-wrap">
-          <PendenciasClinica
-            itens={montarChecklistUnificado(pacientes, sessoes, frequencias)}
-            titulo="Pendências da clínica"
-          />
-          <DashboardBlocoAcoes
-            id="pendencias"
-            editando={editandoDashboard}
-            onOcultar={ocultarBloco}
-          />
-        </div>
-      ) : null}
-
-      {!carregando && blocoVisivel("proximas-sessoes") ? (
-        <div className="dashboard-bloco-wrap">
-          <Janela titulo="Próximas sessões">
-            <DashboardProximasSessoes hojeIso={hoje} sessoes={sessoes} />
-          </Janela>
-          <DashboardBlocoAcoes
-            id="proximas-sessoes"
-            editando={editandoDashboard}
-            onOcultar={ocultarBloco}
-          />
-        </div>
-      ) : null}
-
-      {!carregando && blocoVisivel("aniversariantes") ? (
-        <div className="dashboard-bloco-wrap">
-          <Janela titulo={`Aniversariantes de ${mesAtual}`}>
-            <BirthdayReminder aniversariantes={aniversariantesMes} />
-          </Janela>
-          <DashboardBlocoAcoes
-            id="aniversariantes"
-            editando={editandoDashboard}
-            onOcultar={ocultarBloco}
-          />
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -401,18 +433,16 @@ function DashboardMetric({
           {variant === "patients"
             ? "P"
             : variant === "sessions"
-            ? "S"
-            : variant === "attendance"
-            ? "%"
-            : "R$"}
+              ? "S"
+              : variant === "attendance"
+                ? "%"
+                : "R$"}
         </span>
 
         <span>{label}</span>
       </div>
 
-      <strong className="dashboard-metric-value">
-        {value}
-      </strong>
+      <strong className="dashboard-metric-value">{value}</strong>
 
       <p>{detail}</p>
     </div>

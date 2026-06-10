@@ -11,30 +11,63 @@ type Props = {
   blocosOcultos: DashboardBlocoId[];
   onToggleEditando: () => void;
   onMostrar: (id: DashboardBlocoId) => void;
-  onRestaurarTodos: () => void;
+  onRestaurarPadrao: () => void;
 };
 
 export function DashboardBlocoAcoes({
   id,
   editando,
+  podeSubir,
+  podeDescer,
   onOcultar,
+  onMoverCima,
+  onMoverBaixo,
 }: {
   id: DashboardBlocoId;
   editando: boolean;
+  podeSubir: boolean;
+  podeDescer: boolean;
   onOcultar: (id: DashboardBlocoId) => void;
+  onMoverCima: (id: DashboardBlocoId) => void;
+  onMoverBaixo: (id: DashboardBlocoId) => void;
 }) {
   if (!editando) return null;
 
   return (
     <div className="dashboard-bloco-acoes">
-      <button
-        type="button"
-        className="btn btn-outline btn-sm dashboard-bloco-ocultar"
-        onClick={() => onOcultar(id)}
-        aria-label={`Ocultar ${DASHBOARD_BLOCO_LABELS[id]}`}
-      >
-        Ocultar bloco
-      </button>
+      <span className="dashboard-bloco-acoes-label">
+        {DASHBOARD_BLOCO_LABELS[id]}
+      </span>
+      <div className="dashboard-bloco-acoes-botoes">
+        <button
+          type="button"
+          className="btn btn-outline btn-sm dashboard-bloco-mover"
+          disabled={!podeSubir}
+          onClick={() => onMoverCima(id)}
+          aria-label={`Mover ${DASHBOARD_BLOCO_LABELS[id]} para cima`}
+          title="Mover para cima"
+        >
+          ↑
+        </button>
+        <button
+          type="button"
+          className="btn btn-outline btn-sm dashboard-bloco-mover"
+          disabled={!podeDescer}
+          onClick={() => onMoverBaixo(id)}
+          aria-label={`Mover ${DASHBOARD_BLOCO_LABELS[id]} para baixo`}
+          title="Mover para baixo"
+        >
+          ↓
+        </button>
+        <button
+          type="button"
+          className="btn btn-outline btn-sm dashboard-bloco-ocultar"
+          onClick={() => onOcultar(id)}
+          aria-label={`Ocultar ${DASHBOARD_BLOCO_LABELS[id]}`}
+        >
+          Ocultar
+        </button>
+      </div>
     </div>
   );
 }
@@ -44,7 +77,7 @@ export default function DashboardPersonalizar({
   blocosOcultos,
   onToggleEditando,
   onMostrar,
-  onRestaurarTodos,
+  onRestaurarPadrao,
 }: Props) {
   const blocosParaRestaurar = DASHBOARD_BLOCO_IDS.filter((id) =>
     blocosOcultos.includes(id)
@@ -54,19 +87,21 @@ export default function DashboardPersonalizar({
     <div className="dashboard-personalizar-bar">
       <button
         type="button"
-        className={`btn btn-outline${editando ? " is-active" : ""}`}
+        className={`btn btn-outline dashboard-editar-btn${
+          editando ? " is-active" : ""
+        }`}
         onClick={onToggleEditando}
       >
-        {editando ? "Concluir personalização" : "Personalizar dashboard"}
+        {editando ? "Concluir edição" : "Editar dashboard"}
       </button>
 
-      {editando && blocosOcultos.length > 0 ? (
+      {editando ? (
         <button
           type="button"
           className="btn btn-outline"
-          onClick={onRestaurarTodos}
+          onClick={onRestaurarPadrao}
         >
-          Mostrar todos os blocos
+          Restaurar layout padrão
         </button>
       ) : null}
 
