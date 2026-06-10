@@ -5,6 +5,8 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import FlashMessage from "../../components/FlashMessage";
+import EmptyState from "../../components/ui/EmptyState";
+import { PageSkeleton } from "../../components/ui/Skeleton";
 import PendenciasCadastroEditor from "../../components/PendenciasCadastroEditor";
 import PendenciasIntegracaoLista from "../../components/PendenciasIntegracaoLista";
 import PendenciasRotinaLista from "../../components/PendenciasRotinaLista";
@@ -28,7 +30,7 @@ export default function PendenciasPage() {
     <Suspense
       fallback={
         <div className="clinic-page">
-          <p className="empty-text">Carregando pendências…</p>
+          <PageSkeleton linhas={5} />
         </div>
       }
     >
@@ -133,7 +135,7 @@ function PendenciasConteudo() {
           {erro ? <FlashMessage kind="error">{erro}</FlashMessage> : null}
 
           {carregando ? (
-            <p className="empty-text">Carregando itens…</p>
+            <PageSkeleton linhas={6} />
           ) : !erro && tipo && isPendenciaCadastro(tipo) ? (
             <PendenciasCadastroEditor
               tipo={tipo}

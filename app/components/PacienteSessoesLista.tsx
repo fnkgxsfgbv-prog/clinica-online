@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 
+import EmptyState from "./ui/EmptyState";
 import type { Evolucao, Sessao } from "../types";
 
 type SessaoComRotulo = Sessao & { rotuloDataHora?: string };
@@ -56,7 +57,9 @@ export default function PacienteSessoesLista({
   const router = useRouter();
 
   if (sessoes.length === 0) {
-    return <p className="empty-text">{vazio}</p>;
+    return (
+      <EmptyState compact inline titulo={vazio} icone="📅" />
+    );
   }
 
   return (

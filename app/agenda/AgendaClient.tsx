@@ -10,6 +10,7 @@ import "moment/locale/pt-br.js";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import ConfirmacaoModal from "../components/ConfirmacaoModal";
 import FlashMessage from "../components/FlashMessage";
+import EmptyState from "../components/ui/EmptyState";
 import { usePreferencias } from "../components/PreferenciasProvider";
 import PreferenciasAgendaPanel from "../components/PreferenciasAgendaPanel";
 import { getCurrentUser } from "../lib/auth";
@@ -975,9 +976,13 @@ export default function AgendaClient() {
             </div>
 
             {sessoesDoDia.length === 0 ? (
-              <div className="agenda-day-empty">
-                Nenhuma sessão agendada para este dia.
-              </div>
+              <EmptyState
+                compact
+                inline
+                titulo="Nenhuma sessão agendada para este dia"
+                descricao="Selecione outra data no calendário ou crie um novo agendamento."
+                icone="📅"
+              />
             ) : (
               <div className="agenda-day-table">
                 <div className="agenda-day-row agenda-day-head">
@@ -997,9 +1002,9 @@ export default function AgendaClient() {
                       <i>{(sessao.paciente_nome || "Paciente").slice(0, 2).toUpperCase()}</i>
                       {sessao.paciente_nome || "Paciente"}
                     </span>
-                    <span>{formatarHorario(sessao.hora)}</span>
-                    <span>{formatarValor(sessao.valor)}</span>
-                    <span className="agenda-day-frequency">
+                    <span data-label="Hora">{formatarHorario(sessao.hora)}</span>
+                    <span data-label="Valor">{formatarValor(sessao.valor)}</span>
+                    <span className="agenda-day-frequency" data-label="Frequência">
                       <button
                         type="button"
                         className={`agenda-presence-button ${frequencia.classe}`}
@@ -1066,10 +1071,10 @@ export default function AgendaClient() {
                         </div>
                       ) : null}
                     </span>
-                    <span className="agenda-day-pre-session">
+                    <span className="agenda-day-pre-session" data-label="Pré-sessão">
                       {preSessoes[String(sessao.id)] || "-"}
                     </span>
-                    <span className="agenda-day-actions">
+                    <span className="agenda-day-actions" data-label="Ações">
                       <Link
                         href={`/sessao/${sessao.id}?modo=anotacoes`}
                         className="agenda-day-action agenda-day-action--note"

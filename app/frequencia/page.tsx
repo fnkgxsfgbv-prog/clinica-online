@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PageSkeleton } from "../components/ui/Skeleton";
 import AvisoViradaMesBanner from "../components/AvisoViradaMesBanner";
 import FlashMessage from "../components/FlashMessage";
+import EmptyState from "../components/ui/EmptyState";
 import FrequenciaSubnav from "../components/FrequenciaSubnav";
 import Janela from "../components/Janela";
 import PreferenciasMesPanel from "../components/PreferenciasMesPanel";
@@ -475,78 +476,49 @@ export default function FrequenciaPage() {
             </tbody>
           </table>
 
-          {filtradas.length === 0 && (
-            <p
-              className="empty-text"
-              style={{
-                padding: "18px",
-              }}
-            >
-              Nenhum registro encontrado.
-            </p>
-          )}
+          {filtradas.length === 0 ? (
+            <EmptyState
+              compact
+              inline
+              titulo="Nenhum registro encontrado"
+              descricao="Ajuste o mês ou o filtro de status para ver frequências."
+              icone="📋"
+            />
+          ) : null}
+
+          <div className="frequency-mobile-list">
+            {filtradas.map((item) => (
+              <article key={`m-${item.id}`} className="frequency-mobile-card">
+                <strong>{item.paciente_nome}</strong>
+                <div className="frequency-mobile-meta">
+                  <span>
+                    {item.data ? formatarDataPaciente(item.data) : "-"}
+                  </span>
+                  <Status status={item.status || ""} />
+                  <span>{labelMesAno(chaveMes(item.data || ""))}</span>
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
 
-        <h2
-          style={{
-            marginBottom: "10px",
-          }}
-        >
-          Resumo Financeiro
-        </h2>
+        <h2 className="frequency-section-title">Resumo Financeiro</h2>
 
-        <h3
-          style={{
-            color: "#86efac",
-            marginBottom: "20px",
-          }}
-        >
-          Total Geral: R${" "}
-          {totalGeral.toFixed(2)}
-        </h3>
+        <p className="frequency-finance-summary">
+          Total Geral: R$ {totalGeral.toFixed(2)}
+        </p>
 
-        <div className="session-list">
+        <div className="session-list frequency-finance-list">
           {resumoPacientes.map((p) => (
-            <div
-              key={p.nome}
-              className="lista-card"
-              style={{
-                display: "flex",
-                justifyContent:
-                  "space-between",
-                gap: "14px",
-                alignItems: "center",
-              }}
-            >
+            <div key={p.nome} className="lista-card">
               <div>
                 <strong>{p.nome}</strong>
-
-                <p>
-                  {p.presencas} presença(s)
-                </p>
+                <p>{p.presencas} presença(s)</p>
               </div>
 
-              <div
-                style={{
-                  textAlign: "right",
-                }}
-              >
-                <p>
-                  R${" "}
-                  {p.valorSessao.toFixed(2)}{" "}
-                  / sessão
-                </p>
-
-                <strong
-                  style={{
-                    color: "#86efac",
-                  }}
-                >
-                  R${" "}
-                  {p.totalFinanceiro.toFixed(
-                    2
-                  )}
-                </strong>
+              <div className="frequency-finance-card-total">
+                <p>R$ {p.valorSessao.toFixed(2)} / sessão</p>
+                <strong>R$ {p.totalFinanceiro.toFixed(2)}</strong>
               </div>
             </div>
           ))}

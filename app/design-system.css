@@ -539,3 +539,235 @@ textarea:focus-visible {
 .btn-outline:hover:not(:disabled) {
   transform: translateY(-1px);
 }
+
+/* —— Empty state compacto (dentro de seções) —— */
+
+.ds-empty--compact {
+  padding: 20px 16px;
+  gap: 6px;
+}
+
+.ds-empty--compact .ds-empty-icon {
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  margin-bottom: 0;
+}
+
+.ds-empty--compact .ds-empty-title {
+  font-size: 14px;
+}
+
+.ds-empty--inline {
+  justify-items: start;
+  text-align: left;
+  padding: 16px 0;
+  border: none;
+  background: transparent;
+}
+
+/* —— Frequência mobile —— */
+
+.frequency-mobile-list {
+  display: none;
+}
+
+.frequency-mobile-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--radius-ui);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="light"] .frequency-mobile-card {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: #ffffff;
+}
+
+.frequency-mobile-card strong {
+  font-size: 15px;
+}
+
+.frequency-mobile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.frequency-finance-summary {
+  color: var(--brand);
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+
+.frequency-finance-list .lista-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+
+.frequency-finance-card-total {
+  text-align: right;
+}
+
+.frequency-finance-card-total strong {
+  color: var(--brand);
+  display: block;
+  margin-top: 4px;
+}
+
+.frequency-section-title {
+  margin: 24px 0 10px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .frequency-table-wrap .frequency-table {
+    display: none;
+  }
+
+  .frequency-mobile-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .frequency-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* —— Histórico frequência mobile —— */
+
+.historico-month-card {
+  display: grid;
+  gap: 14px;
+}
+
+.historico-months-stack {
+  display: grid;
+  gap: 22px;
+}
+
+.historico-month-card h2 {
+  margin: 0 0 14px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.historico-month-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.historico-mobile-list {
+  display: none;
+}
+
+.historico-mobile-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-ui-sm);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="light"] .historico-mobile-card {
+  background: rgba(15, 23, 42, 0.02);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+.historico-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .historico-table-wrap table {
+    display: none;
+  }
+
+  .historico-mobile-list {
+    display: grid;
+    gap: 8px;
+  }
+}
+
+/* —— Agenda dia — mobile cards —— */
+
+.agenda-day-empty {
+  padding: 24px 16px;
+  border-radius: var(--radius-ui);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+[data-theme="light"] .agenda-day-empty {
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+@media (max-width: 768px) {
+  .agenda-day-head {
+    display: none !important;
+  }
+
+  .agenda-day-row:not(.agenda-day-head) {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+    padding: 14px;
+    border-radius: var(--radius-ui);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  [data-theme="light"] .agenda-day-row:not(.agenda-day-head) {
+    border-color: rgba(15, 23, 42, 0.1);
+    background: #ffffff !important;
+  }
+
+  .agenda-day-row:not(.agenda-day-head) > span {
+    min-width: 0;
+  }
+
+  .agenda-day-row:not(.agenda-day-head) > span[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .agenda-day-row:not(.agenda-day-head) .agenda-day-client {
+    grid-column: 1 / -1;
+  }
+
+  .agenda-day-row:not(.agenda-day-head) .agenda-day-pre-session {
+    grid-column: 1 / -1;
+  }
+
+  .agenda-day-row:not(.agenda-day-head) .agenda-day-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .agenda-toolbar-left,
+  .agenda-toolbar-views {
+    width: 100%;
+  }
+}
+

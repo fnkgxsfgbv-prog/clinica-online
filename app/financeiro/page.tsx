@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import FlashMessage from "../components/FlashMessage";
+import EmptyState from "../components/ui/EmptyState";
 import AvisoViradaMesBanner from "../components/AvisoViradaMesBanner";
 import Janela from "../components/Janela";
 import { PageSkeleton } from "../components/ui/Skeleton";
@@ -1051,16 +1052,16 @@ export default function FinanceiroPage() {
         {carregando ? (
           <PageSkeleton linhas={7} />
         ) : dados.length === 0 ? (
-          <p className="empty-text">
-            Nenhum dado financeiro para exibir neste período.
-            {!erro ? (
-              <>
-                {" "}
-                Marque sessões como &quot;Presente&quot; na agenda ou escolha
-                outro recorte.
-              </>
-            ) : null}
-          </p>
+          <EmptyState
+            titulo="Nenhum dado financeiro neste período"
+            descricao={
+              erro
+                ? undefined
+                : 'Marque sessões como "Presente" na agenda ou escolha outro recorte de datas.'
+            }
+            icone="💰"
+            acao={{ rotulo: "Ir para agenda", href: "/agenda" }}
+          />
         ) : (
           <div className="financeiro-lista">
             {dados.map((p) => (

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import FlashMessage from "../../components/FlashMessage";
+import EmptyState from "../../components/ui/EmptyState";
+import { PageSkeleton } from "../../components/ui/Skeleton";
 import AvisoViradaMesBanner from "../../components/AvisoViradaMesBanner";
 import FrequenciaSubnav from "../../components/FrequenciaSubnav";
 import Janela from "../../components/Janela";
@@ -274,16 +276,20 @@ export default function HistoricoFrequenciaPage() {
         <PreferenciasMesPanel />
 
         {carregando ? (
-          <p className="empty-text">Carregando histórico...</p>
+          <PageSkeleton linhas={8} />
         ) : mesesOrdenados.length === 0 ? (
-          <p className="empty-text">
-            {mesSelecionado
-              ? `Nenhuma frequência em ${labelMesAno(mesSelecionado)} nos registos carregados.`
-              : "Nenhuma frequência encontrada."}
-          </p>
+          <EmptyState
+            titulo="Nenhuma frequência encontrada"
+            descricao={
+              mesSelecionado
+                ? `Não há registros em ${labelMesAno(mesSelecionado)} nos dados carregados.`
+                : "Os registros de frequência aparecerão aqui conforme forem lançados."
+            }
+            icone="📊"
+          />
         ) : (
           <>
-            <div style={{ display: "grid", gap: "22px" }}>
+            <div className="historico-months-stack">
               {mesesOrdenados.map((mes) => {
                 const itens = agrupadoPorMes[mes];
 
@@ -297,19 +303,10 @@ export default function HistoricoFrequenciaPage() {
                 const pacientesResumo = resumirPorPaciente(itens);
 
                 return (
-                  <div key={mes} className="psico-card">
-                    <h2 style={{ marginBottom: "14px" }}>
-                      {labelMesAno(mes)}
-                    </h2>
+                  <div key={mes} className="psico-card historico-month-card">
+                    <h2>{labelMesAno(mes)}</h2>
 
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "10px",
-                        marginBottom: "18px",
-                        flexWrap: "wrap",
-                      }}
-                    >
+                    <div className="historico-month-badges">
                       <span className="status-badge status-success">
                         Presenças: {presencas}
                       </span>
@@ -323,7 +320,7 @@ export default function HistoricoFrequenciaPage() {
                       </span>
                     </div>
 
-                    <div style={{ overflowX: "auto" }}>
+                    <div className="historico-table-wrap">
                       <table>
                         <thead>
                           <tr>
@@ -383,6 +380,42 @@ export default function HistoricoFrequenciaPage() {
                           })}
                         </tbody>
                       </table>
+
+                      <div className="historico-mobile-list">
+                        {pacientesResumo.map((paciente, idx) => {
+                          const taxa =
+                            paciente.total > 0
+                              ? Math.round(
+                                  (paciente.presencas / paciente.total) * 100
+                                )
+                              : 0;
+
+                          return (
+                            <article
+                              key={`m-${mes}-${paciente.nome}-${String(idx)}`}
+                              className="historico-mobile-card"
+                            >
+                              <strong>{paciente.nome}</strong>
+                              <div className="historico-stats-row">
+                                <span className="status-badge status-success">
+                                  {paciente.presencas} presenças
+                                </span>
+                                <span className="status-badge status-danger">
+                                  {paciente.faltas} faltas
+                                </span>
+                                <span className="status-badge status-neutral">
+                                  {paciente.total} total
+                                </span>
+                                <span
+                                  className={`status-badge ${classeTaxa(taxa)}`}
+                                >
+                                  {taxa}% comparecimento
+                                </span>
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 );

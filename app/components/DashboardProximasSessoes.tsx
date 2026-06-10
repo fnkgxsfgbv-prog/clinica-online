@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import EmptyState from "./ui/EmptyState";
 import {
   agruparProximasSessoes,
   type GrupoProximasSessoes,
@@ -30,7 +31,14 @@ export default function DashboardProximasSessoes({ hojeIso, sessoes }: Props) {
 
   if (grupos.length === 0) {
     return (
-      <p className="empty-text">Nenhuma sessão agendada a partir de amanhã.</p>
+      <EmptyState
+        compact
+        inline
+        titulo="Nenhuma sessão a partir de amanhã"
+        descricao="As próximas sessões agendadas aparecerão aqui."
+        icone="🗓"
+        acao={{ rotulo: "Ver agenda", href: "/agenda" }}
+      />
     );
   }
 

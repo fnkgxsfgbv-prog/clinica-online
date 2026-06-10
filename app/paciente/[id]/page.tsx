@@ -29,6 +29,7 @@ import type { VisualizacaoDocumento } from "../../lib/documento-visualizacao";
 import VisualizadorDocumentoModal from "../../components/VisualizadorDocumentoModal";
 import EvolucaoHistoricoCard from "../../components/EvolucaoHistoricoCard";
 import PacienteSessoesLista from "../../components/PacienteSessoesLista";
+import EmptyState from "../../components/ui/EmptyState";
 import { PageSkeleton } from "../../components/ui/Skeleton";
 import { listEvolucoesPorPacientePorId } from "../../lib/db/evolucoes";
 import { listDocumentoModelos } from "../../lib/db/modelos";
@@ -745,7 +746,13 @@ export default function PacientePage() {
         {aba === "evolucoes" && (
           <div className="session-list">
             {evolucoesClinicas.length === 0 ? (
-              <p className="empty-text">Nenhuma evolução registrada.</p>
+              <EmptyState
+                compact
+                inline
+                titulo="Nenhuma evolução registrada"
+                descricao="Registre evoluções clínicas nas sessões do paciente."
+                icone="📝"
+              />
             ) : (
               evolucoesClinicas.map((e) => (
                 <EvolucaoHistoricoCard key={e.id} evolucao={e} />
@@ -819,7 +826,14 @@ export default function PacientePage() {
             </div>
 
             {documentos.length === 0 ? (
-              <p className="empty-text">Nenhum documento enviado.</p>
+              <EmptyState
+                compact
+                inline
+                titulo="Nenhum documento enviado"
+                descricao="Gere ou anexe documentos na aba Modelos."
+                icone="📄"
+                acao={{ rotulo: "Ver documentos", href: "/modelos" }}
+              />
             ) : (
               documentos.map((doc) => (
                 <div key={doc.id} className="lista-card patient-document-row">

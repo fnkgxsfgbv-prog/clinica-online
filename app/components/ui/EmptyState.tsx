@@ -11,6 +11,8 @@ type Props = {
     onClick?: () => void;
   };
   className?: string;
+  compact?: boolean;
+  inline?: boolean;
 };
 
 export default function EmptyState({
@@ -19,9 +21,15 @@ export default function EmptyState({
   icone,
   acao,
   className = "",
+  compact = false,
+  inline = false,
 }: Props) {
   return (
-    <div className={`ds-empty ${className}`.trim()}>
+    <div
+      className={`ds-empty${compact ? " ds-empty--compact" : ""}${
+        inline ? " ds-empty--inline" : ""
+      } ${className}`.trim()}
+    >
       {icone ? <div className="ds-empty-icon">{icone}</div> : null}
       <strong className="ds-empty-title">{titulo}</strong>
       {descricao ? <p className="ds-empty-desc">{descricao}</p> : null}

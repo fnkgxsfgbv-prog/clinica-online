@@ -32,6 +32,7 @@ import {
 import { ordenarCronologico } from "../../lib/ordenar-datas";
 import { toFiniteNumberId } from "../../lib/id";
 import EvolucaoHistoricoCard from "../../components/EvolucaoHistoricoCard";
+import EmptyState from "../../components/ui/EmptyState";
 import { PageSkeleton } from "../../components/ui/Skeleton";
 import type { Evolucao, Sessao } from "../../types";
 
@@ -580,17 +581,12 @@ export default function SessaoPage() {
     return (
       <div>
         <Janela titulo="Sessão Clínica">
-          <p className="empty-text">
-            Não foi possível exibir esta sessão.
-          </p>
-
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={() => router.push("/agenda")}
-          >
-            Voltar à agenda
-          </button>
+          <EmptyState
+            titulo="Sessão não encontrada"
+            descricao="Não foi possível exibir esta sessão. Ela pode ter sido removida."
+            icone="⚠"
+            acao={{ rotulo: "Voltar à agenda", href: "/agenda" }}
+          />
         </Janela>
       </div>
     );
@@ -840,7 +836,13 @@ export default function SessaoPage() {
         <>
           <Janela titulo="Histórico do Paciente">
             {evolucoesClinicas(evolucoes).length === 0 ? (
-              <p className="empty-text">Nenhuma evolução registrada.</p>
+              <EmptyState
+                compact
+                inline
+                titulo="Nenhuma evolução registrada"
+                descricao="Use o editor acima para registrar a evolução desta sessão."
+                icone="📝"
+              />
             ) : (
               <div className="session-history-list">
                 {evolucoesClinicas(evolucoes).map((item) => (

@@ -8217,9 +8217,9 @@ button:disabled:hover,
 
 .psicomanager-main {
   color: #f4f7fb !important;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.35;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.45;
 }
 
 .psicomanager-main h1,
@@ -8227,29 +8227,29 @@ button:disabled:hover,
 .psicomanager-main h3,
 .psicomanager-main strong {
   color: #ffffff !important;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.02em;
 }
 
 .psicomanager-main h1,
 .janela-header h1,
 .patient-record-title,
 .agenda-title {
-  font-size: 25px !important;
-  line-height: 1.1 !important;
-  font-weight: 900 !important;
+  font-size: 24px !important;
+  line-height: 1.15 !important;
+  font-weight: 600 !important;
 }
 
 .psicomanager-main h2,
 .modelos-title,
 .clinic-card h2 {
-  font-size: 19px !important;
-  line-height: 1.15 !important;
-  font-weight: 900 !important;
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+  font-weight: 600 !important;
 }
 
 .psicomanager-main h3 {
   font-size: 15px !important;
-  font-weight: 900 !important;
+  font-weight: 600 !important;
 }
 
 .patient-muted,
@@ -8263,9 +8263,9 @@ button:disabled:hover,
 .psico-label,
 .label-form {
   color: #c9d0da !important;
-  font-size: 12px !important;
-  font-weight: 800 !important;
-  line-height: 1.35 !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1.45 !important;
 }
 
 .janela-premium,
@@ -8486,13 +8486,13 @@ th {
   background: #202428 !important;
   color: #c9d0da !important;
   font-size: 11px !important;
-  font-weight: 900 !important;
+  font-weight: 600 !important;
 }
 
 td {
   color: #f4f7fb !important;
   font-size: 13px !important;
-  font-weight: 750 !important;
+  font-weight: 400 !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
