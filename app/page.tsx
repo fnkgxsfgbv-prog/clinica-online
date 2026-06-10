@@ -35,6 +35,7 @@ import {
 } from "./lib/dashboard-blocos";
 import { montarChecklistUnificado } from "./lib/checklist-clinica";
 import { pacienteEstaAtivo } from "./lib/status-paciente";
+import { useDashboardLayout } from "./lib/use-dashboard-layout";
 import type { Frequencia, Paciente, Sessao } from "./types";
 
 function formatarDataISO(data: Date) {
@@ -55,7 +56,10 @@ function formatarMoeda(valor: number) {
 export default function Home() {
   const router = useRouter();
   const { preferencias, atualizarPreferencias } = usePreferencias();
-
+  const { blocosOcultos, blocosOrdem, salvarLayout } = useDashboardLayout(
+    preferencias,
+    atualizarPreferencias
+  );
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [sessoes, setSessoes] = useState<Sessao[]>([]);
   const [sessoesHojeLista, setSessoesHojeLista] = useState<Sessao[]>([]);
@@ -68,49 +72,45 @@ export default function Home() {
   const [erro, setErro] = useState("");
   const [editandoDashboard, setEditandoDashboard] = useState(false);
 
-  const blocosOcultos = preferencias.dashboardBlocosOcultos;
-  const blocosOrdem = preferencias.dashboardBlocosOrdem;
-
-  function salvarDashboardPrefs(
-    parcial: Partial<{
-      dashboardBlocosOcultos: DashboardBlocoId[];
-      dashboardBlocosOrdem: DashboardBlocoId[];
-    }>
-  ) {
-    void atualizarPreferencias(parcial, { salvarNuvem: true, imediato: true });
-  }
-
   function ocultarBloco(id: DashboardBlocoId) {
-    const ids = idsDoGrupoDashboard(blocosOrdem, blocosOcultos, id);
-    const novos = [...blocosOcultos];
-    for (const item of ids) {
-      if (!novos.includes(item)) novos.push(item);
-    }
-    salvarDashboardPrefs({ dashboardBlocosOcultos: novos });
-  }
-
-  function mostrarBloco(id: DashboardBlocoId) {
-    salvarDashboardPrefs({
-      dashboardBlocosOcultos: blocosOcultos.filter((item) => item !== id),
+    salvarLayout((atual) => {
+      const ids = idsDoGrupoDashboard(
+        atual.dashboardBlocosOrdem,
+        atual.dashboardBlocosOcultos,
+        id
+      );
+      const novos = [...atual.dashboardBlocosOcultos];
+      for (const item of ids) {
+        if (!novos.includes(item)) novos.push(item);
+      }
+      return { dashboardBlocosOcultos: novos };
     });
   }
 
+  function mostrarBloco(id: DashboardBlocoId) {
+    salvarLayout((atual) => ({
+      dashboardBlocosOcultos: atual.dashboardBlocosOcultos.filter(
+        (item) => item !== id
+      ),
+    }));
+  }
+
   function restaurarPadraoDashboard() {
-    salvarDashboardPrefs({
+    salvarLayout({
       dashboardBlocosOcultos: [],
       dashboardBlocosOrdem: ordemPadraoDashboard(),
     });
   }
 
   function moverBloco(id: DashboardBlocoId, direcao: "up" | "down") {
-    salvarDashboardPrefs({
+    salvarLayout((atual) => ({
       dashboardBlocosOrdem: moverGrupoDashboard(
-        blocosOrdem,
-        blocosOcultos,
+        atual.dashboardBlocosOrdem,
+        atual.dashboardBlocosOcultos,
         id,
         direcao
       ),
-    });
+    }));
   }
 
   const carregarDados = useCallback(async () => {

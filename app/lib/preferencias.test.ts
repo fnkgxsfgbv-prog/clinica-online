@@ -10,6 +10,9 @@ vi.mock("./supabase", () => ({
 }));
 
 import {
+  DASHBOARD_LAYOUT_KEY,
+  gravarLayoutDashboardLocal,
+  lerLayoutDashboardLocal,
   mesclarPreferencias,
   preferenciasPadrao,
   lerPreferenciasDeMetadata,
@@ -51,5 +54,47 @@ describe("lerPreferenciasDeMetadata", () => {
     expect(prefs.tema).toBe("light");
     expect(prefs.mesModo).toBe("ultimo");
     expect(prefs.valorSessaoPadrao).toBe("200");
+  });
+});
+
+describe("layoutDashboardLocal", () => {
+  it("preserva ordem local sobre metadata desatualizada", () => {
+    const storage = new Map<string, string>();
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          storage.set(key, value);
+        },
+      },
+    });
+
+    gravarLayoutDashboardLocal({
+      dashboardBlocosOcultos: [],
+      dashboardBlocosOrdem: [
+        "pendencias",
+        "agenda-hoje",
+        "metric-pacientes",
+        "metric-sessoes",
+        "metric-comparecimento",
+        "metric-receita",
+        "proximas-sessoes",
+        "aniversariantes",
+      ],
+    });
+
+    const daNuvem = lerPreferenciasDeMetadata({
+      [PREFS_METADATA_KEY]: preferenciasPadrao(),
+    });
+    const layoutLocal = lerLayoutDashboardLocal();
+    const mesclado = mesclarPreferencias({
+      ...daNuvem,
+      ...(layoutLocal ?? {}),
+    });
+
+    expect(mesclado.dashboardBlocosOrdem[0]).toBe("pendencias");
+    expect(storage.has(DASHBOARD_LAYOUT_KEY)).toBe(true);
+
+    vi.unstubAllGlobals();
   });
 });

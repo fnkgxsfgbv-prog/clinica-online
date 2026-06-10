@@ -11,6 +11,7 @@ import supabase from "./supabase";
 
 export const PREFS_METADATA_KEY = "psicodesk_prefs";
 export const PREFS_LOCAL_KEY = "psicodesk-prefs";
+export const DASHBOARD_LAYOUT_KEY = "psicodesk-dashboard-layout";
 export const THEME_STORAGE_KEY = "psicodesk-theme";
 export const AVISO_VIRADA_MES_KEY = "psicodesk-aviso-virada-mes";
 
@@ -33,6 +34,11 @@ export type PreferenciasUsuario = {
   dashboardBlocosOcultos: DashboardBlocoId[];
   dashboardBlocosOrdem: DashboardBlocoId[];
 };
+
+export type DashboardLayoutPreferencias = Pick<
+  PreferenciasUsuario,
+  "dashboardBlocosOcultos" | "dashboardBlocosOrdem"
+>;
 
 const DURACOES_VALIDAS = [30, 40, 45, 50, 60, 90] as const;
 
@@ -157,6 +163,61 @@ export function gravarPreferenciasLocal(prefs: PreferenciasUsuario): void {
 
   window.localStorage.setItem(PREFS_LOCAL_KEY, JSON.stringify(prefs));
   window.localStorage.setItem(THEME_STORAGE_KEY, prefs.tema);
+  gravarLayoutDashboardLocal({
+    dashboardBlocosOcultos: prefs.dashboardBlocosOcultos,
+    dashboardBlocosOrdem: prefs.dashboardBlocosOrdem,
+  });
+}
+
+export function lerLayoutDashboardLocal(): DashboardLayoutPreferencias | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(DASHBOARD_LAYOUT_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<DashboardLayoutPreferencias>;
+    return {
+      dashboardBlocosOcultos: normalizarDashboardBlocosOcultos(
+        parsed.dashboardBlocosOcultos
+      ),
+      dashboardBlocosOrdem: normalizarDashboardBlocosOrdem(
+        parsed.dashboardBlocosOrdem
+      ),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function gravarLayoutDashboardLocal(
+  layout: DashboardLayoutPreferencias
+): void {
+  if (typeof window === "undefined") return;
+
+  const normalizado: DashboardLayoutPreferencias = {
+    dashboardBlocosOcultos: normalizarDashboardBlocosOcultos(
+      layout.dashboardBlocosOcultos
+    ),
+    dashboardBlocosOrdem: normalizarDashboardBlocosOrdem(
+      layout.dashboardBlocosOrdem
+    ),
+  };
+
+  window.localStorage.setItem(DASHBOARD_LAYOUT_KEY, JSON.stringify(normalizado));
+}
+
+function mesclarLayoutDashboard(
+  prefs: PreferenciasUsuario
+): PreferenciasUsuario {
+  const layoutLocal = lerLayoutDashboardLocal();
+  if (!layoutLocal) return prefs;
+
+  return mesclarPreferencias({
+    ...prefs,
+    dashboardBlocosOcultos: layoutLocal.dashboardBlocosOcultos,
+    dashboardBlocosOrdem: layoutLocal.dashboardBlocosOrdem,
+  });
 }
 
 export function aplicarTemaNoDocumento(tema: TemaPreferencia): void {
@@ -217,10 +278,13 @@ export async function carregarPreferenciasUsuario(
 ): Promise<PreferenciasUsuario> {
   const atual = user ?? (await supabase.auth.getUser()).data.user;
   if (!atual) {
-    return lerPreferenciasLocal() ?? preferenciasPadrao();
+    const local = lerPreferenciasLocal();
+    return mesclarLayoutDashboard(local ?? preferenciasPadrao());
   }
 
-  const prefs = lerPreferenciasDeMetadata(atual.user_metadata || {});
+  const prefs = mesclarLayoutDashboard(
+    lerPreferenciasDeMetadata(atual.user_metadata || {})
+  );
   gravarPreferenciasLocal(prefs);
   aplicarTemaNoDocumento(prefs.tema);
   return prefs;
@@ -231,12 +295,16 @@ export async function salvarPreferenciasUsuario(
 ): Promise<{ error?: string }> {
   const normalizadas = mesclarPreferencias(prefs);
   gravarPreferenciasLocal(normalizadas);
+  gravarLayoutDashboardLocal({
+    dashboardBlocosOcultos: normalizadas.dashboardBlocosOcultos,
+    dashboardBlocosOrdem: normalizadas.dashboardBlocosOrdem,
+  });
   aplicarTemaNoDocumento(normalizadas.tema);
 
   const { data: userData } = await supabase.auth.getUser();
   const metadata = userData.user?.user_metadata || {};
 
-  const { error } = await supabase.auth.updateUser({
+  const { data, error } = await supabase.auth.updateUser({
     data: {
       ...metadata,
       [PREFS_METADATA_KEY]: normalizadas,
@@ -244,6 +312,14 @@ export async function salvarPreferenciasUsuario(
   });
 
   if (error) return { error: error.message };
+
+  if (data.user) {
+    const confirmadas = mesclarLayoutDashboard(
+      lerPreferenciasDeMetadata(data.user.user_metadata || {})
+    );
+    gravarPreferenciasLocal(confirmadas);
+  }
+
   return {};
 }
 
