@@ -4941,6 +4941,7 @@ button:hover {
   width: 240px;
   max-width: 240px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .modo-sessao-col-conteudo {
@@ -5017,12 +5018,18 @@ button:hover {
 .modo-sessao-fila-lista {
   display: grid;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
-.modo-sessao-fila-item {
-  display: grid;
+.modo-sessao-page .modo-sessao-fila-item {
+  display: grid !important;
   gap: 4px;
-  width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
   padding: 10px 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
@@ -5030,6 +5037,12 @@ button:hover {
   color: var(--text);
   text-align: left;
   cursor: pointer;
+  align-items: start !important;
+  justify-content: start !important;
+  justify-items: stretch !important;
+  white-space: normal !important;
+  line-height: 1.35 !important;
+  box-sizing: border-box !important;
 }
 
 .modo-sessao-fila-item.is-active {
@@ -5051,8 +5064,14 @@ button:hover {
 }
 
 .modo-sessao-fila-item strong {
+  display: block;
+  width: 100%;
+  max-width: 100%;
   font-size: 14px;
   font-weight: 800;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .modo-sessao-fila-status {
