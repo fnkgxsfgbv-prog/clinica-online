@@ -96,7 +96,13 @@ const CAMPOS_PACIENTE_FINANCEIRO = "id,nome,valor_sessao,status";
 function erroColunaInexistente(error: { message?: string; code?: string } | null) {
   if (!error) return false;
   const msg = String(error.message || "").toLowerCase();
-  return error.code === "42703" || msg.includes("does not exist");
+  return (
+    error.code === "42703" ||
+    error.code === "PGRST204" ||
+    msg.includes("does not exist") ||
+    msg.includes("schema cache") ||
+    msg.includes("could not find")
+  );
 }
 
 /** Tenta colunas explícitas; se o schema divergir, usa select("*"). */
@@ -130,13 +136,28 @@ export async function listPacientesAniversariantesDoMes(
 ) {
   const mesPad = String(mesCivil).padStart(2, "0");
 
-  return supabase
+  const resumido = await supabase
     .from(TABLES.PACIENTES)
     .select("id,nome,data_nascimento,status")
     .eq("user_id", userId)
     .or("status.eq.ativo,status.is.null")
     .like("data_nascimento", `%-${mesPad}-%`)
     .order("nome", { ascending: true });
+
+  if (!resumido.error) return resumido;
+  if (!erroColunaInexistente(resumido.error)) return resumido;
+
+  const todos = await listPacientes(userId);
+  if (todos.error) return todos;
+
+  const filtrados = (todos.data || []).filter((p) => {
+    const status = String(p.status || "").trim().toLowerCase();
+    if (status && status !== "ativo") return false;
+    const nasc = String(p.data_nascimento || "");
+    return nasc.includes(`-${mesPad}-`);
+  });
+
+  return { data: filtrados, error: null };
 }
 
 /** Busca rápida para a barra do topo (evita carregar todos os pacientes no shell). */

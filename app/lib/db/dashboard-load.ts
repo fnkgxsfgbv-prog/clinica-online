@@ -1,7 +1,7 @@
 import { ultimoDiaMesChave } from "../mes";
 import {
+  listPacientes,
   listPacientesAniversariantesDoMes,
-  listPacientesResumoChecklist,
   resumoContagemPacientes,
   type ResumoContagemPacientes,
 } from "./pacientes";
@@ -56,7 +56,7 @@ export async function carregarDashboardHome(
     comparecimentoRes,
   ] = await Promise.all([
     resumoContagemPacientes(userId),
-    listPacientesResumoChecklist(userId),
+    listPacientes(userId),
     listPacientesAniversariantesDoMes(userId),
     listSessoesAgendadasFuturas(userId, hoje, horaAtual),
     listSessoesDoDia(userId, hoje),
