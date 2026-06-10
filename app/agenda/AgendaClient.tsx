@@ -740,6 +740,9 @@ export default function AgendaClient() {
         </div>
 
         <div className="agenda-hero-actions">
+          <Link href="/atendimento/hoje" className="btn btn-outline">
+            Modo sessão
+          </Link>
           <button
             type="button"
             className={`btn btn-outline${configAgendaAberta ? " is-active" : ""}`}

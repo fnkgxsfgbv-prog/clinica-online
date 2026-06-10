@@ -4926,6 +4926,320 @@ button:hover {
   color: #a8eadb;
 }
 
+.modo-sessao-page .modo-sessao-layout {
+  display: grid;
+  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.modo-sessao-fila {
+  padding: 14px;
+  border: 1px solid rgba(63, 191, 154, 0.16);
+  border-radius: 16px;
+  background: rgba(12, 19, 28, 0.72);
+}
+
+.modo-sessao-fila-header {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.modo-sessao-fila-header strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.modo-sessao-fila-header span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.modo-sessao-fila-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.modo-sessao-stat {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.modo-sessao-stat.is-present {
+  border-color: rgba(63, 191, 154, 0.28);
+  color: #a8eadb;
+}
+
+.modo-sessao-stat.is-pending {
+  border-color: rgba(232, 229, 255, 0.18);
+}
+
+.modo-sessao-stat.is-absent {
+  border-color: rgba(248, 113, 113, 0.28);
+  color: #fecaca;
+}
+
+.modo-sessao-fila-lista {
+  display: grid;
+  gap: 8px;
+}
+
+.modo-sessao-fila-item {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.modo-sessao-fila-item.is-active {
+  border-color: rgba(63, 191, 154, 0.45);
+  background: rgba(63, 191, 154, 0.08);
+}
+
+.modo-sessao-fila-item.is-done {
+  opacity: 0.82;
+}
+
+.modo-sessao-fila-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.modo-sessao-fila-item strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.modo-sessao-fila-status {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.modo-sessao-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: lowercase;
+}
+
+.modo-sessao-tag.is-now {
+  color: #a8eadb;
+  background: rgba(63, 191, 154, 0.14);
+}
+
+.modo-sessao-tag.is-ok {
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.14);
+}
+
+.modo-sessao-progresso {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.modo-sessao-main {
+  display: grid;
+  gap: 18px;
+  padding: 16px 18px;
+  border: 1px solid rgba(63, 191, 154, 0.14);
+  border-radius: 16px;
+  background: rgba(12, 19, 28, 0.55);
+}
+
+.modo-sessao-main-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modo-sessao-eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.modo-sessao-paciente-nome {
+  margin: 0;
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.modo-sessao-meta {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.modo-sessao-header-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.modo-sessao-contexto {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.modo-sessao-contexto-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.modo-sessao-contexto-header strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.modo-sessao-contexto-header span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.modo-sessao-contexto-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.modo-sessao-campo {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modo-sessao-campo-full {
+  grid-column: 1 / -1;
+}
+
+.modo-sessao-campo span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.modo-sessao-campo p {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.modo-sessao-sem-contexto {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.modo-sessao-status strong,
+.modo-sessao-registro-header strong {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.modo-sessao-status-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.modo-sessao-status-btns .btn.is-active {
+  border-color: rgba(63, 191, 154, 0.55);
+  background: rgba(63, 191, 154, 0.12);
+  color: #a8eadb;
+}
+
+.modo-sessao-registro-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.modo-sessao-registro-header span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.modo-sessao-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dashboard-day-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .modo-sessao-page .modo-sessao-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .modo-sessao-contexto-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+[data-theme="light"] .modo-sessao-fila,
+[data-theme="light"] .modo-sessao-main,
+[data-theme="light"] .modo-sessao-contexto,
+[data-theme="light"] .modo-sessao-campo {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(47, 155, 135, 0.18);
+}
+
 .birthday-reminder-list {
   display: grid;
   gap: 10px;

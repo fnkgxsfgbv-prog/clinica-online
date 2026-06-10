@@ -75,6 +75,7 @@ const menuItems: MenuItem[] = [
 
 const routeTitles: Array<[string, string]> = [
   ["/modelos", "Documentos"],
+  ["/atendimento/hoje", "Modo sessão"],
   ["/novo-paciente", "Novo paciente"],
   ["/frequencia/historico", "Frequência"],
   ["/frequencia", "Frequência"],

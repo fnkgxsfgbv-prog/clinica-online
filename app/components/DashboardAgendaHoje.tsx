@@ -65,9 +65,17 @@ export default function DashboardAgendaHoje({ dataIso, sessoes }: Props) {
             <span className="dashboard-day-date">{rotuloDiaHoje(dataIso)}</span>
           </div>
 
-          <Link href="/agenda" className="btn btn-outline dashboard-day-link">
-            Abrir agenda
-          </Link>
+          <div className="dashboard-day-header-actions">
+            <Link
+              href="/atendimento/hoje"
+              className="btn btn-green dashboard-day-link"
+            >
+              Modo sessão
+            </Link>
+            <Link href="/agenda" className="btn btn-outline dashboard-day-link">
+              Abrir agenda
+            </Link>
+          </div>
         </div>
 
         {sessoes.length > 0 ? (
