@@ -19,6 +19,10 @@ import {
   normalizarCamposModelo,
 } from "./db/modelos";
 import { TABLES } from "./db/tables";
+import {
+  insertComFallbackColunas,
+  sanitizarPayloadPacienteDb,
+} from "./db/schema-fallback";
 import supabase from "./supabase";
 import type {
   DocumentoModelo,
@@ -112,22 +116,25 @@ async function inserirPacientes(
   mapaPacientes: Map<string, string | number>
 ) {
   for (const paciente of pacientes) {
-    const payload = limparRegistro(
-      { ...paciente, user_id: userId } as Record<string, unknown>,
-      ["id"]
+    const payload = sanitizarPayloadPacienteDb(
+      limparRegistro(
+        { ...paciente, user_id: userId } as Record<string, unknown>,
+        ["id"]
+      )
     );
 
-    const res = await supabase
-      .from(TABLES.PACIENTES)
-      .insert([payload])
-      .select("id")
-      .single();
+    const res = await insertComFallbackColunas(
+      (corpo) =>
+        supabase.from(TABLES.PACIENTES).insert([corpo]).select("id").single(),
+      payload
+    );
 
     if (res.error || !res.data) {
       throw new Error(res.error?.message || "Falha ao restaurar paciente.");
     }
 
-    mapaPacientes.set(String(paciente.id), res.data.id);
+    const novoId = (res.data as { id: string | number }).id;
+    mapaPacientes.set(String(paciente.id), novoId);
   }
 }
 

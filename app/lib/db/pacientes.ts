@@ -6,6 +6,15 @@ import {
   salvarDataInicioNasObservacoes,
 } from "../paciente-metadata";
 import { valoresPacienteIdParaQuery } from "./paciente-id-query";
+import {
+  erroColunaInexistente,
+  insertComFallbackColunas,
+  normalizarListaPacientesDb,
+  normalizarPacienteDb,
+  sanitizarPayloadPacienteDb,
+  updateComFallbackColunas,
+  type ErroSupabase,
+} from "./schema-fallback";
 import { TABLES } from "./tables";
 
 /** Tamanho de página na lista de pacientes (UI “Carregar mais”). */
@@ -77,33 +86,32 @@ export async function listPacientesPaginated(
     }
   }
 
-  return q;
+  const res = await q;
+  if (res.error) return res;
+  return {
+    ...res,
+    data: normalizarListaPacientesDb(res.data),
+  };
 }
 
 export async function listPacientes(userId: string) {
-  return supabase
+  const res = await supabase
     .from(TABLES.PACIENTES)
     .select("*")
     .eq("user_id", userId)
     .order("nome", { ascending: true });
+
+  if (res.error) return res;
+  return {
+    ...res,
+    data: normalizarListaPacientesDb(res.data),
+  };
 }
 
 const CAMPOS_PACIENTE_CHECKLIST =
   "id,nome,status,telefone,data_nascimento,cid,observacoes,valor_sessao";
 
 const CAMPOS_PACIENTE_FINANCEIRO = "id,nome,valor_sessao,status";
-
-function erroColunaInexistente(error: { message?: string; code?: string } | null) {
-  if (!error) return false;
-  const msg = String(error.message || "").toLowerCase();
-  return (
-    error.code === "42703" ||
-    error.code === "PGRST204" ||
-    msg.includes("does not exist") ||
-    msg.includes("schema cache") ||
-    msg.includes("could not find")
-  );
-}
 
 /** Tenta colunas explícitas; se o schema divergir, usa select("*"). */
 async function listPacientesComCampos(userId: string, campos: string) {
@@ -113,7 +121,12 @@ async function listPacientesComCampos(userId: string, campos: string) {
     .eq("user_id", userId)
     .order("nome", { ascending: true });
 
-  if (!resumido.error) return resumido;
+  if (!resumido.error) {
+    return {
+      ...resumido,
+      data: normalizarListaPacientesDb(resumido.data),
+    };
+  }
   if (!erroColunaInexistente(resumido.error)) return resumido;
 
   return listPacientes(userId);
@@ -144,7 +157,12 @@ export async function listPacientesAniversariantesDoMes(
     .like("data_nascimento", `%-${mesPad}-%`)
     .order("nome", { ascending: true });
 
-  if (!resumido.error) return resumido;
+  if (!resumido.error) {
+    return {
+      ...resumido,
+      data: normalizarListaPacientesDb(resumido.data),
+    };
+  }
   if (!erroColunaInexistente(resumido.error)) return resumido;
 
   const todos = await listPacientes(userId);
@@ -171,13 +189,31 @@ export async function buscarPacientesPorNome(
     return { data: [] as Paciente[], error: null };
   }
 
-  return supabase
+  const resumido = await supabase
     .from(TABLES.PACIENTES)
     .select("id,nome,status")
     .eq("user_id", userId)
     .ilike("nome", `%${t}%`)
     .order("nome", { ascending: true })
     .limit(limit);
+
+  if (!resumido.error) {
+    return {
+      ...resumido,
+      data: normalizarListaPacientesDb(resumido.data),
+    };
+  }
+
+  if (!erroColunaInexistente(resumido.error)) return resumido;
+
+  const todos = await listPacientes(userId);
+  if (todos.error) return todos;
+
+  const filtrados = (todos.data || [])
+    .filter((p) => p.nome.toLowerCase().includes(t.toLowerCase()))
+    .slice(0, limit);
+
+  return { data: filtrados, error: null };
 }
 
 export async function getPacienteById(userId: string, id: string | number) {
@@ -193,7 +229,12 @@ export async function getPacienteById(userId: string, id: string | number) {
       .maybeSingle();
 
     if (r.error) return r;
-    if (r.data) return { data: r.data, error: null };
+    if (r.data) {
+      return {
+        data: normalizarPacienteDb(r.data as Record<string, unknown>),
+        error: null,
+      };
+    }
   }
 
   return {
@@ -211,12 +252,15 @@ export async function createPaciente(
   userId: string,
   payload: Omit<Paciente, "id" | "user_id">
 ) {
-  return supabase.from(TABLES.PACIENTES).insert([
-    {
-      ...payload,
-      user_id: userId,
-    },
-  ]);
+  const base = sanitizarPayloadPacienteDb(
+    prepararPayloadUpdatePaciente(payload) as Record<string, unknown>
+  );
+
+  return insertComFallbackColunas(
+    (corpo) =>
+      supabase.from(TABLES.PACIENTES).insert([{ ...corpo, user_id: userId }]),
+    base
+  );
 }
 
 export async function updatePaciente(
@@ -224,7 +268,9 @@ export async function updatePaciente(
   id: string | number,
   payload: Partial<Paciente>
 ) {
-  const rest = prepararPayloadUpdatePaciente(payload);
+  const rest = sanitizarPayloadPacienteDb(
+    prepararPayloadUpdatePaciente(payload) as Record<string, unknown>
+  );
   delete rest.id;
   delete rest.user_id;
 
@@ -237,32 +283,23 @@ export async function updatePaciente(
     ).values()
   );
 
-  let ultimoErro: { message: string; code?: string } | null = null;
+  let ultimoErro: ErroSupabase | null = null;
 
   for (const vid of candidatos) {
-    const result = await supabase
-      .from(TABLES.PACIENTES)
-      .update(rest)
-      .eq("user_id", userId)
-      .eq("id", vid)
-      .select("id")
-      .maybeSingle();
-
-    if (result.error) {
-      ultimoErro = result.error;
-      if (colunaDataInicioAusente(result.error) && "data_inicio_atendimento" in rest) {
-        const fallback = { ...rest };
-        delete fallback.data_inicio_atendimento;
-        const retry = await supabase
+    const result = await updateComFallbackColunas(
+      (corpo) =>
+        supabase
           .from(TABLES.PACIENTES)
-          .update(fallback)
+          .update(corpo)
           .eq("user_id", userId)
           .eq("id", vid)
           .select("id")
-          .maybeSingle();
-        if (retry.error) return retry;
-        if (retry.data) return retry;
-      }
+          .maybeSingle(),
+      rest
+    );
+
+    if (result.error) {
+      ultimoErro = result.error;
       continue;
     }
 
@@ -282,15 +319,6 @@ export async function updatePaciente(
       hint: "",
     },
   };
-}
-
-function colunaDataInicioAusente(error: { message?: string; code?: string }) {
-  const msg = String(error.message || "").toLowerCase();
-  return (
-    error.code === "PGRST204" ||
-    msg.includes("data_inicio_atendimento") ||
-    msg.includes("column") && msg.includes("does not exist")
-  );
 }
 
 /** Normaliza payload de update (data de início com fallback nas observações). */

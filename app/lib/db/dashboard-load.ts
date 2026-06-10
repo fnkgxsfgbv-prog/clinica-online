@@ -25,6 +25,11 @@ function dataIsoDesdeDiasAtras(dias: number, base = new Date()) {
   return `${ano}-${mes}-${dia}`;
 }
 
+function listaOuVazio<T>(res: { data: T[] | null; error: unknown }): T[] {
+  if (res.error) return [];
+  return res.data || [];
+}
+
 export type DashboardHomeData = {
   contagemPacientes: ResumoContagemPacientes;
   pacientesChecklist: Paciente[];
@@ -36,7 +41,7 @@ export type DashboardHomeData = {
   comparecimentoMes: { presencas: number; faltas: number };
 };
 
-/** Carrega o painel inicial com consultas enxutas (sem listar todos os pacientes). */
+/** Carrega o painel inicial; falha só se contagens ou pacientes não carregarem. */
 export async function carregarDashboardHome(
   userId: string,
   opcoes: { hoje: string; horaAtual: string; mesAtualChave: string }
@@ -65,33 +70,30 @@ export async function carregarDashboardHome(
     resumoComparecimentoMes(userId, mesAtualChave),
   ]);
 
-  const error =
+  const erroCritico =
     contagemRes.error?.message ||
     checklistRes.error?.message ||
-    aniversariantesRes.error?.message ||
-    futurasRes.error?.message ||
-    hojeRes.error?.message ||
-    sessoesChecklistRes.error?.message ||
-    frequenciasMesRes.error?.message ||
-    comparecimentoRes.error?.message;
+    (!contagemRes.data ? "Erro ao carregar contagens." : null);
 
-  if (error || !contagemRes.data) {
-    return { data: null, error: error || "Erro ao carregar contagens." };
+  if (erroCritico) {
+    return { data: null, error: erroCritico };
   }
 
   return {
     data: {
-      contagemPacientes: contagemRes.data,
-      pacientesChecklist: (checklistRes.data || []) as Paciente[],
-      aniversariantesPacientes: (aniversariantesRes.data || []) as Paciente[],
-      sessoesFuturas: (futurasRes.data || []) as Sessao[],
-      sessoesHoje: (hojeRes.data || []) as Sessao[],
-      sessoesChecklist: (sessoesChecklistRes.data || []) as Sessao[],
-      frequenciasMes: (frequenciasMesRes.data || []) as Frequencia[],
-      comparecimentoMes: {
-        presencas: comparecimentoRes.presencas,
-        faltas: comparecimentoRes.faltas,
-      },
+      contagemPacientes: contagemRes.data!,
+      pacientesChecklist: listaOuVazio(checklistRes),
+      aniversariantesPacientes: listaOuVazio(aniversariantesRes),
+      sessoesFuturas: listaOuVazio(futurasRes),
+      sessoesHoje: listaOuVazio(hojeRes),
+      sessoesChecklist: listaOuVazio(sessoesChecklistRes),
+      frequenciasMes: listaOuVazio(frequenciasMesRes),
+      comparecimentoMes: comparecimentoRes.error
+        ? { presencas: 0, faltas: 0 }
+        : {
+            presencas: comparecimentoRes.presencas,
+            faltas: comparecimentoRes.faltas,
+          },
     } satisfies DashboardHomeData,
     error: null,
   };

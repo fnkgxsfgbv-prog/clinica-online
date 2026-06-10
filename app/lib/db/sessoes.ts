@@ -1,6 +1,7 @@
 import supabase from "../supabase";
 import type { Sessao } from "../../types";
 import { dataReferenciaISO } from "../financeiro";
+import { erroColunaInexistente } from "./schema-fallback";
 import { valoresPacienteIdParaQuery } from "./paciente-id-query";
 import { TABLES } from "./tables";
 
@@ -40,7 +41,7 @@ export async function listSessoesPorIntervalo(
 
 /** Sessões a partir de uma data (inclusiva). */
 export async function listSessoesDesde(userId: string, dataIso: string) {
-  return supabase
+  const resumido = await supabase
     .from(TABLES.SESSOES)
     .select("id,paciente_id,paciente_nome,data,hora,status")
     .eq("user_id", userId)
@@ -48,6 +49,11 @@ export async function listSessoesDesde(userId: string, dataIso: string) {
     .order("data", { ascending: true })
     .order("hora", { ascending: true })
     .order("id", { ascending: true });
+
+  if (!resumido.error) return resumido;
+  if (!erroColunaInexistente(resumido.error)) return resumido;
+
+  return listSessoesPorIntervalo(userId, dataIso, "2999-12-31");
 }
 
 export async function listSessoesAgendadasFuturas(
