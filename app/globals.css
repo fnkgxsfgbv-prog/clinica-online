@@ -9196,6 +9196,28 @@ td {
   min-height: 0;
 }
 
+.session-plano-empty-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  padding: 32px 24px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.session-plano-empty-panel .ds-empty {
+  padding: 0;
+  border: none;
+  background: transparent;
+  max-width: 420px;
+}
+
+.session-plano-empty-panel .ds-empty-desc {
+  max-width: none;
+}
+
 .session-notes-focus-header {
   display: flex;
   align-items: center;
@@ -9605,6 +9627,11 @@ td {
 
 [data-theme="light"] .session-plano-empty {
   color: #6b7785;
+}
+
+[data-theme="light"] .session-plano-empty-panel {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: rgba(15, 23, 42, 0.02);
 }
 
 [data-theme="light"] .session-plano-link {

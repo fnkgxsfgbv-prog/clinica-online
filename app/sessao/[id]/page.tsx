@@ -46,8 +46,8 @@ import {
 } from "../../lib/lembretes-sessao-cache";
 import {
   gerarLembretesBasicos,
+  formatarPreparacaoTextoAgenda,
   gerarPreparacaoPreSessaoBasica,
-  formatarLembretesHtmlPreSessao,
   type FinalidadeSugestaoPlano,
   type LembretesSessaoPlano,
 } from "../../lib/plano-terapeutico-lembretes";
@@ -437,13 +437,14 @@ export default function SessaoPage() {
     });
   }
 
-  function inserirPreparacaoNoPreSessao() {
+  async function inserirPreparacaoNoPreSessao() {
     if (!preparacaoPlano) return;
 
-    const html = formatarLembretesHtmlPreSessao(preparacaoPlano);
-    const separador = preSessao.trim() ? "<p></p>" : "";
-    setPreSessao(`${preSessao}${separador}${html}`);
-    mostrarMensagem("Sugestão inserida no preparo. Revise antes de salvar.");
+    const texto = formatarPreparacaoTextoAgenda(preparacaoPlano);
+    setPreSessao(texto);
+    preSessaoRef.current = texto;
+    await salvarAnotacoesSessao(true);
+    mostrarMensagem("Preparo salvo. Aparece na agenda do dia.");
   }
 
   async function carregarSugestaoPlano(
@@ -1094,21 +1095,15 @@ export default function SessaoPage() {
                   />
                 </div>
               ) : (
-                <EmptyState
-                  compact
-                  inline
-                  titulo="Nenhum plano cadastrado"
-                  descricao="Cadastre o plano terapêutico na ficha do paciente para consultá-lo aqui durante a sessão."
-                  icone="📋"
-                  acao={
-                    sessao?.paciente_id
-                      ? {
-                          rotulo: "Cadastrar plano",
-                          href: `/paciente/${sessao.paciente_id}?aba=plano`,
-                        }
-                      : undefined
-                  }
-                />
+                <div className="session-plano-empty-panel">
+                  <EmptyState
+                    compact
+                    inline
+                    titulo="Nenhum plano cadastrado"
+                    descricao="Use o botão «Cadastrar plano» acima para abrir a ficha do paciente. O conteúdo aparecerá aqui durante a sessão."
+                    icone="📋"
+                  />
+                </div>
               )
             ) : abaRegistro === "evolucao-clinica" ? (
               <div className="session-evolution-grid session-evolution-grid-embedded">

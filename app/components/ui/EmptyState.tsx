@@ -35,13 +35,16 @@ export default function EmptyState({
       {descricao ? <p className="ds-empty-desc">{descricao}</p> : null}
       {acao ? (
         acao.href ? (
-          <Link href={acao.href} className="btn btn-green ds-empty-action">
+          <Link
+            href={acao.href}
+            className={`btn ${inline ? "btn-outline" : "btn-green"} ds-empty-action`}
+          >
             {acao.rotulo}
           </Link>
         ) : (
           <button
             type="button"
-            className="btn btn-green ds-empty-action"
+            className={`btn ${inline ? "btn-outline" : "btn-green"} ds-empty-action`}
             onClick={acao.onClick}
           >
             {acao.rotulo}
