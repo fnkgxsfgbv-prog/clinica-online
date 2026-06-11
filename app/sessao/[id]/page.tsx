@@ -39,8 +39,6 @@ import EvolucaoHistoricoCard from "../../components/EvolucaoHistoricoCard";
 import EmptyState from "../../components/ui/EmptyState";
 import { PageSkeleton } from "../../components/ui/Skeleton";
 import SessionPlanoLembretes from "./SessionPlanoLembretes";
-import SessionPagamento from "./SessionPagamento";
-import { labelStatusPagamento } from "../../lib/pagamento-sessao";
 import type { LembretesSessaoPlano } from "../../lib/plano-terapeutico-lembretes";
 import type { Evolucao, PacientePlanoTerapeutico, Sessao } from "../../types";
 
@@ -718,10 +716,6 @@ export default function SessaoPage() {
                 <span>Valor</span>
                 <strong>R$ {Number(sessao.valor || 0).toFixed(2).replace(".", ",")}</strong>
               </div>
-              <div>
-                <span>Pagamento</span>
-                <strong>{labelStatusPagamento(sessao.status_pagamento)}</strong>
-              </div>
             </div>
           </div>
 
@@ -782,16 +776,6 @@ export default function SessaoPage() {
               </button>
             </div>
           ) : null}
-
-          {!modoAnotacoes ? (
-            <SessionPagamento
-              sessao={sessao}
-              onAtualizado={() => {
-                void carregarSessao();
-              }}
-            />
-          ) : null}
-
           {mensagem && (
             <FlashMessage kind="success">{mensagem}</FlashMessage>
           )}

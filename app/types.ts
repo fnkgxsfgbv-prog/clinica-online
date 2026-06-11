@@ -24,12 +24,6 @@ export type Sessao = {
   hora?: string | null;
   valor?: number | string | null;
   status?: string | null;
-  status_pagamento?: string | null;
-  forma_pagamento?: string | null;
-  pago_em?: string | null;
-  pagamento_referencia?: string | null;
-  pagamento_pix_copia_cola?: string | null;
-  pagamento_link?: string | null;
 };
 
 export type Frequencia = {
