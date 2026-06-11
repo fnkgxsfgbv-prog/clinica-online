@@ -242,9 +242,29 @@ export function resolverTemaEfetivo(tema: TemaPreferencia): TemaEfetivo {
   return tema;
 }
 
+/** Cor da barra do Safari / PsicoDesk (standalone). */
+export const COR_BARRA_PSICODESK: Record<TemaEfetivo, string> = {
+  dark: "#1a2027",
+  light: "#eef2f5",
+};
+
+export function aplicarCorBarraPsicodesk(tema: TemaPreferencia): void {
+  if (typeof document === "undefined") return;
+
+  const cor = COR_BARRA_PSICODESK[resolverTemaEfetivo(tema)];
+  let meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.setAttribute("name", "theme-color");
+    document.head.appendChild(meta);
+  }
+  meta.setAttribute("content", cor);
+}
+
 export function aplicarTemaNoDocumento(tema: TemaPreferencia): void {
   if (typeof document === "undefined") return;
   document.documentElement.dataset.theme = resolverTemaEfetivo(tema);
+  aplicarCorBarraPsicodesk(tema);
 }
 
 export function inscreverMudancaTemaSistema(

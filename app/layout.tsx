@@ -41,7 +41,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#2f9b87",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#1a2027" },
+    { media: "(prefers-color-scheme: light)", color: "#eef2f5" },
+  ],
 };
 
 export default function RootLayout({
@@ -69,6 +72,14 @@ export default function RootLayout({
                         : "dark";
 
                   document.documentElement.dataset.theme = theme;
+
+                  var barDark = "#1a2027";
+                  var barLight = "#eef2f5";
+                  var barColor = theme === "light" ? barLight : barDark;
+                  var themeMeta = document.querySelector('meta[name="theme-color"]');
+                  if (themeMeta) {
+                    themeMeta.setAttribute("content", barColor);
+                  }
                 } catch (error) {
                   document.documentElement.dataset.theme = "dark";
                 }
