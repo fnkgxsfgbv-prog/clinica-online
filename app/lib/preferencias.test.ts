@@ -26,6 +26,7 @@ describe("preferenciasPadrao", () => {
     expect(prefs.mesModo).toBe("automatico");
     expect(prefs.duracaoSessaoMinutos).toBe(50);
     expect(prefs.agendaVisualizacao).toBe("week");
+    expect(prefs.usarIaClinica).toBe(true);
   });
 });
 
@@ -44,6 +45,11 @@ describe("mesclarPreferencias", () => {
   it("aceita tema system", () => {
     const prefs = mesclarPreferencias({ tema: "system" });
     expect(prefs.tema).toBe("system");
+  });
+
+  it("permite desligar IA clínica", () => {
+    const prefs = mesclarPreferencias({ usarIaClinica: false });
+    expect(prefs.usarIaClinica).toBe(false);
   });
 });
 

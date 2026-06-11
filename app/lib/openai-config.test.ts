@@ -1,6 +1,6 @@
 import { describe, expect, it, afterEach } from "vitest";
 
-import { iaNaNuvemDisponivel, resolverConfigOpenAi } from "./openai-config";
+import { iaNaNuvemDisponivel, iaClinicaAtiva, resolverConfigOpenAi } from "./openai-config";
 
 describe("resolverConfigOpenAi", () => {
   afterEach(() => {
@@ -31,5 +31,11 @@ describe("resolverConfigOpenAi", () => {
 
   it("detecta ausência de credenciais", () => {
     expect(iaNaNuvemDisponivel()).toBe(false);
+  });
+
+  it("respeita preferência desligada", () => {
+    process.env.OPENAI_API_KEY = "sk-test";
+    expect(iaClinicaAtiva(true)).toBe(true);
+    expect(iaClinicaAtiva(false)).toBe(false);
   });
 });

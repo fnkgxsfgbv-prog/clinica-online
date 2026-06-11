@@ -13,6 +13,7 @@ import {
   resumoPlanoImportado,
   sanitizarHtmlPlanoImportado,
 } from "../../../lib/plano-terapeutico-importacao";
+import { iaClinicaHabilitadaNasPreferencias } from "../../../lib/preferencias";
 import { createSupabaseServerClient } from "../../../lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -114,16 +115,9 @@ export async function POST(request: Request) {
     );
   }
 
-  let estruturado;
-  try {
-    estruturado = await estruturarPlanoComIa(extracao.texto);
-  } catch (error) {
-    const mensagem =
-      error instanceof Error
-        ? error.message
-        : "Erro ao organizar o plano com IA.";
-    return NextResponse.json({ erro: mensagem }, { status: 502 });
-  }
+  const estruturado = await estruturarPlanoComIa(extracao.texto, {
+    usarIaClinica: iaClinicaHabilitadaNasPreferencias(user.user_metadata),
+  });
 
   const conteudo = sanitizarHtmlPlanoImportado(estruturado.html);
   if (!conteudo) {
@@ -218,6 +212,7 @@ export async function POST(request: Request) {
     resumo: resumoPlanoImportado(conteudo),
     totalPaginas: extracao.totalPaginas,
     usouIa: estruturado.usouIa,
+    avisoIa: estruturado.avisoIa,
     pdfNomeArquivo: arquivo.name,
     pdfStoragePath: storagePath,
     salvo: salvarAutomatico,

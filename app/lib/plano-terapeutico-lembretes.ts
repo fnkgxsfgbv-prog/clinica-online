@@ -1,4 +1,6 @@
-import { iaNaNuvemDisponivel, resolverConfigOpenAi } from "./openai-config";
+import { AVISO_IA_INDISPONIVEL } from "./ia-aviso";
+import { chamarModeloClinico } from "./ia-client";
+import { iaClinicaAtiva } from "./openai-config";
 
 export type TipoLembreteSeguimento = "foco" | "meta" | "tecnica" | "monitorar";
 
@@ -11,6 +13,7 @@ export type LembretesSessaoPlano = {
   focoHoje: string;
   lembretes: LembreteSeguimentoPlano[];
   usouIa: boolean;
+  avisoIa?: string;
 };
 
 type SecaoPlano = {
@@ -171,11 +174,6 @@ export function gerarLembretesBasicos(planoHtml: string): LembretesSessaoPlano {
   };
 }
 
-type RespostaOpenAi = {
-  choices?: Array<{ message?: { content?: string | null } }>;
-  error?: { message?: string };
-};
-
 function parseRespostaIaLembretes(bruto: string): LembretesSessaoPlano | null {
   const limpo = bruto
     .replace(/^```json?\s*/i, "")
@@ -213,16 +211,16 @@ export async function gerarLembretesSessaoPlano({
   planoHtml,
   pacienteNome,
   sessaoData,
+  usarIaClinica = true,
 }: {
   planoHtml: string;
   pacienteNome?: string;
   sessaoData?: string;
+  usarIaClinica?: boolean;
 }) {
-  if (!iaNaNuvemDisponivel()) {
+  if (!iaClinicaAtiva(usarIaClinica)) {
     return gerarLembretesBasicos(planoHtml);
   }
-
-  const { apiKey, baseUrl, model } = resolverConfigOpenAi();
 
   const secoes = extrairSecoesPlanoHtml(planoHtml);
   const textoPlano = secoes
@@ -247,16 +245,10 @@ Regras:
   const contextoPaciente = pacienteNome ? `Paciente: ${pacienteNome}\n` : "";
   const contextoSessao = sessaoData ? `Data da sessão: ${sessaoData}\n` : "";
 
-  const resposta = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
+  try {
+    const bruto = await chamarModeloClinico({
       temperature: 0.3,
-      response_format: { type: "json_object" },
+      responseFormat: "json_object",
       messages: [
         { role: "system", content: promptSistema },
         {
@@ -264,24 +256,23 @@ Regras:
           content: `${contextoPaciente}${contextoSessao}Plano terapêutico:\n\n${textoPlano}`,
         },
       ],
-    }),
-  });
+    });
 
-  const corpo = (await resposta.json()) as RespostaOpenAi;
-  if (!resposta.ok) {
-    throw new Error(
-      corpo.error?.message ||
-        "Não foi possível gerar lembretes com IA. Tente novamente."
-    );
+    const parseado = parseRespostaIaLembretes(bruto);
+    if (!parseado) {
+      return {
+        ...gerarLembretesBasicos(planoHtml),
+        avisoIa: AVISO_IA_INDISPONIVEL,
+      };
+    }
+
+    return parseado;
+  } catch {
+    return {
+      ...gerarLembretesBasicos(planoHtml),
+      avisoIa: AVISO_IA_INDISPONIVEL,
+    };
   }
-
-  const bruto = corpo.choices?.[0]?.message?.content?.trim() || "";
-  const parseado = parseRespostaIaLembretes(bruto);
-  if (!parseado) {
-    return gerarLembretesBasicos(planoHtml);
-  }
-
-  return parseado;
 }
 
 export function rotuloTipoLembrete(tipo: TipoLembreteSeguimento) {

@@ -8,6 +8,7 @@ import {
   preferenciasPadrao,
   type TemaPreferencia,
 } from "../lib/preferencias";
+import { TEXTO_PRIVACIDADE_IA } from "../lib/ia-aviso";
 
 type Props = {
   email?: string;
@@ -82,6 +83,24 @@ export default function ContaTemaPanel({ email }: Props) {
           Sua preferência já fica salva; o envio automático será ativado em uma
           próxima atualização.
         </span>
+
+        <div className="conta-ia-prefs">
+          <h3>Recursos de IA</h3>
+          <label className="context-prefs-check">
+            <input
+              type="checkbox"
+              checked={preferencias.usarIaClinica}
+              onChange={(e) =>
+                void atualizarPreferencias(
+                  { usarIaClinica: e.target.checked },
+                  { salvarNuvem: true }
+                )
+              }
+            />
+            <span>Usar IA para organizar PDF e lembretes na sessão</span>
+          </label>
+          <span className="context-prefs-hint">{TEXTO_PRIVACIDADE_IA}</span>
+        </div>
 
         <div className="conta-actions-row">
           <button

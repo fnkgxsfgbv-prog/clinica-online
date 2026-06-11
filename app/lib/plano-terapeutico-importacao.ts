@@ -1,4 +1,6 @@
-import { iaNaNuvemDisponivel, resolverConfigOpenAi } from "./openai-config";
+import { AVISO_IA_INDISPONIVEL } from "./ia-aviso";
+import { chamarModeloClinico } from "./ia-client";
+import { iaClinicaAtiva } from "./openai-config";
 
 function escaparHtml(texto: string) {
   return texto
@@ -264,20 +266,23 @@ export function estruturarPlanoBasico(textoExtraido: string) {
   return html;
 }
 
-type RespostaOpenAi = {
-  choices?: Array<{ message?: { content?: string | null } }>;
-  error?: { message?: string };
+type RespostaEstruturacaoPlano = {
+  html: string;
+  usouIa: boolean;
+  avisoIa?: string;
 };
 
-export async function estruturarPlanoComIa(textoExtraido: string) {
-  if (!iaNaNuvemDisponivel()) {
+export async function estruturarPlanoComIa(
+  textoExtraido: string,
+  { usarIaClinica = true }: { usarIaClinica?: boolean } = {}
+): Promise<RespostaEstruturacaoPlano> {
+  if (!iaClinicaAtiva(usarIaClinica)) {
     return {
       html: estruturarPlanoBasico(textoExtraido),
-      usouIa: false as const,
+      usouIa: false,
     };
   }
 
-  const { apiKey, baseUrl, model } = resolverConfigOpenAi();
   const textoNormalizado = normalizarTextoExtraidoPdf(textoExtraido);
   const promptSistema = `Você organiza planos terapêuticos clínicos em HTML simples para prontuário psicológico.
 Regras:
@@ -290,43 +295,36 @@ Regras:
 - Mantenha linguagem clínica fiel ao documento original.
 - Responda APENAS com o HTML.`;
 
-  const resposta = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
+  try {
+    const bruto = await chamarModeloClinico({
       temperature: 0.2,
+      maxCharsConteudoUsuario: 120_000,
       messages: [
         { role: "system", content: promptSistema },
         {
           role: "user",
-          content: `Organize este plano terapêutico extraído de PDF:\n\n${textoNormalizado.slice(0, 120000)}`,
+          content: `Organize este plano terapêutico extraído de PDF:\n\n${textoNormalizado}`,
         },
       ],
-    }),
-  });
+    });
 
-  const corpo = (await resposta.json()) as RespostaOpenAi;
-  if (!resposta.ok) {
-    throw new Error(
-      corpo.error?.message ||
-        "Não foi possível organizar o plano com IA. Tente novamente."
-    );
-  }
+    const html = sanitizarHtmlPlanoImportado(bruto);
+    if (!html) {
+      return {
+        html: estruturarPlanoBasico(textoExtraido),
+        usouIa: false,
+        avisoIa: AVISO_IA_INDISPONIVEL,
+      };
+    }
 
-  const bruto = corpo.choices?.[0]?.message?.content?.trim() || "";
-  const html = sanitizarHtmlPlanoImportado(bruto);
-  if (!html) {
+    return { html, usouIa: true };
+  } catch {
     return {
       html: estruturarPlanoBasico(textoExtraido),
-      usouIa: false as const,
+      usouIa: false,
+      avisoIa: AVISO_IA_INDISPONIVEL,
     };
   }
-
-  return { html, usouIa: true as const };
 }
 
 export function sanitizarHtmlPlanoImportado(html: string) {

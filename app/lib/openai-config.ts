@@ -35,3 +35,7 @@ export function iaNaNuvemDisponivel() {
   const { apiKey } = resolverConfigOpenAi();
   return Boolean(apiKey);
 }
+
+export function iaClinicaAtiva(usarIaClinica = true) {
+  return usarIaClinica && iaNaNuvemDisponivel();
+}

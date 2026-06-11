@@ -22,6 +22,7 @@ type ImportacaoPdfResposta = {
   resumo: string;
   totalPaginas: number;
   usouIa: boolean;
+  avisoIa?: string;
   pdfNomeArquivo: string;
   pdfStoragePath: string;
   salvo: boolean;
@@ -32,6 +33,7 @@ type ImportacaoPdfPendente = {
   resumo: string;
   totalPaginas: number;
   usouIa: boolean;
+  avisoIa?: string;
   pdfNomeArquivo: string;
   pdfStoragePath: string;
 };
@@ -213,6 +215,7 @@ export default function PlanoTerapeuticoSection({
         resumo: corpo.resumo,
         totalPaginas: corpo.totalPaginas,
         usouIa: corpo.usouIa,
+        avisoIa: corpo.avisoIa,
         pdfNomeArquivo: corpo.pdfNomeArquivo,
         pdfStoragePath: corpo.pdfStoragePath,
       });
@@ -238,7 +241,9 @@ export default function PlanoTerapeuticoSection({
     setSucesso(
       importacaoPendente.usouIa
         ? "Plano importado e organizado com IA. Revise o texto e salve."
-        : "Plano importado do PDF. Revise o texto e salve."
+        : importacaoPendente.avisoIa
+          ? `${importacaoPendente.avisoIa} Revise o texto e salve.`
+          : "Plano importado do PDF. Revise o texto e salve."
     );
   }
 
@@ -333,6 +338,9 @@ export default function PlanoTerapeuticoSection({
                 : " · organizado automaticamente"}
             </p>
             <p>{importacaoPendente.resumo}</p>
+            {importacaoPendente.avisoIa ? (
+              <p className="patient-muted">{importacaoPendente.avisoIa}</p>
+            ) : null}
           </div>
           <div className="plano-terapeutico-import-actions">
             <button

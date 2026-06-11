@@ -67,6 +67,10 @@ export default function SessionPlanoLembretes({
         ) : null}
       </div>
 
+      {lembretes.avisoIa ? (
+        <p className="session-seguimento-muted">{lembretes.avisoIa}</p>
+      ) : null}
+
       <p className="session-seguimento-foco">{lembretes.focoHoje}</p>
 
       {preview.length ? (

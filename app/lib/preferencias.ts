@@ -32,6 +32,7 @@ export type PreferenciasUsuario = {
   ocultarPacientesInativos: boolean;
   avisoViradaMes: boolean;
   emailResumoSemanal: boolean;
+  usarIaClinica: boolean;
   dashboardBlocosOcultos: DashboardBlocoId[];
   dashboardBlocosOrdem: DashboardBlocoId[];
 };
@@ -93,6 +94,7 @@ export function preferenciasPadrao(): PreferenciasUsuario {
     ocultarPacientesInativos: false,
     avisoViradaMes: true,
     emailResumoSemanal: false,
+    usarIaClinica: true,
     dashboardBlocosOcultos: [],
     dashboardBlocosOrdem: ordemPadraoDashboard(),
   };
@@ -130,6 +132,10 @@ export function mesclarPreferencias(
     emailResumoSemanal: normalizarBoolean(
       parcial.emailResumoSemanal,
       padrao.emailResumoSemanal
+    ),
+    usarIaClinica: normalizarBoolean(
+      parcial.usarIaClinica,
+      padrao.usarIaClinica
     ),
     dashboardBlocosOcultos: normalizarDashboardBlocosOcultos(
       parcial.dashboardBlocosOcultos ?? padrao.dashboardBlocosOcultos
@@ -298,6 +304,12 @@ export function agendarSalvarPreferenciasNuvem(
   timerSalvarNuvem = window.setTimeout(() => {
     void salvarPreferenciasUsuario(prefs);
   }, delayMs);
+}
+
+export function iaClinicaHabilitadaNasPreferencias(
+  metadata: Record<string, unknown> | null | undefined
+): boolean {
+  return lerPreferenciasDeMetadata(metadata).usarIaClinica;
 }
 
 export async function carregarPreferenciasUsuario(

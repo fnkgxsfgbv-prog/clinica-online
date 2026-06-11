@@ -11502,6 +11502,20 @@ td {
   gap: 4px;
 }
 
+.conta-ia-prefs {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.conta-ia-prefs h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
 .conta-actions-row {
   display: flex;
   flex-wrap: wrap;

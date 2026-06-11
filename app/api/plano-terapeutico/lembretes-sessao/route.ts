@@ -4,6 +4,7 @@ import { getPlanoTerapeuticoPorPaciente } from "../../../lib/db/plano-terapeutic
 import { valoresPacienteIdParaQuery } from "../../../lib/db/paciente-id-query";
 import { TABLES } from "../../../lib/db/tables";
 import { gerarLembretesSessaoPlano } from "../../../lib/plano-terapeutico-lembretes";
+import { iaClinicaHabilitadaNasPreferencias } from "../../../lib/preferencias";
 import { planoTerapeuticoTemConteudo } from "../../../lib/resumo-texto-clinico";
 import { createSupabaseServerClient } from "../../../lib/supabase/server";
 
@@ -84,19 +85,12 @@ export async function POST(request: Request) {
     );
   }
 
-  try {
-    const lembretes = await gerarLembretesSessaoPlano({
-      planoHtml,
-      pacienteNome: pacienteOk.paciente.nome || undefined,
-      sessaoData: corpo.sessaoData,
-    });
+  const lembretes = await gerarLembretesSessaoPlano({
+    planoHtml,
+    pacienteNome: pacienteOk.paciente.nome || undefined,
+    sessaoData: corpo.sessaoData,
+    usarIaClinica: iaClinicaHabilitadaNasPreferencias(user.user_metadata),
+  });
 
-    return NextResponse.json(lembretes);
-  } catch (error) {
-    const mensagem =
-      error instanceof Error
-        ? error.message
-        : "Não foi possível gerar lembretes de seguimento.";
-    return NextResponse.json({ erro: mensagem }, { status: 502 });
-  }
+  return NextResponse.json(lembretes);
 }
