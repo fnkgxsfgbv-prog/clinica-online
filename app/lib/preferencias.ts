@@ -33,6 +33,7 @@ export type PreferenciasUsuario = {
   avisoViradaMes: boolean;
   emailResumoSemanal: boolean;
   usarIaClinica: boolean;
+  usarSugestaoPlanoPreSessao: boolean;
   dashboardBlocosOcultos: DashboardBlocoId[];
   dashboardBlocosOrdem: DashboardBlocoId[];
 };
@@ -95,6 +96,7 @@ export function preferenciasPadrao(): PreferenciasUsuario {
     avisoViradaMes: true,
     emailResumoSemanal: false,
     usarIaClinica: true,
+    usarSugestaoPlanoPreSessao: true,
     dashboardBlocosOcultos: [],
     dashboardBlocosOrdem: ordemPadraoDashboard(),
   };
@@ -136,6 +138,10 @@ export function mesclarPreferencias(
     usarIaClinica: normalizarBoolean(
       parcial.usarIaClinica,
       padrao.usarIaClinica
+    ),
+    usarSugestaoPlanoPreSessao: normalizarBoolean(
+      parcial.usarSugestaoPlanoPreSessao,
+      padrao.usarSugestaoPlanoPreSessao
     ),
     dashboardBlocosOcultos: normalizarDashboardBlocosOcultos(
       parcial.dashboardBlocosOcultos ?? padrao.dashboardBlocosOcultos

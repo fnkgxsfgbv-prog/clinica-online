@@ -38,6 +38,7 @@ import { toFiniteNumberId } from "../../lib/id";
 import EvolucaoHistoricoCard from "../../components/EvolucaoHistoricoCard";
 import EmptyState from "../../components/ui/EmptyState";
 import { PageSkeleton } from "../../components/ui/Skeleton";
+import { usePreferencias } from "../../components/PreferenciasProvider";
 import SessionPlanoLembretes from "./SessionPlanoLembretes";
 import {
   gravarLembretesSessaoCache,
@@ -45,6 +46,7 @@ import {
 } from "../../lib/lembretes-sessao-cache";
 import {
   gerarLembretesBasicos,
+  formatarLembretesHtmlPreSessao,
   type LembretesSessaoPlano,
 } from "../../lib/plano-terapeutico-lembretes";
 import { resumoEvolucaoParaIa } from "../../lib/plano-ia-texto";
@@ -61,6 +63,7 @@ export default function SessaoPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { preferencias, atualizarPreferencias } = usePreferencias();
   const modoAnotacoes = searchParams.get("modo") === "anotacoes";
   const modoEvolucao = searchParams.get("modo") === "evolucao";
   const idParam = params.id;
@@ -404,6 +407,15 @@ export default function SessaoPage() {
       planoConteudo: planoTerapeutico,
       lembretes: basico,
     });
+  }
+
+  function inserirLembretesNoPreSessao() {
+    if (!lembretesSessao) return;
+
+    const html = formatarLembretesHtmlPreSessao(lembretesSessao);
+    const separador = preSessao.trim() ? "<p></p>" : "";
+    setPreSessao(`${preSessao}${separador}${html}`);
+    mostrarMensagem("Sugestão inserida no preparo. Revise antes de salvar.");
   }
 
   async function carregarLembretesSessao(opcoes: { forcar?: boolean } = {}) {
@@ -864,20 +876,6 @@ export default function SessaoPage() {
           <FlashMessage kind="success">{mensagem}</FlashMessage>
         ) : null}
         <div className="session-notes-workspace">
-          {planoTerapeuticoTemConteudo(planoTerapeutico) &&
-          abaRegistro !== "plano-vigente" ? (
-            <SessionPlanoLembretes
-              compacto
-              temPlano={planoTerapeuticoTemConteudo(planoTerapeutico)}
-              lembretes={lembretesSessao}
-              carregando={lembretesCarregando}
-              erro={lembretesErro}
-              onVerPlano={() => setAbaRegistro("plano-vigente")}
-              onGerarComIa={() => void carregarLembretesSessao({ forcar: true })}
-              onResumoBasico={aplicarResumoBasicoLembretes}
-              onRegenerar={() => void carregarLembretesSessao({ forcar: true })}
-            />
-          ) : null}
           <div className="session-notes-layout">
           <aside className="session-notes-sidebar" aria-label="Abas do registro da sessão">
             <button
@@ -926,8 +924,26 @@ export default function SessaoPage() {
                 ) : null}
                 {abaRegistro === "plano-vigente" ? (
                   <p>Plano cadastrado na ficha do paciente — consulte durante o atendimento.</p>
+                ) : abaRegistro === "pre-sessao" ? (
+                  <p>Planeje a sessão. Sugestões do plano são opcionais — você escolhe se usa.</p>
                 ) : null}
               </div>
+              {abaRegistro === "pre-sessao" &&
+              planoTerapeuticoTemConteudo(planoTerapeutico) ? (
+                <label className="session-pre-sessao-ia-toggle context-prefs-check">
+                  <input
+                    type="checkbox"
+                    checked={preferencias.usarSugestaoPlanoPreSessao}
+                    onChange={(e) =>
+                      void atualizarPreferencias(
+                        { usarSugestaoPlanoPreSessao: e.target.checked },
+                        { salvarNuvem: true }
+                      )
+                    }
+                  />
+                  <span>Sugestões do plano</span>
+                </label>
+              ) : null}
               {abaRegistro === "plano-vigente" ? (
                 sessao?.paciente_id ? (
                   <button
@@ -967,6 +983,7 @@ export default function SessaoPage() {
               ) : planoTerapeuticoTemConteudo(planoTerapeutico) ? (
                 <div className="session-plano-stack">
                   <SessionPlanoLembretes
+                    contexto="sessao"
                     temPlano={planoTerapeuticoTemConteudo(planoTerapeutico)}
                     lembretes={lembretesSessao}
                     carregando={lembretesCarregando}
@@ -1041,6 +1058,30 @@ export default function SessaoPage() {
                   value={encaminhamentos}
                   onChange={setEncaminhamentos}
                   placeholder="Orientações e encaminhamentos..."
+                />
+              </div>
+            ) : abaRegistro === "pre-sessao" &&
+              preferencias.usarSugestaoPlanoPreSessao &&
+              planoTerapeuticoTemConteudo(planoTerapeutico) ? (
+              <div className="session-pre-sessao-stack">
+                <SessionPlanoLembretes
+                  contexto="pre-sessao"
+                  temPlano={planoTerapeuticoTemConteudo(planoTerapeutico)}
+                  lembretes={lembretesSessao}
+                  carregando={lembretesCarregando}
+                  erro={lembretesErro}
+                  onVerPlano={() => setAbaRegistro("plano-vigente")}
+                  onGerarComIa={() => void carregarLembretesSessao({ forcar: true })}
+                  onResumoBasico={aplicarResumoBasicoLembretes}
+                  onRegenerar={() => void carregarLembretesSessao({ forcar: true })}
+                  onInserirNoPreparo={inserirLembretesNoPreSessao}
+                />
+                <RichTextEditor
+                  key={abaRegistro}
+                  editorLabel={rotuloAbaRegistro(abaRegistro)}
+                  placeholder={placeholderAbaRegistro(abaRegistro)}
+                  value={preSessao}
+                  onChange={setPreSessao}
                 />
               </div>
             ) : (

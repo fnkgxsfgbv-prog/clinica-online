@@ -51,6 +51,11 @@ describe("mesclarPreferencias", () => {
     const prefs = mesclarPreferencias({ usarIaClinica: false });
     expect(prefs.usarIaClinica).toBe(false);
   });
+
+  it("permite desligar sugestões na pré-sessão", () => {
+    const prefs = mesclarPreferencias({ usarSugestaoPlanoPreSessao: false });
+    expect(prefs.usarSugestaoPlanoPreSessao).toBe(false);
+  });
 });
 
 describe("lerPreferenciasDeMetadata", () => {

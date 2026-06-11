@@ -1,7 +1,9 @@
 export const AJUDA_SEGUIMENTO_SESSAO = [
   "Resumo automático: organiza o plano no seu navegador, sem enviar dados à internet.",
   "Gerar com IA: envia trechos do plano (e, se existir, resumo da última evolução) à Vercel AI Gateway.",
-  "Nada é gerado ao abrir a sessão — você escolhe quando pedir lembretes.",
+  "Nada é gerado ao abrir a sessão — você escolhe quando pedir sugestões.",
+  "Na aba Pré-sessão, use “Usar no preparo” só se quiser colar a sugestão no editor.",
+  "Desative as sugestões na pré-sessão em Minha clínica ou pelo toggle na própria aba.",
   "Lembretes ficam em cache nesta aba do navegador enquanto o plano não mudar.",
   "Regenerar força uma nova sugestão com IA, ignorando o cache.",
 ] as const;

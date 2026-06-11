@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   extrairSecoesPlanoHtml,
+  formatarLembretesHtmlPreSessao,
   gerarLembretesBasicos,
   rotuloTipoLembrete,
 } from "./plano-terapeutico-lembretes";
@@ -29,6 +30,17 @@ describe("gerarLembretesBasicos", () => {
     expect(resultado.lembretes.some((item) => item.tipo === "monitorar")).toBe(true);
     expect(resultado.usouIa).toBe(false);
     expect(resultado.modo).toBe("basico");
+  });
+});
+
+describe("formatarLembretesHtmlPreSessao", () => {
+  it("monta html com foco e lembretes", () => {
+    const html =
+      "<h3>3. OBJETIVO GERAL</h3><p>Promover autonomia.</p><h3>4. OBJETIVOS ESPECÍFICOS</h3><ul><li>Desenvolver habilidades sociais</li></ul>";
+    const lembretes = gerarLembretesBasicos(html);
+    const formatado = formatarLembretesHtmlPreSessao(lembretes);
+    expect(formatado).toContain("Foco sugerido");
+    expect(formatado).toContain("<ul>");
   });
 });
 

@@ -45,27 +45,43 @@ function SeguimentoAjuda({ compacto = false }: { compacto?: boolean }) {
   );
 }
 
+function tituloPainel(contexto: "sessao" | "pre-sessao") {
+  return contexto === "pre-sessao" ? "Preparo sugerido" : "Seguimento de hoje";
+}
+
+function textoVazio(contexto: "sessao" | "pre-sessao") {
+  if (contexto === "pre-sessao") {
+    return "Gere sugestões a partir do plano para preparar a sessão. Você decide se usa no editor.";
+  }
+  return "Gere lembretes a partir do plano terapêutico quando quiser.";
+}
+
 export default function SessionPlanoLembretes({
   lembretes,
   compacto = false,
   carregando = false,
   erro = "",
   temPlano = true,
+  contexto = "sessao",
   onVerPlano,
   onGerarComIa,
   onResumoBasico,
   onRegenerar,
+  onInserirNoPreparo,
 }: {
   lembretes: LembretesSessaoPlano | null;
   compacto?: boolean;
   carregando?: boolean;
   erro?: string;
   temPlano?: boolean;
+  contexto?: "sessao" | "pre-sessao";
   onVerPlano?: () => void;
   onGerarComIa?: () => void;
   onResumoBasico?: () => void;
   onRegenerar?: () => void;
+  onInserirNoPreparo?: () => void;
 }) {
+  const titulo = tituloPainel(contexto);
   if (!temPlano) return null;
 
   if (carregando) {
@@ -74,7 +90,7 @@ export default function SessionPlanoLembretes({
         className={`session-seguimento-card${compacto ? " is-compact" : ""}`}
         aria-live="polite"
       >
-        <strong>Seguimento de hoje</strong>
+        <strong>{titulo}</strong>
         <p className="session-seguimento-muted">Gerando lembretes do plano...</p>
       </div>
     );
@@ -83,7 +99,7 @@ export default function SessionPlanoLembretes({
   if (erro) {
     return (
       <div className={`session-seguimento-card is-error${compacto ? " is-compact" : ""}`}>
-        <strong>Seguimento de hoje</strong>
+        <strong>{titulo}</strong>
         <p className="session-seguimento-muted">{erro}</p>
         {onGerarComIa || onResumoBasico ? (
           <div className="session-seguimento-actions">
@@ -112,10 +128,8 @@ export default function SessionPlanoLembretes({
       <div className={`session-seguimento-card is-empty${compacto ? " is-compact" : ""}`}>
         <div className="session-seguimento-header">
           <div>
-            <strong>Seguimento de hoje</strong>
-            <p className="session-seguimento-muted">
-              Gere lembretes a partir do plano terapêutico quando quiser.
-            </p>
+            <strong>{titulo}</strong>
+            <p className="session-seguimento-muted">{textoVazio(contexto)}</p>
           </div>
           {compacto && onVerPlano ? (
             <button type="button" className="session-seguimento-link" onClick={onVerPlano}>
@@ -153,7 +167,7 @@ export default function SessionPlanoLembretes({
     <div className={`session-seguimento-card${compacto ? " is-compact" : ""}`}>
       <div className="session-seguimento-header">
         <div>
-          <strong>Seguimento de hoje</strong>
+          <strong>{titulo}</strong>
           <span
             className={`session-seguimento-badge ${classeBadgeModo(lembretes.modo)}`}
             title={rotuloModo}
@@ -162,6 +176,15 @@ export default function SessionPlanoLembretes({
           </span>
         </div>
         <div className="session-seguimento-header-actions">
+          {contexto === "pre-sessao" && onInserirNoPreparo ? (
+            <button
+              type="button"
+              className="session-seguimento-link"
+              onClick={onInserirNoPreparo}
+            >
+              Usar no preparo
+            </button>
+          ) : null}
           {onRegenerar ? (
             <button type="button" className="session-seguimento-link" onClick={onRegenerar}>
               Regenerar

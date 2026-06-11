@@ -88,6 +88,19 @@ export default function ContaTemaPanel({ email }: Props) {
 
         <div className="conta-ia-prefs">
           <h3>Recursos de IA</h3>
+          <label className="context-prefs-check conta-ia-prefs-check">
+            <input
+              type="checkbox"
+              checked={preferencias.usarSugestaoPlanoPreSessao}
+              onChange={(e) =>
+                void atualizarPreferencias(
+                  { usarSugestaoPlanoPreSessao: e.target.checked },
+                  { salvarNuvem: true }
+                )
+              }
+            />
+            <span>Mostrar sugestões do plano na aba Pré-sessão</span>
+          </label>
           <label className="context-prefs-check">
             <input
               type="checkbox"

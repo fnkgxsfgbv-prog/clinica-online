@@ -292,3 +292,24 @@ export function rotuloTipoLembrete(tipo: TipoLembreteSeguimento) {
   if (tipo === "monitorar") return "Monitorar";
   return "Foco";
 }
+
+function escaparHtmlTexto(texto: string) {
+  return String(texto || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+/** HTML simples para colar no editor de pré-sessão. */
+export function formatarLembretesHtmlPreSessao(lembretes: LembretesSessaoPlano) {
+  const itens = lembretes.lembretes
+    .map(
+      (item) =>
+        `<li><strong>${escaparHtmlTexto(rotuloTipoLembrete(item.tipo))}:</strong> ${escaparHtmlTexto(item.texto)}</li>`
+    )
+    .join("");
+
+  return `<p><strong>Foco sugerido:</strong> ${escaparHtmlTexto(lembretes.focoHoje)}</p>${
+    itens ? `<ul>${itens}</ul>` : ""
+  }`;
+}
