@@ -44,7 +44,8 @@ type AbaRegistroSessao =
   | "pre-sessao"
   | "anotacoes"
   | "observacoes"
-  | "evolucao-clinica";
+  | "evolucao-clinica"
+  | "plano-vigente";
 
 export default function SessaoPage() {
   const params = useParams();
@@ -773,37 +774,13 @@ export default function SessaoPage() {
             >
               Evolução clínica
             </button>
-
-            <div className="session-plano-panel" aria-label="Plano terapêutico vigente">
-              <strong>Plano vigente</strong>
-              {!planoTerapeuticoCarregado ? (
-                <p className="session-plano-empty">Carregando plano...</p>
-              ) : planoTerapeuticoTemConteudo(planoTerapeutico) ? (
-                <div
-                  className="session-plano-conteudo"
-                  dangerouslySetInnerHTML={{
-                    __html: sanitizarHtmlBasico(planoTerapeutico),
-                  }}
-                />
-              ) : (
-                <p className="session-plano-empty">
-                  Nenhum plano cadastrado para este paciente.
-                </p>
-              )}
-              {sessao?.paciente_id ? (
-                <button
-                  type="button"
-                  className="session-plano-link"
-                  onClick={() =>
-                    router.push(`/paciente/${sessao.paciente_id}?aba=plano`)
-                  }
-                >
-                  {planoTerapeuticoTemConteudo(planoTerapeutico)
-                    ? "Editar plano"
-                    : "Cadastrar plano"}
-                </button>
-              ) : null}
-            </div>
+            <button
+              type="button"
+              className={abaRegistro === "plano-vigente" ? "is-active" : ""}
+              onClick={() => setAbaRegistro("plano-vigente")}
+            >
+              Plano terapêutico
+            </button>
           </aside>
 
           <section className="session-notes-editor">
@@ -813,23 +790,71 @@ export default function SessaoPage() {
                 {abaRegistro === "evolucao-clinica" ? (
                   <p>Esta aba será salva no histórico de evolução do paciente.</p>
                 ) : null}
+                {abaRegistro === "plano-vigente" ? (
+                  <p>Plano cadastrado na ficha do paciente — consulte durante o atendimento.</p>
+                ) : null}
               </div>
-              <button
-                type="button"
-                className="btn btn-green"
-                onClick={() =>
-                  abaRegistro === "evolucao-clinica"
-                    ? void salvarEvolucao()
-                    : void salvarAnotacoesSessao()
-                }
-              >
-                {abaRegistro === "evolucao-clinica"
-                  ? "Salvar evolução"
-                  : "Salvar anotações"}
-              </button>
+              {abaRegistro === "plano-vigente" ? (
+                sessao?.paciente_id ? (
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() =>
+                      router.push(`/paciente/${sessao.paciente_id}?aba=plano`)
+                    }
+                  >
+                    {planoTerapeuticoTemConteudo(planoTerapeutico)
+                      ? "Editar plano"
+                      : "Cadastrar plano"}
+                  </button>
+                ) : null
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-green"
+                  onClick={() =>
+                    abaRegistro === "evolucao-clinica"
+                      ? void salvarEvolucao()
+                      : void salvarAnotacoesSessao()
+                  }
+                >
+                  {abaRegistro === "evolucao-clinica"
+                    ? "Salvar evolução"
+                    : "Salvar anotações"}
+                </button>
+              )}
             </div>
 
-            {abaRegistro === "evolucao-clinica" ? (
+            {abaRegistro === "plano-vigente" ? (
+              !planoTerapeuticoCarregado ? (
+                <p className="session-plano-empty session-plano-view-empty">
+                  Carregando plano...
+                </p>
+              ) : planoTerapeuticoTemConteudo(planoTerapeutico) ? (
+                <div
+                  className="session-plano-view rich-text-output"
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizarHtmlBasico(planoTerapeutico),
+                  }}
+                />
+              ) : (
+                <EmptyState
+                  compact
+                  inline
+                  titulo="Nenhum plano cadastrado"
+                  descricao="Cadastre o plano terapêutico na ficha do paciente para consultá-lo aqui durante a sessão."
+                  icone="📋"
+                  acao={
+                    sessao?.paciente_id
+                      ? {
+                          rotulo: "Cadastrar plano",
+                          href: `/paciente/${sessao.paciente_id}?aba=plano`,
+                        }
+                      : undefined
+                  }
+                />
+              )
+            ) : abaRegistro === "evolucao-clinica" ? (
               <div className="session-evolution-grid session-evolution-grid-embedded">
                 <CardEvolucao
                   titulo="Queixa"
@@ -1075,10 +1100,13 @@ function rotuloAbaRegistro(aba: AbaRegistroSessao) {
   if (aba === "pre-sessao") return "Pré-sessão";
   if (aba === "observacoes") return "Observações";
   if (aba === "evolucao-clinica") return "Evolução clínica";
+  if (aba === "plano-vigente") return "Plano terapêutico";
   return "Anotações";
 }
 
-function placeholderAbaRegistro(aba: Exclude<AbaRegistroSessao, "evolucao-clinica">) {
+function placeholderAbaRegistro(
+  aba: Exclude<AbaRegistroSessao, "evolucao-clinica" | "plano-vigente">
+) {
   if (aba === "pre-sessao") {
     return "Escreva o planejamento, tema ou preparação para esta sessão...";
   }
