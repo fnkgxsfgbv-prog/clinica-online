@@ -28,6 +28,7 @@ describe("gerarLembretesBasicos", () => {
     expect(resultado.lembretes.some((item) => item.tipo === "tecnica")).toBe(true);
     expect(resultado.lembretes.some((item) => item.tipo === "monitorar")).toBe(true);
     expect(resultado.usouIa).toBe(false);
+    expect(resultado.modo).toBe("basico");
   });
 });
 

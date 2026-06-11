@@ -16,6 +16,7 @@
     "push:github": "node scripts/push-github.mjs",
     "deploy:check": "node scripts/check-auto-deploy.mjs",
     "ia:check": "node --env-file=.env.local scripts/ia-check.mjs",
+    "ia:check:ci": "node scripts/ia-check-config.mjs",
     "lint": "eslint",
     "security:check": "node --env-file=.env.local scripts/validate-security.mjs",
     "security:apply-rls": "node --env-file=.env.local scripts/apply-rls.mjs",

@@ -1,6 +1,7 @@
 import { AVISO_IA_INDISPONIVEL } from "./ia-aviso";
 import { chamarModeloClinico } from "./ia-client";
 import { iaClinicaAtiva } from "./openai-config";
+import { prepararTextoPdfParaIa } from "./plano-ia-texto";
 
 function escaparHtml(texto: string) {
   return texto
@@ -283,7 +284,9 @@ export async function estruturarPlanoComIa(
     };
   }
 
-  const textoNormalizado = normalizarTextoExtraidoPdf(textoExtraido);
+  const textoNormalizado = prepararTextoPdfParaIa(
+    normalizarTextoExtraidoPdf(textoExtraido)
+  );
   const promptSistema = `Você organiza planos terapêuticos clínicos em HTML simples para prontuário psicológico.
 Regras:
 - Use SOMENTE informações presentes no texto fornecido; não invente diagnósticos, metas ou técnicas.
@@ -298,7 +301,7 @@ Regras:
   try {
     const bruto = await chamarModeloClinico({
       temperature: 0.2,
-      maxCharsConteudoUsuario: 120_000,
+      maxCharsConteudoUsuario: 52_000,
       messages: [
         { role: "system", content: promptSistema },
         {

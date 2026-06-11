@@ -1,6 +1,7 @@
 import { AVISO_IA_INDISPONIVEL } from "./ia-aviso";
 import { chamarModeloClinico } from "./ia-client";
 import { iaClinicaAtiva } from "./openai-config";
+import { prepararTextoPlanoParaIa } from "./plano-ia-texto";
 
 export type TipoLembreteSeguimento = "foco" | "meta" | "tecnica" | "monitorar";
 
@@ -9,10 +10,13 @@ export type LembreteSeguimentoPlano = {
   texto: string;
 };
 
+export type ModoLembretesPlano = "ia" | "basico";
+
 export type LembretesSessaoPlano = {
   focoHoje: string;
   lembretes: LembreteSeguimentoPlano[];
   usouIa: boolean;
+  modo: ModoLembretesPlano;
   avisoIa?: string;
 };
 
@@ -171,6 +175,7 @@ export function gerarLembretesBasicos(planoHtml: string): LembretesSessaoPlano {
     focoHoje,
     lembretes: lembretes.slice(0, 6),
     usouIa: false,
+    modo: "basico",
   };
 }
 
@@ -201,6 +206,7 @@ function parseRespostaIaLembretes(bruto: string): LembretesSessaoPlano | null {
       focoHoje: focoHoje || lembretes[0]?.texto || "",
       lembretes: lembretes.slice(0, 6),
       usouIa: true,
+      modo: "ia",
     };
   } catch {
     return null;
@@ -209,27 +215,30 @@ function parseRespostaIaLembretes(bruto: string): LembretesSessaoPlano | null {
 
 export async function gerarLembretesSessaoPlano({
   planoHtml,
-  pacienteNome,
   sessaoData,
+  ultimaEvolucaoResumo,
   usarIaClinica = true,
+  somenteBasico = false,
 }: {
   planoHtml: string;
-  pacienteNome?: string;
   sessaoData?: string;
+  ultimaEvolucaoResumo?: string;
   usarIaClinica?: boolean;
+  somenteBasico?: boolean;
 }) {
-  if (!iaClinicaAtiva(usarIaClinica)) {
+  if (somenteBasico || !iaClinicaAtiva(usarIaClinica)) {
     return gerarLembretesBasicos(planoHtml);
   }
 
   const secoes = extrairSecoesPlanoHtml(planoHtml);
-  const textoPlano = secoes
-    .map((secao) => {
-      const itens = secao.itens.length ? `\n- ${secao.itens.join("\n- ")}` : "";
-      return `${secao.titulo}\n${secao.paragrafo}${itens}`;
-    })
-    .join("\n\n")
-    .slice(0, 12000);
+  const textoPlano = prepararTextoPlanoParaIa(
+    secoes
+      .map((secao) => {
+        const itens = secao.itens.length ? `\n- ${secao.itens.join("\n- ")}` : "";
+        return `${secao.titulo}\n${secao.paragrafo}${itens}`;
+      })
+      .join("\n\n")
+  );
 
   const promptSistema = `Você apoia psicólogos durante sessões clínicas com lembretes práticos baseados no plano terapêutico.
 Regras:
@@ -242,8 +251,10 @@ Regras:
 - Não repita o focoHoje nos lembretes.
 - Linguagem clínica, objetiva, em português do Brasil.`;
 
-  const contextoPaciente = pacienteNome ? `Paciente: ${pacienteNome}\n` : "";
   const contextoSessao = sessaoData ? `Data da sessão: ${sessaoData}\n` : "";
+  const contextoEvolucao = ultimaEvolucaoResumo
+    ? `Resumo da última evolução (sem identificação):\n${ultimaEvolucaoResumo}\n\n`
+    : "";
 
   try {
     const bruto = await chamarModeloClinico({
@@ -253,7 +264,7 @@ Regras:
         { role: "system", content: promptSistema },
         {
           role: "user",
-          content: `${contextoPaciente}${contextoSessao}Plano terapêutico:\n\n${textoPlano}`,
+          content: `${contextoSessao}${contextoEvolucao}Plano terapêutico:\n\n${textoPlano}`,
         },
       ],
     });

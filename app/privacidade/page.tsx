@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function PrivacidadePage() {
   return (
-    <LegalDocument title="Privacidade e LGPD" updatedAt="22 de maio de 2026">
+    <LegalDocument title="Privacidade e LGPD" updatedAt="28 de maio de 2026">
       <section>
         <h2>1. Quem somos</h2>
         <p>
@@ -55,7 +55,31 @@ export default function PrivacidadePage() {
       </section>
 
       <section>
-        <h2>5. Segurança</h2>
+        <h2>5. Recursos de inteligência artificial (opcional)</h2>
+        <p>
+          Algumas funções do PsicoDesk podem usar modelos de linguagem via Vercel
+          AI Gateway, somente quando você ativa &quot;Recursos de IA&quot; em Minha
+          clínica. Nesse caso, trechos do plano terapêutico e, quando aplicável,
+          um resumo da última evolução clínica podem ser enviados para gerar
+          lembretes de sessão ou organizar planos importados de PDF.
+        </p>
+        <ul>
+          <li>
+            Não enviamos o nome completo do paciente nesses prompts de IA.
+          </li>
+          <li>
+            Os resultados são sugestões de apoio; não substituem julgamento
+            clínico nem diagnóstico.
+          </li>
+          <li>
+            Você pode desativar a IA a qualquer momento; o sistema continua com
+            resumos automáticos locais do plano.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>6. Segurança</h2>
         <p>
           Utilizamos autenticação, conexão criptografada (HTTPS) e políticas de
           acesso no banco (RLS). Recomendamos senha forte, não compartilhar
@@ -64,7 +88,7 @@ export default function PrivacidadePage() {
       </section>
 
       <section>
-        <h2>6. Retenção e exclusão</h2>
+        <h2>7. Retenção e exclusão</h2>
         <p>
           Os registros permanecem enquanto a conta estiver ativa e forem
           necessários ao consultório. A profissional pode exportar dados em
@@ -74,7 +98,7 @@ export default function PrivacidadePage() {
       </section>
 
       <section>
-        <h2>7. Direitos do titular (LGPD)</h2>
+        <h2>8. Direitos do titular (LGPD)</h2>
         <p>
           Pacientes e titulares podem solicitar informações, correção ou
           exclusão, quando aplicável, entrando em contato com a psicóloga
@@ -84,7 +108,7 @@ export default function PrivacidadePage() {
       </section>
 
       <section>
-        <h2>8. Contato</h2>
+        <h2>9. Contato</h2>
         <p>
           Dúvidas sobre esta política: utilize o canal de suporte da sua clínica
           ou o e-mail de contato informado no cadastro da conta PsicoDesk.

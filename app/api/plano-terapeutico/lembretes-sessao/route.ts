@@ -48,6 +48,8 @@ export async function POST(request: Request) {
     pacienteId?: string;
     sessaoData?: string;
     planoConteudo?: string;
+    somenteBasico?: boolean;
+    ultimaEvolucaoResumo?: string;
   };
 
   try {
@@ -87,9 +89,10 @@ export async function POST(request: Request) {
 
   const lembretes = await gerarLembretesSessaoPlano({
     planoHtml,
-    pacienteNome: pacienteOk.paciente.nome || undefined,
     sessaoData: corpo.sessaoData,
+    ultimaEvolucaoResumo: String(corpo.ultimaEvolucaoResumo || "").trim() || undefined,
     usarIaClinica: iaClinicaHabilitadaNasPreferencias(user.user_metadata),
+    somenteBasico: Boolean(corpo.somenteBasico),
   });
 
   return NextResponse.json(lembretes);
