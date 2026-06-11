@@ -37,6 +37,9 @@ type UserProfile = {
   endereco: string;
   cidade: string;
   observacoes: string;
+  chavePix: string;
+  nomeRecebedorPix: string;
+  cidadeRecebedorPix: string;
   fotoUrl: string;
   fotoPath: string;
   criadoEm: string;
@@ -109,6 +112,9 @@ function MinhaClinicaConteudo() {
     endereco: "",
     cidade: "",
     observacoes: "",
+    chavePix: "",
+    nomeRecebedorPix: "",
+    cidadeRecebedorPix: "",
   });
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [sessoes, setSessoes] = useState<Sessao[]>([]);
@@ -161,6 +167,13 @@ function MinhaClinicaConteudo() {
         endereco: String(metadata.clinic_address || ""),
         cidade: String(metadata.clinic_city || ""),
         observacoes: String(metadata.clinic_notes || ""),
+        chavePix: String(metadata.pix_key || metadata.chave_pix || ""),
+        nomeRecebedorPix: String(
+          metadata.pix_receiver_name || metadata.name || metadata.full_name || ""
+        ),
+        cidadeRecebedorPix: String(
+          metadata.pix_receiver_city || metadata.clinic_city || ""
+        ),
         fotoUrl: await resolverUrlFotoPerfil(metadata),
         fotoPath,
         criadoEm: formatarData(user.created_at),
@@ -175,6 +188,9 @@ function MinhaClinicaConteudo() {
         endereco: perfilAtual.endereco,
         cidade: perfilAtual.cidade,
         observacoes: perfilAtual.observacoes,
+        chavePix: perfilAtual.chavePix,
+        nomeRecebedorPix: perfilAtual.nomeRecebedorPix || perfilAtual.nome,
+        cidadeRecebedorPix: perfilAtual.cidadeRecebedorPix || perfilAtual.cidade,
       });
       setPacientes((pacientesRes.data || []) as Paciente[]);
       setSessoes((sessoesRes.data || []) as Sessao[]);
@@ -239,6 +255,9 @@ function MinhaClinicaConteudo() {
         endereco: perfil.endereco,
         cidade: perfil.cidade,
         observacoes: perfil.observacoes,
+        chavePix: perfil.chavePix,
+        nomeRecebedorPix: perfil.nomeRecebedorPix || perfil.nome,
+        cidadeRecebedorPix: perfil.cidadeRecebedorPix || perfil.cidade,
       });
     }
     setEditando(false);
@@ -268,6 +287,9 @@ function MinhaClinicaConteudo() {
         clinic_address: form.endereco.trim(),
         clinic_city: form.cidade.trim(),
         clinic_notes: form.observacoes.trim(),
+        pix_key: form.chavePix.trim(),
+        pix_receiver_name: form.nomeRecebedorPix.trim() || nome,
+        pix_receiver_city: form.cidadeRecebedorPix.trim() || form.cidade.trim(),
         avatar_path: perfil?.fotoPath || null,
       },
     });
@@ -287,6 +309,9 @@ function MinhaClinicaConteudo() {
       endereco: form.endereco.trim(),
       cidade: form.cidade.trim(),
       observacoes: form.observacoes.trim(),
+      chavePix: form.chavePix.trim(),
+      nomeRecebedorPix: form.nomeRecebedorPix.trim() || nome,
+      cidadeRecebedorPix: form.cidadeRecebedorPix.trim() || form.cidade.trim(),
       fotoUrl: perfil?.fotoUrl || "",
       fotoPath: perfil?.fotoPath || "",
       criadoEm: perfil?.criadoEm || formatarData(data.user.created_at),
@@ -301,6 +326,9 @@ function MinhaClinicaConteudo() {
       endereco: atualizado.endereco,
       cidade: atualizado.cidade,
       observacoes: atualizado.observacoes,
+      chavePix: atualizado.chavePix,
+      nomeRecebedorPix: atualizado.nomeRecebedorPix,
+      cidadeRecebedorPix: atualizado.cidadeRecebedorPix,
     });
     setMensagem("Dados da clínica atualizados.");
     setEditando(false);
@@ -550,6 +578,37 @@ function MinhaClinicaConteudo() {
                       placeholder="Informações internas, horários, orientações ou descrição curta."
                     />
                   </label>
+                  <label className="clinic-edit-full clinic-edit-section-title">
+                    <span>Recebimentos Pix</span>
+                  </label>
+                  <label className="clinic-edit-full">
+                    <span>Chave Pix</span>
+                    <input
+                      value={form.chavePix}
+                      onChange={(event) => atualizarCampo("chavePix", event.target.value)}
+                      placeholder="CPF, e-mail, telefone ou chave aleatória"
+                    />
+                  </label>
+                  <label>
+                    <span>Nome do recebedor (no Pix)</span>
+                    <input
+                      value={form.nomeRecebedorPix}
+                      onChange={(event) =>
+                        atualizarCampo("nomeRecebedorPix", event.target.value)
+                      }
+                      placeholder={form.nome || "Nome profissional"}
+                    />
+                  </label>
+                  <label>
+                    <span>Cidade (no Pix)</span>
+                    <input
+                      value={form.cidadeRecebedorPix}
+                      onChange={(event) =>
+                        atualizarCampo("cidadeRecebedorPix", event.target.value)
+                      }
+                      placeholder={form.cidade || "Cidade"}
+                    />
+                  </label>
                 </div>
               ) : (
                 <div className="clinic-data-grid">
@@ -609,6 +668,8 @@ function MinhaClinicaConteudo() {
                     <strong>{sessoes.length}</strong>
                     <span>Conta ativa desde</span>
                     <strong>{perfil?.criadoEm}</strong>
+                    <span>Chave Pix</span>
+                    <strong>{perfil?.chavePix || "Não configurada"}</strong>
                   </div>
                   {perfil?.observacoes ? (
                     <div className="clinic-notes-card">
@@ -623,6 +684,23 @@ function MinhaClinicaConteudo() {
 
             {aba === "dados" ? (
             <div className="clinic-tools-grid">
+              <section className="clinic-card clinic-tool-card clinic-tool-card-wide">
+                <div className="clinic-tool-header">
+                  <div>
+                    <h2>Cobrança Pix na sessão</h2>
+                    <p>
+                      Configure a chave Pix na aba Perfil. Na sessão clínica, use
+                      &quot;Gerar cobrança Pix&quot; para cobrar direto pelo PsicoDesk.
+                    </p>
+                  </div>
+                </div>
+                <p className="clinic-tool-note">
+                  {perfil?.chavePix
+                    ? `Chave configurada: ${perfil.chavePix}`
+                    : "Nenhuma chave Pix cadastrada ainda — edite o perfil para ativar cobranças."}
+                </p>
+              </section>
+
               <PendenciasClinica
                 itens={checklistCompleto}
                 titulo="Pendências da clínica"
