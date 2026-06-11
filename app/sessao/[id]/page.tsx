@@ -38,6 +38,8 @@ import { toFiniteNumberId } from "../../lib/id";
 import EvolucaoHistoricoCard from "../../components/EvolucaoHistoricoCard";
 import EmptyState from "../../components/ui/EmptyState";
 import { PageSkeleton } from "../../components/ui/Skeleton";
+import SessionPlanoLembretes from "./SessionPlanoLembretes";
+import type { LembretesSessaoPlano } from "../../lib/plano-terapeutico-lembretes";
 import type { Evolucao, PacientePlanoTerapeutico, Sessao } from "../../types";
 
 type AbaRegistroSessao =
@@ -85,6 +87,11 @@ export default function SessaoPage() {
   const [erroCarga, setErroCarga] = useState("");
   const [planoTerapeutico, setPlanoTerapeutico] = useState("");
   const [planoTerapeuticoCarregado, setPlanoTerapeuticoCarregado] = useState(false);
+  const [lembretesSessao, setLembretesSessao] = useState<LembretesSessaoPlano | null>(
+    null
+  );
+  const [lembretesCarregando, setLembretesCarregando] = useState(false);
+  const [lembretesErro, setLembretesErro] = useState("");
   const ultimoSnapshotAnotacoesRef = useRef("");
   const salvandoAnotacoesRef = useRef(false);
   const salvarNovamenteDepoisRef = useRef(false);
@@ -133,7 +140,23 @@ export default function SessaoPage() {
   useEffect(() => {
     setPlanoTerapeutico("");
     setPlanoTerapeuticoCarregado(false);
+    setLembretesSessao(null);
+    setLembretesErro("");
   }, [sessao?.id]);
+
+  useEffect(() => {
+    if (
+      !planoTerapeuticoCarregado ||
+      !planoTerapeuticoTemConteudo(planoTerapeutico) ||
+      !sessao?.paciente_id
+    ) {
+      setLembretesSessao(null);
+      return;
+    }
+
+    void carregarLembretesSessao();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planoTerapeuticoCarregado, planoTerapeutico, sessao?.id]);
 
   useEffect(() => {
     if (modoAnotacoes) setAbaRegistro("anotacoes");
@@ -343,6 +366,44 @@ export default function SessaoPage() {
     const registro = (data || null) as PacientePlanoTerapeutico | null;
     setPlanoTerapeutico(registro?.conteudo || "");
     setPlanoTerapeuticoCarregado(true);
+  }
+
+  async function carregarLembretesSessao() {
+    if (!sessao?.paciente_id || !planoTerapeuticoTemConteudo(planoTerapeutico)) {
+      setLembretesSessao(null);
+      return;
+    }
+
+    setLembretesCarregando(true);
+    setLembretesErro("");
+
+    try {
+      const resposta = await fetch("/api/plano-terapeutico/lembretes-sessao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          pacienteId: sessao.paciente_id,
+          sessaoData: sessao.data || undefined,
+          planoConteudo: planoTerapeutico,
+        }),
+      });
+
+      const corpo = (await resposta.json()) as LembretesSessaoPlano & { erro?: string };
+
+      if (!resposta.ok) {
+        setLembretesSessao(null);
+        setLembretesErro(corpo.erro || "Não foi possível gerar lembretes.");
+        return;
+      }
+
+      setLembretesSessao(corpo);
+    } catch {
+      setLembretesSessao(null);
+      setLembretesErro("Falha de rede ao gerar lembretes.");
+    } finally {
+      setLembretesCarregando(false);
+    }
   }
 
   async function carregarEvolucoes() {
@@ -745,6 +806,17 @@ export default function SessaoPage() {
           <FlashMessage kind="success">{mensagem}</FlashMessage>
         ) : null}
         <div className="session-notes-workspace">
+          {planoTerapeuticoTemConteudo(planoTerapeutico) &&
+          abaRegistro !== "plano-vigente" ? (
+            <SessionPlanoLembretes
+              compacto
+              lembretes={lembretesSessao}
+              carregando={lembretesCarregando}
+              erro={lembretesErro}
+              onVerPlano={() => setAbaRegistro("plano-vigente")}
+            />
+          ) : null}
+          <div className="session-notes-layout">
           <aside className="session-notes-sidebar" aria-label="Abas do registro da sessão">
             <button
               type="button"
@@ -831,12 +903,19 @@ export default function SessaoPage() {
                   Carregando plano...
                 </p>
               ) : planoTerapeuticoTemConteudo(planoTerapeutico) ? (
-                <div
-                  className="session-plano-view rich-text-output"
-                  dangerouslySetInnerHTML={{
-                    __html: sanitizarHtmlBasico(planoTerapeutico),
-                  }}
-                />
+                <div className="session-plano-stack">
+                  <SessionPlanoLembretes
+                    lembretes={lembretesSessao}
+                    carregando={lembretesCarregando}
+                    erro={lembretesErro}
+                  />
+                  <div
+                    className="session-plano-view rich-text-output"
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizarHtmlBasico(planoTerapeutico),
+                    }}
+                  />
+                </div>
               ) : (
                 <EmptyState
                   compact
@@ -924,6 +1003,7 @@ export default function SessaoPage() {
               />
             )}
           </section>
+          </div>
         </div>
       </Janela>
 
