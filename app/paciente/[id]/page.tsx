@@ -792,7 +792,10 @@ export default function PacientePage() {
         )}
 
         {aba === "plano" && paciente ? (
-          <PlanoTerapeuticoSection pacienteId={idPaciente} />
+          <PlanoTerapeuticoSection
+            pacienteId={idPaciente}
+            onDocumentosChanged={carregarDocumentos}
+          />
         ) : null}
 
         {aba === "documentos" && (

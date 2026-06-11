@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { PACIENTE_DOCUMENTOS_BUCKET } from "../../../lib/db/documentos";
+import {
+  PACIENTE_DOCUMENTOS_BUCKET,
+  registrarDocumentoPacienteExistente,
+  removerDocumentoPorStoragePath,
+} from "../../../lib/db/documentos";
 import { valoresPacienteIdParaQuery } from "../../../lib/db/paciente-id-query";
 import { TABLES } from "../../../lib/db/tables";
 import {
@@ -146,6 +150,27 @@ export async function POST(request: Request) {
     );
   }
 
+  const nomeDocumento = arquivo.name.toLowerCase().endsWith(".pdf")
+    ? `Plano terapêutico - ${arquivo.name}`
+    : `Plano terapêutico - ${arquivo.name}.pdf`;
+
+  const documentoRegistrado = await registrarDocumentoPacienteExistente(supabase, {
+    userId: user.id,
+    pacienteId,
+    nomeArquivo: nomeDocumento,
+    storagePath,
+    tipoMime: "application/pdf",
+    tamanhoBytes: arquivo.size,
+  });
+
+  if (documentoRegistrado.error) {
+    await supabase.storage.from(PACIENTE_DOCUMENTOS_BUCKET).remove([storagePath]);
+    return NextResponse.json(
+      { erro: documentoRegistrado.error.message },
+      { status: 500 }
+    );
+  }
+
   const planoExistente = await supabase
     .from(TABLES.PACIENTE_PLANO_TERAPEUTICO)
     .select("*")
@@ -204,6 +229,7 @@ export async function POST(request: Request) {
       await supabase.storage
         .from(PACIENTE_DOCUMENTOS_BUCKET)
         .remove([caminhoAnterior]);
+      await removerDocumentoPorStoragePath(supabase, user.id, caminhoAnterior);
     }
   }
 

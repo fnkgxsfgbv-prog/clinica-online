@@ -5,6 +5,7 @@ import { useState } from "react";
 import { AJUDA_SEGUIMENTO_SESSAO } from "../../lib/ia-ajuda";
 import { rotuloModoLembretes } from "../../lib/ia-aviso";
 import {
+  formatarPreparacaoTextoAgenda,
   rotuloTipoLembrete,
   type LembretesSessaoPlano,
   type TipoLembreteSeguimento,
@@ -166,6 +167,8 @@ export default function SessionPlanoLembretes({
 
   const preview = lembretes.lembretes.slice(0, compacto ? 2 : lembretes.lembretes.length);
   const rotuloModo = rotuloModoLembretes(lembretes.modo);
+  const textoPreSessaoAgenda =
+    contexto === "pre-sessao" ? formatarPreparacaoTextoAgenda(lembretes) : "";
 
   return (
     <div className={`session-seguimento-card${compacto ? " is-compact" : ""}`}>
@@ -186,7 +189,7 @@ export default function SessionPlanoLembretes({
               className="session-seguimento-link"
               onClick={onInserirNoPreparo}
             >
-              Usar no preparo
+              Salvar na agenda
             </button>
           ) : null}
           {onRegenerar ? (
@@ -206,20 +209,31 @@ export default function SessionPlanoLembretes({
         <p className="session-seguimento-muted">{lembretes.avisoIa}</p>
       ) : null}
 
-      <p className="session-seguimento-foco">{lembretes.focoHoje}</p>
+      {contexto === "pre-sessao" ? (
+        <>
+          <p className="session-seguimento-foco">{textoPreSessaoAgenda}</p>
+          <p className="session-seguimento-muted">
+            Este texto aparece na coluna Pré-sessão da agenda após salvar.
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="session-seguimento-foco">{lembretes.focoHoje}</p>
 
-      {preview.length ? (
-        <ul className="session-seguimento-lista">
-          {preview.map((item) => (
-            <li key={`${item.tipo}-${item.texto}`} className={classeTipo(item.tipo)}>
-              <span>{rotuloTipoLembrete(item.tipo)}</span>
-              <p>{item.texto}</p>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+          {preview.length ? (
+            <ul className="session-seguimento-lista">
+              {preview.map((item) => (
+                <li key={`${item.tipo}-${item.texto}`} className={classeTipo(item.tipo)}>
+                  <span>{rotuloTipoLembrete(item.tipo)}</span>
+                  <p>{item.texto}</p>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </>
+      )}
 
-      {compacto && lembretes.lembretes.length > preview.length && onVerPlano ? (
+      {contexto !== "pre-sessao" && compacto && lembretes.lembretes.length > preview.length && onVerPlano ? (
         <button type="button" className="session-seguimento-link" onClick={onVerPlano}>
           +{lembretes.lembretes.length - preview.length} lembretes
         </button>

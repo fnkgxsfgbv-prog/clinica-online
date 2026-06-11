@@ -16,6 +16,8 @@ export type FinalidadeSugestaoPlano = "pre-sessao" | "seguimento";
 
 export type LembretesSessaoPlano = {
   focoHoje: string;
+  /** Frase curta para coluna Pré-sessão da agenda e editor. */
+  textoAgenda?: string;
   lembretes: LembreteSeguimentoPlano[];
   usouIa: boolean;
   modo: ModoLembretesPlano;
@@ -105,6 +107,104 @@ function pushLembrete(
   lista.push({ tipo, texto: limpo });
 }
 
+function textoIndesejadoPreSessao(texto: string) {
+  const limpo = texto.replace(/\s+/g, " ").trim();
+  if (!limpo) return true;
+  if (limpo.length > 140) return true;
+  if (/CID-?\s*10|F\d{2}(\.\d+)?|diagnóstico|com necessidade elevada de suporte/i.test(limpo)) {
+    return true;
+  }
+  return false;
+}
+
+function limparTextoLembretePreSessao(texto: string) {
+  return texto
+    .replace(/^Revisar:\s*/i, "")
+    .replace(/^Preparar:\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function pushLembretePreSessao(
+  lista: LembreteSeguimentoPlano[],
+  tipo: TipoLembreteSeguimento,
+  texto: string
+) {
+  const limpo = limitarTexto(limparTextoLembretePreSessao(texto), 100);
+  if (!limpo || textoIndesejadoPreSessao(limpo)) return;
+  if (lista.some((item) => item.texto === limpo)) return;
+  lista.push({ tipo, texto: limpo });
+}
+
+export function formatarPreparacaoTextoAgenda(
+  lembretes: LembretesSessaoPlano,
+  maximo = 220
+) {
+  if (lembretes.textoAgenda?.trim()) {
+    return limitarTexto(lembretes.textoAgenda.trim(), maximo);
+  }
+
+  const partes: string[] = [];
+  const foco = limparTextoLembretePreSessao(lembretes.focoHoje);
+  if (foco && !textoIndesejadoPreSessao(foco)) {
+    partes.push(foco.replace(/\.$/, ""));
+  }
+
+  for (const item of lembretes.lembretes) {
+    if (partes.length >= 3) break;
+
+    const texto = limparTextoLembretePreSessao(item.texto);
+    if (!texto || textoIndesejadoPreSessao(texto)) continue;
+    if (item.tipo === "monitorar" && /continuidade|última sessão/i.test(texto)) continue;
+    if (partes.some((parte) => parte.toLowerCase().includes(texto.toLowerCase().slice(0, 40)))) {
+      continue;
+    }
+
+    partes.push(texto.replace(/\.$/, ""));
+  }
+
+  if (!partes.length) {
+    return "Revisar metas e preparo da sessão com base no plano vigente.";
+  }
+
+  if (partes.length === 1) {
+    const frase = partes[0].endsWith(".") ? partes[0] : `${partes[0]}.`;
+    return limitarTexto(frase, maximo);
+  }
+
+  const [primeiro, ...resto] = partes;
+  let frase = primeiro;
+
+  if (resto.length === 1) {
+    const complemento = resto[0];
+    const inicio = complemento.charAt(0).toLowerCase() + complemento.slice(1);
+    frase = `${primeiro}, com foco em ${inicio}`;
+  } else if (resto.length >= 2) {
+    const meio = resto.slice(0, -1).join(", ");
+    const ultimo = resto.at(-1) || "";
+    frase = `${primeiro}, com foco em ${meio} e ${ultimo.charAt(0).toLowerCase()}${ultimo.slice(1)}`;
+  }
+
+  if (!frase.endsWith(".")) frase += ".";
+  return limitarTexto(frase, maximo);
+}
+
+function enriquecerPreparacaoParaAgenda(resultado: LembretesSessaoPlano): LembretesSessaoPlano {
+  const textoAgenda = formatarPreparacaoTextoAgenda(resultado);
+  const focoHoje = textoIndesejadoPreSessao(resultado.focoHoje)
+    ? textoAgenda
+    : limitarTexto(limparTextoLembretePreSessao(resultado.focoHoje), 180) || textoAgenda;
+
+  return {
+    ...resultado,
+    focoHoje,
+    textoAgenda,
+    lembretes: resultado.lembretes
+      .filter((item) => !textoIndesejadoPreSessao(limparTextoLembretePreSessao(item.texto)))
+      .slice(0, 4),
+  };
+}
+
 export function gerarLembretesBasicos(planoHtml: string): LembretesSessaoPlano {
   const secoes = extrairSecoesPlanoHtml(planoHtml);
   const lembretes: LembreteSeguimentoPlano[] = [];
@@ -184,8 +284,8 @@ export function gerarLembretesBasicos(planoHtml: string): LembretesSessaoPlano {
 export function gerarPreparacaoPreSessaoBasica(planoHtml: string): LembretesSessaoPlano {
   const secoes = extrairSecoesPlanoHtml(planoHtml);
   const lembretes: LembreteSeguimentoPlano[] = [];
+  const acoes: string[] = [];
 
-  const demanda = escolherSecao(secoes, ["demanda", "queixa", "motivo", "hipótese", "hipotese"]);
   const objetivos = escolherSecao(secoes, [
     "objetivo geral",
     "objetivos gerais",
@@ -204,42 +304,54 @@ export function gerarPreparacaoPreSessaoBasica(planoHtml: string): LembretesSess
     "tecnic",
   ]);
 
-  const focoHoje =
-    limitarTexto(demanda?.paragrafo || "", 180) ||
-    limitarTexto(objetivos?.paragrafo || "", 180) ||
-    limitarTexto(objetivos?.itens[0] || "", 180) ||
-    "Revisar o plano e definir tema de abertura da sessão.";
-
-  for (const item of (objetivos?.itens || []).slice(0, 3)) {
-    pushLembrete(lembretes, "meta", `Revisar: ${item}`);
-  }
-
   for (const item of (procedimentos?.itens || []).slice(0, 2)) {
-    pushLembrete(lembretes, "tecnica", `Preparar: ${item}`);
+    if (textoIndesejadoPreSessao(item)) continue;
+    acoes.push(item);
+    pushLembretePreSessao(lembretes, "tecnica", item);
   }
 
   if (procedimentos?.paragrafo && !procedimentos.itens.length) {
-    pushLembrete(lembretes, "tecnica", `Preparar: ${procedimentos.paragrafo}`);
-  }
-
-  pushLembrete(lembretes, "monitorar", "Checar continuidade desde a última sessão");
-
-  if (lembretes.length <= 1) {
-    for (const secao of secoes.slice(0, 3)) {
-      if (secao.itens.length) {
-        pushLembrete(lembretes, "meta", `Revisar: ${secao.itens[0]}`);
-      } else if (secao.paragrafo) {
-        pushLembrete(lembretes, "meta", secao.paragrafo);
-      }
+    const paragrafo = limitarTexto(procedimentos.paragrafo, 100);
+    if (!textoIndesejadoPreSessao(paragrafo)) {
+      acoes.push(paragrafo);
+      pushLembretePreSessao(lembretes, "tecnica", paragrafo);
     }
   }
 
-  return {
+  for (const item of (objetivos?.itens || []).slice(0, 2)) {
+    if (textoIndesejadoPreSessao(item)) continue;
+    acoes.push(item);
+    pushLembretePreSessao(lembretes, "meta", item);
+  }
+
+  if (!acoes.length && objetivos?.paragrafo && !textoIndesejadoPreSessao(objetivos.paragrafo)) {
+    const paragrafo = limitarTexto(objetivos.paragrafo, 100);
+    acoes.push(paragrafo);
+    pushLembretePreSessao(lembretes, "meta", paragrafo);
+  }
+
+  const focoHoje =
+    acoes[0] ||
+    limitarTexto(objetivos?.itens[0] || "", 100) ||
+    "Revisar metas e preparo da sessão com base no plano vigente.";
+
+  if (!lembretes.length) {
+    for (const secao of secoes.slice(0, 4)) {
+      if (secao.itens.length) {
+        pushLembretePreSessao(lembretes, "meta", secao.itens[0]);
+      } else if (secao.paragrafo) {
+        pushLembretePreSessao(lembretes, "meta", secao.paragrafo);
+      }
+      if (lembretes.length) break;
+    }
+  }
+
+  return enriquecerPreparacaoParaAgenda({
     focoHoje,
-    lembretes: lembretes.slice(0, 6),
+    lembretes,
     usouIa: false,
     modo: "basico",
-  };
+  });
 }
 
 function textoPlanoParaPrompt(planoHtml: string) {
@@ -270,7 +382,10 @@ function contextoPromptPlano({
   return `${contextoSessao}${contextoEvolucao}Plano terapêutico:\n\n${textoPlano}`;
 }
 
-function parseRespostaIaLembretes(bruto: string): LembretesSessaoPlano | null {
+function parseRespostaIaLembretes(
+  bruto: string,
+  opcoes: { preSessao?: boolean } = {}
+): LembretesSessaoPlano | null {
   const limpo = bruto
     .replace(/^```json?\s*/i, "")
     .replace(/```\s*$/i, "")
@@ -278,27 +393,33 @@ function parseRespostaIaLembretes(bruto: string): LembretesSessaoPlano | null {
 
   try {
     const json = JSON.parse(limpo) as {
+      textoAgenda?: string;
       focoHoje?: string;
       lembretes?: Array<{ tipo?: string; texto?: string }>;
     };
 
-    const focoHoje = limitarTexto(json.focoHoje || "", 180);
+    const textoAgenda = limitarTexto(json.textoAgenda || "", 220);
+    const focoHoje = limitarTexto(json.textoAgenda || json.focoHoje || "", 180);
     const lembretes: LembreteSeguimentoPlano[] = [];
+    const push = opcoes.preSessao ? pushLembretePreSessao : pushLembrete;
 
     for (const item of json.lembretes || []) {
       const tipo = item.tipo as TipoLembreteSeguimento;
       if (!["foco", "meta", "tecnica", "monitorar"].includes(tipo)) continue;
-      pushLembrete(lembretes, tipo, item.texto || "");
+      push(lembretes, tipo, item.texto || "");
     }
 
-    if (!focoHoje && !lembretes.length) return null;
+    if (!focoHoje && !textoAgenda && !lembretes.length) return null;
 
-    return {
+    const resultado: LembretesSessaoPlano = {
       focoHoje: focoHoje || lembretes[0]?.texto || "",
-      lembretes: lembretes.slice(0, 6),
+      textoAgenda: textoAgenda || undefined,
+      lembretes: lembretes.slice(0, opcoes.preSessao ? 4 : 6),
       usouIa: true,
       modo: "ia",
     };
+
+    return opcoes.preSessao ? enriquecerPreparacaoParaAgenda(resultado) : resultado;
   } catch {
     return null;
   }
@@ -327,11 +448,13 @@ Regras:
 - Use SOMENTE informações do plano fornecido; não invente metas, técnicas ou diagnósticos.
 - Foque em preparo antecipado: tema de abertura, o que revisar, materiais ou pontos a checar antes de começar.
 - NÃO escreva roteiro para usar durante a sessão — isso é preparo prévio.
+- NÃO copie parágrafos longos, códigos CID-10 ou blocos de diagnóstico do plano.
 - Responda APENAS JSON válido no formato:
-{"focoHoje":"string","lembretes":[{"tipo":"meta|tecnica|monitorar","texto":"string"}]}
-- focoHoje: 1 frase sobre como abrir/preparar esta sessão (máx. 180 caracteres).
-- lembretes: 3 a 6 itens, tipos permitidos: meta, tecnica, monitorar.
-- Não repita o focoHoje nos lembretes.
+{"textoAgenda":"string","focoHoje":"string","lembretes":[{"tipo":"meta|tecnica|monitorar","texto":"string"}]}
+- textoAgenda: UMA frase fluida (máx. 220 caracteres) para a coluna Pré-sessão da agenda. Estilo: "Aplicação dos instrumentos X, com foco na participação funcional."
+- focoHoje: resumo curto do preparo (máx. 180 caracteres), preferencialmente igual ao textoAgenda.
+- lembretes: 2 a 4 itens curtos (máx. 100 caracteres cada), tipos: meta, tecnica, monitorar.
+- Não repita o textoAgenda nos lembretes.
 - Linguagem clínica, objetiva, em português do Brasil.`;
 
   try {
@@ -351,7 +474,7 @@ Regras:
       ],
     });
 
-    const parseado = parseRespostaIaLembretes(bruto);
+    const parseado = parseRespostaIaLembretes(bruto, { preSessao: true });
     if (!parseado) {
       return {
         ...gerarPreparacaoPreSessaoBasica(planoHtml),
@@ -446,16 +569,8 @@ function escaparHtmlTexto(texto: string) {
     .replaceAll(">", "&gt;");
 }
 
-/** HTML simples para colar no editor de pré-sessão. */
+/** HTML mínimo para colar no editor de pré-sessão (texto curto estilo agenda). */
 export function formatarLembretesHtmlPreSessao(lembretes: LembretesSessaoPlano) {
-  const itens = lembretes.lembretes
-    .map(
-      (item) =>
-        `<li><strong>${escaparHtmlTexto(rotuloTipoLembrete(item.tipo))}:</strong> ${escaparHtmlTexto(item.texto)}</li>`
-    )
-    .join("");
-
-  return `<p><strong>Preparo sugerido:</strong> ${escaparHtmlTexto(lembretes.focoHoje)}</p>${
-    itens ? `<ul>${itens}</ul>` : ""
-  }`;
+  const texto = formatarPreparacaoTextoAgenda(lembretes);
+  return `<p>${escaparHtmlTexto(texto)}</p>`;
 }

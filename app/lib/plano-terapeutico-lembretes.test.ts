@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   extrairSecoesPlanoHtml,
   formatarLembretesHtmlPreSessao,
+  formatarPreparacaoTextoAgenda,
   gerarLembretesBasicos,
   gerarPreparacaoPreSessaoBasica,
   rotuloTipoLembrete,
@@ -35,24 +36,46 @@ describe("gerarLembretesBasicos", () => {
 });
 
 describe("formatarLembretesHtmlPreSessao", () => {
-  it("monta html com foco e lembretes", () => {
+  it("monta parágrafo curto para o editor", () => {
     const html =
       "<h3>3. OBJETIVO GERAL</h3><p>Promover autonomia.</p><h3>4. OBJETIVOS ESPECÍFICOS</h3><ul><li>Desenvolver habilidades sociais</li></ul>";
-    const lembretes = gerarLembretesBasicos(html);
+    const lembretes = gerarPreparacaoPreSessaoBasica(html);
     const formatado = formatarLembretesHtmlPreSessao(lembretes);
-    expect(formatado).toContain("Preparo sugerido");
-    expect(formatado).toContain("<ul>");
+    expect(formatado).toContain("<p>");
+    expect(formatado).not.toContain("Preparo sugerido");
+    expect(formatado).not.toContain("<ul>");
+  });
+});
+
+describe("formatarPreparacaoTextoAgenda", () => {
+  it("gera frase fluida curta", () => {
+    const html =
+      "<h3>5. PROCEDIMENTOS</h3><ul><li>Aplicação dos instrumentos BPA-2</li></ul><h3>4. OBJETIVOS ESPECÍFICOS</h3><ul><li>Participação funcional</li></ul>";
+    const lembretes = gerarPreparacaoPreSessaoBasica(html);
+    const texto = formatarPreparacaoTextoAgenda(lembretes);
+    expect(texto.length).toBeLessThanOrEqual(220);
+    expect(texto).toContain("BPA-2");
+    expect(texto).not.toMatch(/CID-10/i);
+  });
+
+  it("ignora blocos longos de diagnóstico", () => {
+    const html =
+      "<h3>2. DESCRIÇÃO DA DEMANDA</h3><p>CID-10: F84.0, com necessidade elevada de suporte, caracterizado por prejuízos significativos na comunicação, interação social e regulação comportamental prolongada no plano.</p><h3>5. PROCEDIMENTOS</h3><ul><li>Psicoeducação parental</li></ul>";
+    const lembretes = gerarPreparacaoPreSessaoBasica(html);
+    const texto = formatarPreparacaoTextoAgenda(lembretes);
+    expect(texto).not.toMatch(/CID-10/i);
+    expect(texto).toContain("Psicoeducação");
   });
 });
 
 describe("gerarPreparacaoPreSessaoBasica", () => {
-  it("prioriza revisão e preparo", () => {
+  it("prioriza procedimentos e objetivos acionáveis", () => {
     const html =
       "<h3>2. DESCRIÇÃO DA DEMANDA</h3><p>Ansiedade social.</p><h3>4. OBJETIVOS ESPECÍFICOS</h3><ul><li>Desenvolver habilidades sociais</li></ul><h3>5. PROCEDIMENTOS</h3><ul><li>Psicoeducação</li></ul>";
     const resultado = gerarPreparacaoPreSessaoBasica(html);
-    expect(resultado.focoHoje).toContain("Ansiedade");
-    expect(resultado.lembretes.some((item) => item.texto.includes("Revisar:"))).toBe(true);
-    expect(resultado.lembretes.some((item) => item.texto.includes("Preparar:"))).toBe(true);
+    expect(resultado.textoAgenda).toContain("Psicoeducação");
+    expect(resultado.lembretes.some((item) => item.texto.includes("Psicoeducação"))).toBe(true);
+    expect(resultado.lembretes.some((item) => /continuidade/i.test(item.texto))).toBe(false);
   });
 });
 

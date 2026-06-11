@@ -3,6 +3,8 @@ import type { PacienteDocumento } from "../../types";
 import { TABLES } from "./tables";
 import { mensagemErroSupabase } from "../supabase-error";
 
+type SupabaseDbClient = Pick<typeof supabase, "from">;
+
 export const PACIENTE_DOCUMENTOS_BUCKET = "paciente-documentos";
 const MAX_DOCUMENTO_BYTES = 15 * 1024 * 1024; // 15MB
 
@@ -426,4 +428,79 @@ export async function substituirDocumentoPaciente({
   }
 
   return update;
+}
+
+/** Registra metadados de arquivo já enviado ao bucket (ex.: PDF do plano terapêutico). */
+export async function registrarDocumentoPacienteExistente(
+  client: SupabaseDbClient,
+  {
+    userId,
+    pacienteId,
+    nomeArquivo,
+    storagePath,
+    tipoMime,
+    tamanhoBytes,
+  }: {
+    userId: string;
+    pacienteId: string | number;
+    nomeArquivo: string;
+    storagePath: string;
+    tipoMime?: string | null;
+    tamanhoBytes?: number | null;
+  }
+) {
+  const existente = await client
+    .from(TABLES.PACIENTE_DOCUMENTOS)
+    .select("*")
+    .eq("user_id", userId)
+    .eq("storage_path", storagePath)
+    .maybeSingle();
+
+  if (existente.error) {
+    return {
+      data: null,
+      error: new Error(mensagemErroSupabase("registrar documento", existente.error)),
+    };
+  }
+
+  if (existente.data) {
+    return { data: existente.data as PacienteDocumento, error: null };
+  }
+
+  const insert = await client
+    .from(TABLES.PACIENTE_DOCUMENTOS)
+    .insert([
+      {
+        user_id: userId,
+        paciente_id: String(pacienteId),
+        nome_arquivo: nomeArquivo,
+        storage_path: storagePath,
+        tipo_mime: tipoMime || null,
+        tamanho_bytes: tamanhoBytes ?? null,
+      },
+    ])
+    .select("*")
+    .single();
+
+  if (insert.error) {
+    return {
+      data: null,
+      error: new Error(mensagemErroSupabase("registrar documento", insert.error)),
+    };
+  }
+
+  return { data: insert.data as PacienteDocumento, error: null };
+}
+
+/** Remove metadados de documento pelo caminho no storage (não apaga o arquivo). */
+export async function removerDocumentoPorStoragePath(
+  client: SupabaseDbClient,
+  userId: string,
+  storagePath: string
+) {
+  return client
+    .from(TABLES.PACIENTE_DOCUMENTOS)
+    .delete()
+    .eq("user_id", userId)
+    .eq("storage_path", storagePath);
 }

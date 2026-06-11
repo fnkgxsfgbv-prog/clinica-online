@@ -40,8 +40,10 @@ type ImportacaoPdfPendente = {
 
 export default function PlanoTerapeuticoSection({
   pacienteId,
+  onDocumentosChanged,
 }: {
   pacienteId: string | number;
+  onDocumentosChanged?: () => Promise<void>;
 }) {
   const router = useRouter();
   const inputPdfRef = useRef<HTMLInputElement>(null);
@@ -219,6 +221,7 @@ export default function PlanoTerapeuticoSection({
         pdfNomeArquivo: corpo.pdfNomeArquivo,
         pdfStoragePath: corpo.pdfStoragePath,
       });
+      await onDocumentosChanged?.();
     } catch {
       setErro("Falha de rede ao importar o PDF. Tente novamente.");
     } finally {
