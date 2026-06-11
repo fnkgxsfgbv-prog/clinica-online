@@ -4,7 +4,9 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { createPublicKey, publicEncrypt } from "node:crypto";
+import pkg from "tweetsodium";
+
+const { seal: sealSecret } = pkg;
 
 const repo = "fnkgxsfgbv-prog/clinica-online";
 const secretName = process.env.SECRET_NAME?.trim() || "VERCEL_TOKEN";
@@ -25,6 +27,8 @@ function ghApi(path, { method = "GET", body } = {}) {
     "curl",
     [
       "-sS",
+      "-w",
+      "\n%{http_code}",
       "-X",
       method,
       "-H",
@@ -44,29 +48,31 @@ function ghApi(path, { method = "GET", body } = {}) {
     console.error(r.stderr || r.stdout);
     process.exit(r.status ?? 1);
   }
-  return JSON.parse(r.stdout);
+  const lines = r.stdout.trim().split("\n");
+  const code = lines.pop();
+  const text = lines.join("\n");
+  const parsed = text ? JSON.parse(text) : null;
+  if (Number(code) >= 400) {
+    console.error(`GitHub API ${method} ${path} → ${code}`, parsed?.message || text);
+    process.exit(1);
+  }
+  return { code, body: parsed };
 }
 
-const { key_id: keyId, key: publicKeyB64 } = ghApi(
+const { body: publicKey } = ghApi(
   `/repos/${repo}/actions/secrets/public-key`
 );
 
-const publicKey = createPublicKey({
-  key: Buffer.from(publicKeyB64, "base64"),
-  format: "der",
-  type: "spki",
-});
-
-const encrypted = publicEncrypt(
-  { key: publicKey, padding: 4 /* RSA_PKCS1_OAEP_PADDING */ },
-  Buffer.from(secretValue, "utf8")
+const encryptedBytes = sealSecret(
+  Buffer.from(secretValue, "utf8"),
+  Buffer.from(publicKey.key, "base64")
 );
 
 ghApi(`/repos/${repo}/actions/secrets/${secretName}`, {
   method: "PUT",
   body: {
-    encrypted_value: encrypted.toString("base64"),
-    key_id: keyId,
+    encrypted_value: Buffer.from(encryptedBytes).toString("base64"),
+    key_id: publicKey.key_id,
   },
 });
 
