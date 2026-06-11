@@ -18,6 +18,11 @@ import {
   listEvolucoesPorPacientePorId,
   updateEvolucao,
 } from "../../lib/db/evolucoes";
+import { getPlanoTerapeuticoPorPaciente } from "../../lib/db/plano-terapeutico";
+import {
+  planoTerapeuticoTemConteudo,
+  resumoTextoClinico,
+} from "../../lib/resumo-texto-clinico";
 import Janela from "../../components/Janela";
 import FlashMessage from "../../components/FlashMessage";
 import RichTextEditor, {
@@ -34,7 +39,7 @@ import { toFiniteNumberId } from "../../lib/id";
 import EvolucaoHistoricoCard from "../../components/EvolucaoHistoricoCard";
 import EmptyState from "../../components/ui/EmptyState";
 import { PageSkeleton } from "../../components/ui/Skeleton";
-import type { Evolucao, Sessao } from "../../types";
+import type { Evolucao, PacientePlanoTerapeutico, Sessao } from "../../types";
 
 type AbaRegistroSessao =
   | "pre-sessao"
@@ -78,6 +83,8 @@ export default function SessaoPage() {
   const [novaHora, setNovaHora] = useState("");
   const [carregandoInicial, setCarregandoInicial] = useState(true);
   const [erroCarga, setErroCarga] = useState("");
+  const [planoTerapeutico, setPlanoTerapeutico] = useState("");
+  const [planoTerapeuticoCarregado, setPlanoTerapeuticoCarregado] = useState(false);
   const ultimoSnapshotAnotacoesRef = useRef("");
   const salvandoAnotacoesRef = useRef(false);
   const salvarNovamenteDepoisRef = useRef(false);
@@ -117,10 +124,16 @@ export default function SessaoPage() {
   useEffect(() => {
     if (sessao?.paciente_id) {
       void carregarEvolucoes();
+      void carregarPlanoTerapeutico();
     }
-    // carregarEvolucoes deve rodar quando a sessão carregada muda.
+    // carregarEvolucoes e carregarPlanoTerapeutico devem rodar quando a sessão carregada muda.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessao]);
+
+  useEffect(() => {
+    setPlanoTerapeutico("");
+    setPlanoTerapeuticoCarregado(false);
+  }, [sessao?.id]);
 
   useEffect(() => {
     if (modoAnotacoes) setAbaRegistro("anotacoes");
@@ -303,6 +316,33 @@ export default function SessaoPage() {
 
     setSessao(data as Sessao);
     setCarregandoInicial(false);
+  }
+
+  async function carregarPlanoTerapeutico() {
+    if (!sessao?.paciente_id) return;
+
+    setPlanoTerapeuticoCarregado(false);
+
+    const user = await requireUserClient(router, getCurrentUser);
+    if (!user) {
+      setPlanoTerapeuticoCarregado(true);
+      return;
+    }
+
+    const { data, error } = await getPlanoTerapeuticoPorPaciente(
+      user.id,
+      sessao.paciente_id
+    );
+
+    if (error) {
+      setPlanoTerapeutico("");
+      setPlanoTerapeuticoCarregado(true);
+      return;
+    }
+
+    const registro = (data || null) as PacientePlanoTerapeutico | null;
+    setPlanoTerapeutico(registro?.conteudo || "");
+    setPlanoTerapeuticoCarregado(true);
   }
 
   async function carregarEvolucoes() {
@@ -734,6 +774,34 @@ export default function SessaoPage() {
             >
               Evolução clínica
             </button>
+
+            <div className="session-plano-panel" aria-label="Plano terapêutico vigente">
+              <strong>Plano vigente</strong>
+              {!planoTerapeuticoCarregado ? (
+                <p className="session-plano-empty">Carregando plano...</p>
+              ) : planoTerapeuticoTemConteudo(planoTerapeutico) ? (
+                <p className="session-plano-resumo">
+                  {resumoTextoClinico(planoTerapeutico, 320)}
+                </p>
+              ) : (
+                <p className="session-plano-empty">
+                  Nenhum plano cadastrado para este paciente.
+                </p>
+              )}
+              {sessao?.paciente_id ? (
+                <button
+                  type="button"
+                  className="session-plano-link"
+                  onClick={() =>
+                    router.push(`/paciente/${sessao.paciente_id}?aba=plano`)
+                  }
+                >
+                  {planoTerapeuticoTemConteudo(planoTerapeutico)
+                    ? "Editar plano"
+                    : "Cadastrar plano"}
+                </button>
+              ) : null}
+            </div>
           </aside>
 
           <section className="session-notes-editor">

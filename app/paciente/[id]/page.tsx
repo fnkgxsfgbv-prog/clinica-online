@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AnamneseSection from "./AnamneseSection";
+import PlanoTerapeuticoSection from "./PlanoTerapeuticoSection";
 import FlashMessage from "../../components/FlashMessage";
 import Janela from "../../components/Janela";
 import { getCurrentUser } from "../../lib/auth";
@@ -98,7 +99,13 @@ function enriquecerSessoes(lista: Sessao[]): SessaoLista[] {
   }));
 }
 
-const ABAS_PACIENTE = ["sessoes", "evolucoes", "documentos", "formularios"] as const;
+const ABAS_PACIENTE = [
+  "sessoes",
+  "evolucoes",
+  "plano",
+  "documentos",
+  "formularios",
+] as const;
 
 export default function PacientePage() {
   const router = useRouter();
@@ -658,6 +665,16 @@ export default function PacientePage() {
           <button
             type="button"
             className={
+              aba === "plano" ? "patient-tab is-active" : "patient-tab"
+            }
+            onClick={() => setAba("plano")}
+          >
+            Plano terapêutico
+          </button>
+
+          <button
+            type="button"
+            className={
               aba === "documentos" ? "patient-tab is-active" : "patient-tab"
             }
             onClick={() => setAba("documentos")}
@@ -773,6 +790,10 @@ export default function PacientePage() {
             )}
           </div>
         )}
+
+        {aba === "plano" && paciente ? (
+          <PlanoTerapeuticoSection pacienteId={idPaciente} />
+        ) : null}
 
         {aba === "documentos" && (
           <div className="session-list">

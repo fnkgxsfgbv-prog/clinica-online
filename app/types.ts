@@ -130,6 +130,15 @@ export type ModeloArquivo = {
   created_at?: string | null;
 };
 
+export type PacientePlanoTerapeutico = {
+  id: number | string;
+  user_id?: string | null;
+  paciente_id: number | string;
+  conteudo?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
 export type PacienteFormulario = {
   id: number | string;
   user_id?: string | null;

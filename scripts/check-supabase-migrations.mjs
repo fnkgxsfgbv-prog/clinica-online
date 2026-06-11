@@ -21,6 +21,10 @@ const checks = [
   { nome: "paciente_documentos", sql: "SELECT to_regclass('public.paciente_documentos') AS ok" },
   { nome: "paciente_anamnese", sql: "SELECT to_regclass('public.paciente_anamnese') AS ok" },
   {
+    nome: "paciente_plano_terapeutico",
+    sql: "SELECT to_regclass('public.paciente_plano_terapeutico') AS ok",
+  },
+  {
     nome: "documento_modelos",
     sql: "SELECT to_regclass('public.documento_modelos') AS ok",
   },
@@ -74,6 +78,7 @@ for (const { nome, sql } of checks) {
 console.log("\nMigrations locais (aplicar se faltar algo):");
 console.log("  npm run db:apply-documentos   # 010–013");
 console.log("  npm run db:apply-anamnese     # 011–014");
+console.log("  npm run db:apply-plano-terapeutico # 019");
 console.log("  npm run db:apply-modelos      # 015");
 console.log("  npm run db:fix-sessoes-delete # 016");
 

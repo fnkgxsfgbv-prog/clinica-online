@@ -9048,6 +9048,79 @@ td {
   color: #ffffff !important;
 }
 
+.plano-terapeutico-section {
+  display: grid;
+  gap: 14px;
+}
+
+.plano-terapeutico-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.plano-terapeutico-header strong {
+  color: #ffffff;
+  font-size: 16px;
+}
+
+.plano-terapeutico-header p {
+  margin: 6px 0 0;
+}
+
+.plano-terapeutico-updated {
+  margin-top: 8px !important;
+  font-size: 12px !important;
+}
+
+.session-plano-panel {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.session-plano-panel strong {
+  color: #ffffff;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.session-plano-resumo {
+  margin: 0;
+  color: #c9d0da;
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+.session-plano-empty {
+  margin: 0;
+  color: #9aa3b2;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.session-plano-link {
+  justify-self: start;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #5ec4b7 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  text-decoration: underline;
+  box-shadow: none !important;
+}
+
+.session-plano-link:hover {
+  color: #7fd8cc !important;
+}
+
 .session-notes-editor {
   display: grid;
   grid-template-rows: auto 1fr;
@@ -9162,6 +9235,27 @@ td {
 [data-theme="light"] .session-notes-sidebar button.is-active {
   background: #eef2ff !important;
   color: #17212b !important;
+}
+
+[data-theme="light"] .plano-terapeutico-header strong,
+[data-theme="light"] .session-plano-panel strong {
+  color: #17212b;
+}
+
+[data-theme="light"] .session-plano-resumo {
+  color: #425466;
+}
+
+[data-theme="light"] .session-plano-empty {
+  color: #6b7785;
+}
+
+[data-theme="light"] .session-plano-link {
+  color: #1f8f7a !important;
+}
+
+[data-theme="light"] .session-plano-panel {
+  border-top-color: rgba(15, 23, 42, 0.1);
 }
 
 [data-theme="light"] .session-evolution-card h3 {
