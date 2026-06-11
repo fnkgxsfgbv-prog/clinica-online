@@ -25,12 +25,6 @@ import EmptyState from "../components/ui/EmptyState";
 import { PatientsSkeleton } from "../components/ui/Skeleton";
 import type { Paciente } from "../types";
 
-function hrefTelefone(telefone: string | null | undefined) {
-  const digits = String(telefone || "").replace(/\D/g, "");
-  if (digits.length < 8) return null;
-  return `tel:${digits}`;
-}
-
 export default function PacientesPage() {
   const router = useRouter();
 
@@ -165,8 +159,6 @@ export default function PacientesPage() {
   }
 
   function renderAcoes(p: Paciente, compacto = false) {
-    const telHref = hrefTelefone(p.telefone);
-
     return (
       <div className={compacto ? "patient-mobile-actions" : "patients-actions"}>
         <button
@@ -180,27 +172,6 @@ export default function PacientesPage() {
         >
           Agendar
         </button>
-
-        {telHref ? (
-          <a
-            className="btn btn-outline"
-            href={telHref}
-            title={`Ligar para ${p.nome}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            Ligar
-          </a>
-        ) : (
-          <button
-            type="button"
-            className="btn btn-outline"
-            disabled
-            title="Sem telefone cadastrado"
-            onClick={(e) => e.stopPropagation()}
-          >
-            Ligar
-          </button>
-        )}
 
         <button
           type="button"
@@ -326,7 +297,6 @@ export default function PacientesPage() {
                 <tr>
                   <th>Nome</th>
                   <th>Status</th>
-                  <th>Telefone</th>
                   <th>Convênio</th>
                   <th>CID</th>
                   <th>Valor</th>
@@ -380,9 +350,6 @@ export default function PacientesPage() {
                         </span>
                       </td>
 
-                      <td className="patients-phone-cell">
-                        {p.telefone?.trim() ? p.telefone : "—"}
-                      </td>
                       <td>{p.convenio || "—"}</td>
                       <td>{formatarCidParaExibicao(p.cid)}</td>
                       <td>{p.valor_sessao ? `R$ ${p.valor_sessao}` : "—"}</td>
@@ -438,9 +405,6 @@ export default function PacientesPage() {
                     ) : null}
 
                     <div className="patient-mobile-meta">
-                      <span>
-                        Tel.: {p.telefone?.trim() ? p.telefone : "—"}
-                      </span>
                       <span>Convênio: {p.convenio || "—"}</span>
                       <span>CID: {formatarCidParaExibicao(p.cid)}</span>
                       <span>

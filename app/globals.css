@@ -3776,23 +3776,19 @@ button:hover {
 }
 
 .patients-table th:nth-child(4) {
-  width: 120px;
+  width: 100px;
 }
 
 .patients-table th:nth-child(5) {
-  width: 80px;
-}
-
-.patients-table th:nth-child(6) {
   width: 90px;
 }
 
-.patients-table th:nth-child(7) {
+.patients-table th:nth-child(6) {
   width: 340px;
   text-align: right;
 }
 
-.patients-table td:nth-child(6) {
+.patients-table td:nth-child(5) {
   white-space: nowrap;
 }
 
@@ -3844,11 +3840,6 @@ button:hover {
   background: rgba(245, 158, 11, 0.22);
 }
 
-.patients-phone-cell {
-  white-space: nowrap;
-  font-size: 13px;
-}
-
 .patients-actions-cell {
   text-align: right;
   min-width: 340px;
@@ -3856,7 +3847,7 @@ button:hover {
 
 .patients-actions {
   display: grid;
-  grid-template-columns: repeat(4, minmax(68px, 1fr));
+  grid-template-columns: repeat(3, minmax(68px, 1fr));
   justify-content: flex-end;
   align-items: center;
   gap: 7px;
