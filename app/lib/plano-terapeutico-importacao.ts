@@ -29,7 +29,6 @@ const ROTULOS_SECAO = [
   "interven",
   "técnic",
   "tecnica",
-  "tecnica",
   "plano",
   "monitor",
   "indicador",
@@ -42,19 +41,155 @@ const ROTULOS_SECAO = [
   "hipotese",
   "queixa",
   "demanda",
+  "diagnóstico",
+  "diagnostico",
+  "procedimento",
+  "justificativa",
+  "protocolo",
+  "acompanhamento",
+  "critério",
+  "criterio",
+  "descrição",
+  "descricao",
 ];
+
+function letrasMaiusculas(texto: string) {
+  const letras = texto.replace(/[^A-Za-zÀ-ú]/g, "");
+  if (!letras.length) return 0;
+  const maiusculas = (texto.match(/[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ]/g) || []).length;
+  return maiusculas / letras.length;
+}
+
+function pareceTituloSecaoNumerado(linha: string) {
+  const match = linha.trim().match(/^(\d{1,2})\.\s+(.+)$/);
+  if (!match) return false;
+  const titulo = match[2].trim();
+  if (titulo.length > 100) return false;
+  return letrasMaiusculas(titulo) >= 0.7;
+}
+
+function pareceItemLista(linha: string) {
+  const limpa = linha.trim();
+  if (/^[-•*–—]\s+/.test(limpa)) return true;
+  if (/^[a-h][.)]\s+/i.test(limpa)) return true;
+  if (/^\d{1,2}[)]\s+/.test(limpa)) return true;
+  const match = limpa.match(/^(\d{1,2})\.\s+(.+)$/);
+  if (!match) return false;
+  return !pareceTituloSecaoNumerado(limpa);
+}
 
 function pareceTituloSecao(linha: string) {
   const limpa = linha.trim();
-  if (!limpa || limpa.length > 90) return false;
+  if (!limpa || limpa.length > 120) return false;
+  if (pareceTituloSecaoNumerado(limpa)) return true;
   if (/[:：]$/.test(limpa)) return true;
-  if (/^\d+[\).\-\s]/.test(limpa)) return true;
+  if (/^PLANO\s+TERAP[EÊ]UTICO/i.test(limpa)) return true;
   const lower = limpa.toLowerCase();
-  return ROTULOS_SECAO.some((rotulo) => lower.includes(rotulo));
+  if (ROTULOS_SECAO.some((rotulo) => lower.includes(rotulo)) && limpa.length <= 90) {
+    return true;
+  }
+  return false;
+}
+
+function textoPdfVeioColado(texto: string) {
+  const linhas = texto.split("\n").map((linha) => linha.trim()).filter(Boolean);
+  const temSecoesInline = contarSecoesNumeradasInline(texto) >= 2;
+  if (linhas.length <= 2 && texto.length > 200 && temSecoesInline) return true;
+  if (linhas.length <= 2 && texto.length > 400) return true;
+  const proporcaoQuebras = (texto.match(/\n/g)?.length || 0) / Math.max(texto.length, 1);
+  return proporcaoQuebras < 0.002 && texto.length > 300;
+}
+
+function contarSecoesNumeradasInline(texto: string) {
+  return (texto.match(/\d{1,2}\.\s+[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ][A-ZÁÉÍÓÚÀÂÊÔÃÕÇ\s\-/]{2,}/g) || [])
+    .length;
+}
+
+function removerBlocosRepetidos(texto: string) {
+  const linhas = texto.split("\n").map((linha) => linha.trim()).filter(Boolean);
+  if (linhas.length < 4) return texto;
+
+  const contagem = new Map<string, number>();
+  for (const linha of linhas) {
+    if (linha.length < 25 || linha.length > 220) continue;
+    contagem.set(linha, (contagem.get(linha) || 0) + 1);
+  }
+
+  const repetidas = new Set(
+    [...contagem.entries()].filter(([, vezes]) => vezes >= 2).map(([linha]) => linha)
+  );
+  if (!repetidas.size) return texto;
+
+  const visto = new Set<string>();
+  return linhas
+    .filter((linha) => {
+      if (!repetidas.has(linha)) return true;
+      if (visto.has(linha)) return false;
+      visto.add(linha);
+      return true;
+    })
+    .join("\n");
+}
+
+function limparEspacosPdf(texto: string) {
+  return texto
+    .replace(/\r/g, "")
+    .replace(/\u0000/g, "")
+    .replace(/[\u00a0\u202f]/g, " ")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
+function quebrarSecoesNumeradasInline(texto: string) {
+  return texto.replace(
+    /\s+(\d{1,2})\.\s+([A-ZÁÉÍÓÚÀÂÊÔÃÕÇ][A-ZÁÉÍÓÚÀÂÊÔÃÕÇ\s\-/()]*?)(?=\s+[A-ZÁÉÍÓÚÀÂÊÔÃÕ][a-záéíóúàâêôãõç]|\s+\d{1,2}\.\s|\s+\d{1,2}[)]\s|\s+[a-h][.)]\s|\s*$)/g,
+    (_, num, titulo) => {
+      if (letrasMaiusculas(titulo) >= 0.65) {
+        return `\n\n${num}. ${titulo.trim()}\n`;
+      }
+      return ` ${num}. ${titulo}`;
+    }
+  );
+}
+
+function quebrarItensListaInline(texto: string) {
+  let t = texto;
+
+  t = t.replace(/\s+(\d{1,2})[)]\s+/g, "\n$1) ");
+
+  t = t.replace(/\s+([a-h])[)]\s+/gi, "\n$1) ");
+
+  t = t.replace(/\s+(\d{1,2})\.\s+([A-ZÁÉÍÓÚÀÂÊÔÃÕ][a-záéíóúàâêôãõç])/g, "\n$1. $2");
+
+  t = t.replace(/\s+([a-h])\.\s+/gi, "\n$1. ");
+
+  return t.replace(/\s(?=[-•*–—]\s+)/g, "\n");
+}
+
+export function normalizarTextoExtraidoPdf(texto: string) {
+  let t = limparEspacosPdf(texto);
+  if (!t) return "";
+
+  t = removerBlocosRepetidos(t);
+
+  const precisaOrganizar =
+    textoPdfVeioColado(t) || contarSecoesNumeradasInline(t) >= 2;
+
+  if (!precisaOrganizar) {
+    return t.replace(/\n{3,}/g, "\n\n");
+  }
+
+  t = t.replace(/\s+(PLANO\s+TERAP[EÊ]UTICO[^\n]{0,160})/gi, "\n\n$1\n");
+
+  t = quebrarSecoesNumeradasInline(t);
+  t = quebrarItensListaInline(t);
+
+  return t.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 export function estruturarPlanoBasico(textoExtraido: string) {
-  const linhas = textoExtraido
+  const normalizado = normalizarTextoExtraidoPdf(textoExtraido);
+  const linhas = normalizado
     .split("\n")
     .map((linha) => linha.trim())
     .filter(Boolean);
@@ -62,7 +197,6 @@ export function estruturarPlanoBasico(textoExtraido: string) {
   if (!linhas.length) return "";
 
   const partes: string[] = [];
-  let tituloAtual = "";
   let paragrafoAtual: string[] = [];
   let listaAtual: string[] = [];
 
@@ -84,16 +218,27 @@ export function estruturarPlanoBasico(textoExtraido: string) {
   }
 
   for (const linha of linhas) {
-    if (pareceTituloSecao(linha)) {
+    if (/^PLANO\s+TERAP[EÊ]UTICO/i.test(linha)) {
       flushSecao();
-      tituloAtual = linha.replace(/[:：]\s*$/, "");
-      partes.push(blocoTitulo(tituloAtual));
+      partes.push(blocoTitulo(linha));
       continue;
     }
 
-    if (/^[-•*–—]\s+/.test(linha) || /^\d+[\).\-\s]+/.test(linha)) {
+    if (pareceTituloSecao(linha)) {
+      flushSecao();
+      const titulo = linha.replace(/[:：]\s*$/, "");
+      partes.push(blocoTitulo(titulo));
+      continue;
+    }
+
+    if (pareceItemLista(linha)) {
       flushParagrafo();
-      listaAtual.push(linha.replace(/^[-•*–—]\s+/, "").replace(/^\d+[\).\-\s]+/, ""));
+      listaAtual.push(
+        linha
+          .replace(/^[-•*–—]\s+/, "")
+          .replace(/^(\d{1,2})[.)]\s+/, "")
+          .replace(/^([a-h])[.)]\s+/i, "")
+      );
       continue;
     }
 
@@ -102,7 +247,19 @@ export function estruturarPlanoBasico(textoExtraido: string) {
   }
 
   flushSecao();
-  return partes.join("");
+
+  const html = partes.join("");
+  if (
+    html &&
+    !html.includes("<h3>") &&
+    contarSecoesNumeradasInline(textoExtraido) >= 2
+  ) {
+    return estruturarPlanoBasico(
+      quebrarSecoesNumeradasInline(quebrarItensListaInline(limparEspacosPdf(textoExtraido)))
+    );
+  }
+
+  return html;
 }
 
 type RespostaOpenAi = {
@@ -120,12 +277,15 @@ export async function estruturarPlanoComIa(textoExtraido: string) {
   }
 
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+  const textoNormalizado = normalizarTextoExtraidoPdf(textoExtraido);
   const promptSistema = `Você organiza planos terapêuticos clínicos em HTML simples para prontuário psicológico.
 Regras:
 - Use SOMENTE informações presentes no texto fornecido; não invente diagnósticos, metas ou técnicas.
 - Se algo não estiver no texto, omita.
 - Saída: HTML simples com tags h3, p, ul, li, strong. Sem html/body/script/style.
-- Agrupe em seções claras quando possível: Objetivos, Fases/Etapas, Intervenções/Técnicas, Monitoramento, Observações.
+- Separe claramente cada seção numerada (ex.: "1. DIAGNÓSTICO", "2. DESCRIÇÃO DA DEMANDA") em h3 próprio.
+- Transforme listas numeradas ou com letras (a., b., 1., 2.) em ul/li.
+- Nunca deixe o documento inteiro em um único parágrafo.
 - Mantenha linguagem clínica fiel ao documento original.
 - Responda APENAS com o HTML.`;
 
@@ -142,7 +302,7 @@ Regras:
         { role: "system", content: promptSistema },
         {
           role: "user",
-          content: `Organize este plano terapêutico extraído de PDF:\n\n${textoExtraido.slice(0, 120000)}`,
+          content: `Organize este plano terapêutico extraído de PDF:\n\n${textoNormalizado.slice(0, 120000)}`,
         },
       ],
     }),
