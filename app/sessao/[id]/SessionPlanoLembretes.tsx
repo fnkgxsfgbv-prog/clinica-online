@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
+
+import { AJUDA_SEGUIMENTO_SESSAO } from "../../lib/ia-ajuda";
 import { rotuloModoLembretes } from "../../lib/ia-aviso";
 import {
   rotuloTipoLembrete,
   type LembretesSessaoPlano,
   type TipoLembreteSeguimento,
 } from "../../lib/plano-terapeutico-lembretes";
+import IaAjudaLista from "../../components/IaAjudaLista";
 
 function classeTipo(tipo: TipoLembreteSeguimento) {
   if (tipo === "meta") return "is-meta";
@@ -16,6 +20,29 @@ function classeTipo(tipo: TipoLembreteSeguimento) {
 
 function classeBadgeModo(modo: LembretesSessaoPlano["modo"]) {
   return modo === "ia" ? "is-ia" : "is-basico";
+}
+
+function SeguimentoAjuda({ compacto = false }: { compacto?: boolean }) {
+  const [aberta, setAberta] = useState(false);
+
+  return (
+    <div className="session-seguimento-ajuda">
+      <button
+        type="button"
+        className="session-seguimento-link"
+        aria-expanded={aberta}
+        onClick={() => setAberta((atual) => !atual)}
+      >
+        {aberta ? "Ocultar como funciona" : "Como funciona?"}
+      </button>
+      {aberta ? (
+        <IaAjudaLista
+          itens={AJUDA_SEGUIMENTO_SESSAO}
+          className={compacto ? "is-compact" : undefined}
+        />
+      ) : null}
+    </div>
+  );
 }
 
 export default function SessionPlanoLembretes({
@@ -114,6 +141,7 @@ export default function SessionPlanoLembretes({
             ) : null}
           </div>
         ) : null}
+        <SeguimentoAjuda compacto={compacto} />
       </div>
     );
   }
@@ -169,6 +197,8 @@ export default function SessionPlanoLembretes({
           +{lembretes.lembretes.length - preview.length} lembretes
         </button>
       ) : null}
+
+      <SeguimentoAjuda compacto={compacto} />
     </div>
   );
 }

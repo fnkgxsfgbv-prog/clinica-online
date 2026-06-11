@@ -9170,6 +9170,11 @@ td {
   color: #7fd8cc !important;
 }
 
+.session-seguimento-ajuda {
+  display: grid;
+  gap: 8px;
+}
+
 .session-plano-stack {
   display: grid;
   gap: 14px;
@@ -11568,6 +11573,28 @@ td {
   margin: 0;
   font-size: 0.95rem;
   color: var(--text);
+}
+
+.ia-ajuda-lista {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.ia-ajuda-lista.is-compact {
+  font-size: 0.78rem;
+}
+
+.ia-ajuda-lista.conta-ia-ajuda {
+  margin-top: 4px;
+}
+
+.conta-ia-mais {
+  margin: 0;
 }
 
 .conta-actions-row {

@@ -54,7 +54,7 @@ export default function PrivacidadePage() {
         </p>
       </section>
 
-      <section>
+      <section id="ia">
         <h2>5. Recursos de inteligência artificial (opcional)</h2>
         <p>
           Algumas funções do PsicoDesk podem usar modelos de linguagem via Vercel

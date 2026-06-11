@@ -3,11 +3,13 @@
 import Link from "next/link";
 
 import { usePreferencias } from "./PreferenciasProvider";
+import IaAjudaLista from "./IaAjudaLista";
 import {
   aplicarTemaNoDocumento,
   preferenciasPadrao,
   type TemaPreferencia,
 } from "../lib/preferencias";
+import { AJUDA_PRIVACIDADE_IA } from "../lib/ia-ajuda";
 import { TEXTO_PRIVACIDADE_IA } from "../lib/ia-aviso";
 
 type Props = {
@@ -100,6 +102,10 @@ export default function ContaTemaPanel({ email }: Props) {
             <span>Usar IA para organizar PDF e lembretes na sessão</span>
           </label>
           <span className="context-prefs-hint">{TEXTO_PRIVACIDADE_IA}</span>
+          <IaAjudaLista itens={AJUDA_PRIVACIDADE_IA} className="conta-ia-ajuda" />
+          <p className="context-prefs-hint conta-ia-mais">
+            <Link href="/privacidade#ia">Política completa sobre IA e dados</Link>
+          </p>
         </div>
 
         <div className="conta-actions-row">
