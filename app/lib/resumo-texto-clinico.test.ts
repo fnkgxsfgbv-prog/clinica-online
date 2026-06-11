@@ -13,6 +13,13 @@ describe("resumoTextoClinico", () => {
     expect(resumo).toContain("Meta principal");
     expect(resumo).not.toContain("<p>");
   });
+
+  it("preserva espaço entre blocos html", () => {
+    const html = "<h3>1. DIAGNÓSTICO</h3><p>Transtorno do Espectro Autista</p>";
+    expect(resumoTextoClinico(html, 200)).toBe(
+      "1. DIAGNÓSTICO Transtorno do Espectro Autista"
+    );
+  });
 });
 
 describe("planoTerapeuticoTemConteudo", () => {

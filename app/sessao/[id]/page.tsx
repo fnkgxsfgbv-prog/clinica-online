@@ -21,7 +21,6 @@ import {
 import { getPlanoTerapeuticoPorPaciente } from "../../lib/db/plano-terapeutico";
 import {
   planoTerapeuticoTemConteudo,
-  resumoTextoClinico,
 } from "../../lib/resumo-texto-clinico";
 import Janela from "../../components/Janela";
 import FlashMessage from "../../components/FlashMessage";
@@ -780,9 +779,12 @@ export default function SessaoPage() {
               {!planoTerapeuticoCarregado ? (
                 <p className="session-plano-empty">Carregando plano...</p>
               ) : planoTerapeuticoTemConteudo(planoTerapeutico) ? (
-                <p className="session-plano-resumo">
-                  {resumoTextoClinico(planoTerapeutico, 320)}
-                </p>
+                <div
+                  className="session-plano-conteudo"
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizarHtmlBasico(planoTerapeutico),
+                  }}
+                />
               ) : (
                 <p className="session-plano-empty">
                   Nenhum plano cadastrado para este paciente.
