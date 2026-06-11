@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 
 const alvo = ["app/lib/openai-config.test.ts", "app/lib/ia-client.test.ts"];
 
-const r = spawnSync("npm", ["test", "--", ...alvo], {
+const r = spawnSync("npx", ["vitest", "run", ...alvo], {
   stdio: "inherit",
   shell: process.platform === "win32",
 });

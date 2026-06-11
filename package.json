@@ -40,7 +40,7 @@
     "site:url": "bash scripts/site-url.sh",
     "producao:comercial": "node scripts/producao-comercial.mjs",
     "vercel:bootstrap": "node scripts/vercel-bootstrap.mjs",
-    "test": "vitest run"
+    "test": "vitest run && node scripts/ia-check-config.mjs"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.15.0",
