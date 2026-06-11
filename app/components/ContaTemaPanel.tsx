@@ -91,16 +91,20 @@ export default function ContaTemaPanel({ email }: Props) {
           <label className="context-prefs-check conta-ia-prefs-check">
             <input
               type="checkbox"
-              checked={preferencias.usarSugestaoPlanoPreSessao}
+              checked={preferencias.usarSugestaoPlanoNaSessao}
               onChange={(e) =>
                 void atualizarPreferencias(
-                  { usarSugestaoPlanoPreSessao: e.target.checked },
+                  { usarSugestaoPlanoNaSessao: e.target.checked },
                   { salvarNuvem: true }
                 )
               }
             />
-            <span>Mostrar sugestões do plano na aba Pré-sessão</span>
+            <span>Mostrar sugestões do plano na sessão</span>
           </label>
+          <span className="context-prefs-hint conta-ia-prefs-hint">
+            Pré-sessão, anotações e plano terapêutico. A coluna Pré-sessão na agenda
+            continua mostrando o texto que você salvar.
+          </span>
           <label className="context-prefs-check">
             <input
               type="checkbox"

@@ -4,6 +4,7 @@ import {
   extrairSecoesPlanoHtml,
   formatarLembretesHtmlPreSessao,
   gerarLembretesBasicos,
+  gerarPreparacaoPreSessaoBasica,
   rotuloTipoLembrete,
 } from "./plano-terapeutico-lembretes";
 
@@ -39,8 +40,19 @@ describe("formatarLembretesHtmlPreSessao", () => {
       "<h3>3. OBJETIVO GERAL</h3><p>Promover autonomia.</p><h3>4. OBJETIVOS ESPECÍFICOS</h3><ul><li>Desenvolver habilidades sociais</li></ul>";
     const lembretes = gerarLembretesBasicos(html);
     const formatado = formatarLembretesHtmlPreSessao(lembretes);
-    expect(formatado).toContain("Foco sugerido");
+    expect(formatado).toContain("Preparo sugerido");
     expect(formatado).toContain("<ul>");
+  });
+});
+
+describe("gerarPreparacaoPreSessaoBasica", () => {
+  it("prioriza revisão e preparo", () => {
+    const html =
+      "<h3>2. DESCRIÇÃO DA DEMANDA</h3><p>Ansiedade social.</p><h3>4. OBJETIVOS ESPECÍFICOS</h3><ul><li>Desenvolver habilidades sociais</li></ul><h3>5. PROCEDIMENTOS</h3><ul><li>Psicoeducação</li></ul>";
+    const resultado = gerarPreparacaoPreSessaoBasica(html);
+    expect(resultado.focoHoje).toContain("Ansiedade");
+    expect(resultado.lembretes.some((item) => item.texto.includes("Revisar:"))).toBe(true);
+    expect(resultado.lembretes.some((item) => item.texto.includes("Preparar:"))).toBe(true);
   });
 });
 

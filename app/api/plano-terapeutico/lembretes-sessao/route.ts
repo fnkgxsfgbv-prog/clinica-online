@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 import { getPlanoTerapeuticoPorPaciente } from "../../../lib/db/plano-terapeutico";
 import { valoresPacienteIdParaQuery } from "../../../lib/db/paciente-id-query";
 import { TABLES } from "../../../lib/db/tables";
-import { gerarLembretesSessaoPlano } from "../../../lib/plano-terapeutico-lembretes";
+import {
+  gerarLembretesSessaoPlano,
+  gerarPreparacaoPreSessaoPlano,
+  type FinalidadeSugestaoPlano,
+} from "../../../lib/plano-terapeutico-lembretes";
 import { iaClinicaHabilitadaNasPreferencias } from "../../../lib/preferencias";
 import { planoTerapeuticoTemConteudo } from "../../../lib/resumo-texto-clinico";
 import { createSupabaseServerClient } from "../../../lib/supabase/server";
@@ -50,6 +54,7 @@ export async function POST(request: Request) {
     planoConteudo?: string;
     somenteBasico?: boolean;
     ultimaEvolucaoResumo?: string;
+    finalidade?: FinalidadeSugestaoPlano;
   };
 
   try {
@@ -87,13 +92,21 @@ export async function POST(request: Request) {
     );
   }
 
-  const lembretes = await gerarLembretesSessaoPlano({
+  const finalidade: FinalidadeSugestaoPlano =
+    corpo.finalidade === "pre-sessao" ? "pre-sessao" : "seguimento";
+
+  const opcoes = {
     planoHtml,
     sessaoData: corpo.sessaoData,
     ultimaEvolucaoResumo: String(corpo.ultimaEvolucaoResumo || "").trim() || undefined,
     usarIaClinica: iaClinicaHabilitadaNasPreferencias(user.user_metadata),
     somenteBasico: Boolean(corpo.somenteBasico),
-  });
+  };
+
+  const lembretes =
+    finalidade === "pre-sessao"
+      ? await gerarPreparacaoPreSessaoPlano(opcoes)
+      : await gerarLembretesSessaoPlano(opcoes);
 
   return NextResponse.json(lembretes);
 }

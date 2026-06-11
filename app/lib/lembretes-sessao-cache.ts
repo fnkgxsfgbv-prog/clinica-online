@@ -1,4 +1,7 @@
-import type { LembretesSessaoPlano } from "./plano-terapeutico-lembretes";
+import type {
+  FinalidadeSugestaoPlano,
+  LembretesSessaoPlano,
+} from "./plano-terapeutico-lembretes";
 
 const PREFIXO = "psicodesk-lembretes";
 
@@ -11,14 +14,20 @@ export function hashPlanoParaCache(conteudo: string): string {
   return (hash >>> 0).toString(36);
 }
 
-function chaveCache(sessaoId: string | number, planoHash: string) {
-  return `${PREFIXO}:${sessaoId}:${planoHash}`;
+function chaveCache(
+  finalidade: FinalidadeSugestaoPlano,
+  sessaoId: string | number,
+  planoHash: string
+) {
+  return `${PREFIXO}:${finalidade}:${sessaoId}:${planoHash}`;
 }
 
 export function lerLembretesSessaoCache({
+  finalidade,
   sessaoId,
   planoConteudo,
 }: {
+  finalidade: FinalidadeSugestaoPlano;
   sessaoId: string | number;
   planoConteudo: string;
 }): LembretesSessaoPlano | null {
@@ -26,7 +35,7 @@ export function lerLembretesSessaoCache({
 
   try {
     const hash = hashPlanoParaCache(planoConteudo);
-    const raw = window.sessionStorage.getItem(chaveCache(sessaoId, hash));
+    const raw = window.sessionStorage.getItem(chaveCache(finalidade, sessaoId, hash));
     if (!raw) return null;
     return JSON.parse(raw) as LembretesSessaoPlano;
   } catch {
@@ -35,10 +44,12 @@ export function lerLembretesSessaoCache({
 }
 
 export function gravarLembretesSessaoCache({
+  finalidade,
   sessaoId,
   planoConteudo,
   lembretes,
 }: {
+  finalidade: FinalidadeSugestaoPlano;
   sessaoId: string | number;
   planoConteudo: string;
   lembretes: LembretesSessaoPlano;
@@ -48,7 +59,7 @@ export function gravarLembretesSessaoCache({
   try {
     const hash = hashPlanoParaCache(planoConteudo);
     window.sessionStorage.setItem(
-      chaveCache(sessaoId, hash),
+      chaveCache(finalidade, sessaoId, hash),
       JSON.stringify(lembretes)
     );
   } catch {

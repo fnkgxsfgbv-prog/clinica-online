@@ -46,7 +46,9 @@ import {
 } from "../../lib/lembretes-sessao-cache";
 import {
   gerarLembretesBasicos,
+  gerarPreparacaoPreSessaoBasica,
   formatarLembretesHtmlPreSessao,
+  type FinalidadeSugestaoPlano,
   type LembretesSessaoPlano,
 } from "../../lib/plano-terapeutico-lembretes";
 import { resumoEvolucaoParaIa } from "../../lib/plano-ia-texto";
@@ -98,11 +100,14 @@ export default function SessaoPage() {
   const [erroCarga, setErroCarga] = useState("");
   const [planoTerapeutico, setPlanoTerapeutico] = useState("");
   const [planoTerapeuticoCarregado, setPlanoTerapeuticoCarregado] = useState(false);
-  const [lembretesSessao, setLembretesSessao] = useState<LembretesSessaoPlano | null>(
+  const [preparacaoPlano, setPreparacaoPlano] = useState<LembretesSessaoPlano | null>(null);
+  const [preparacaoCarregando, setPreparacaoCarregando] = useState(false);
+  const [preparacaoErro, setPreparacaoErro] = useState("");
+  const [lembretesSeguimento, setLembretesSeguimento] = useState<LembretesSessaoPlano | null>(
     null
   );
-  const [lembretesCarregando, setLembretesCarregando] = useState(false);
-  const [lembretesErro, setLembretesErro] = useState("");
+  const [seguimentoCarregando, setSeguimentoCarregando] = useState(false);
+  const [seguimentoErro, setSeguimentoErro] = useState("");
   const ultimoSnapshotAnotacoesRef = useRef("");
   const salvandoAnotacoesRef = useRef(false);
   const salvarNovamenteDepoisRef = useRef(false);
@@ -151,8 +156,10 @@ export default function SessaoPage() {
   useEffect(() => {
     setPlanoTerapeutico("");
     setPlanoTerapeuticoCarregado(false);
-    setLembretesSessao(null);
-    setLembretesErro("");
+    setPreparacaoPlano(null);
+    setPreparacaoErro("");
+    setLembretesSeguimento(null);
+    setSeguimentoErro("");
   }, [sessao?.id]);
 
   useEffect(() => {
@@ -164,12 +171,22 @@ export default function SessaoPage() {
       return;
     }
 
-    const emCache = lerLembretesSessaoCache({
+    const preparacaoCache = lerLembretesSessaoCache({
+      finalidade: "pre-sessao",
       sessaoId: sessao.id,
       planoConteudo: planoTerapeutico,
     });
-    if (emCache) {
-      setLembretesSessao(emCache);
+    if (preparacaoCache) {
+      setPreparacaoPlano(preparacaoCache);
+    }
+
+    const seguimentoCache = lerLembretesSessaoCache({
+      finalidade: "seguimento",
+      sessaoId: sessao.id,
+      planoConteudo: planoTerapeutico,
+    });
+    if (seguimentoCache) {
+      setLembretesSeguimento(seguimentoCache);
     }
   }, [planoTerapeuticoCarregado, planoTerapeutico, sessao?.id]);
 
@@ -396,48 +413,77 @@ export default function SessaoPage() {
     return resumo || undefined;
   }
 
-  function aplicarResumoBasicoLembretes() {
+  function aplicarResumoBasico(finalidade: FinalidadeSugestaoPlano) {
     if (!sessao?.id || !planoTerapeuticoTemConteudo(planoTerapeutico)) return;
 
-    const basico = gerarLembretesBasicos(planoTerapeutico);
-    setLembretesSessao(basico);
-    setLembretesErro("");
+    const sugestao =
+      finalidade === "pre-sessao"
+        ? gerarPreparacaoPreSessaoBasica(planoTerapeutico)
+        : gerarLembretesBasicos(planoTerapeutico);
+
+    if (finalidade === "pre-sessao") {
+      setPreparacaoPlano(sugestao);
+      setPreparacaoErro("");
+    } else {
+      setLembretesSeguimento(sugestao);
+      setSeguimentoErro("");
+    }
+
     gravarLembretesSessaoCache({
+      finalidade,
       sessaoId: sessao.id,
       planoConteudo: planoTerapeutico,
-      lembretes: basico,
+      lembretes: sugestao,
     });
   }
 
-  function inserirLembretesNoPreSessao() {
-    if (!lembretesSessao) return;
+  function inserirPreparacaoNoPreSessao() {
+    if (!preparacaoPlano) return;
 
-    const html = formatarLembretesHtmlPreSessao(lembretesSessao);
+    const html = formatarLembretesHtmlPreSessao(preparacaoPlano);
     const separador = preSessao.trim() ? "<p></p>" : "";
     setPreSessao(`${preSessao}${separador}${html}`);
     mostrarMensagem("Sugestão inserida no preparo. Revise antes de salvar.");
   }
 
-  async function carregarLembretesSessao(opcoes: { forcar?: boolean } = {}) {
+  async function carregarSugestaoPlano(
+    finalidade: FinalidadeSugestaoPlano,
+    opcoes: { forcar?: boolean } = {}
+  ) {
     if (!sessao?.paciente_id || !planoTerapeuticoTemConteudo(planoTerapeutico)) {
-      setLembretesSessao(null);
+      if (finalidade === "pre-sessao") {
+        setPreparacaoPlano(null);
+      } else {
+        setLembretesSeguimento(null);
+      }
       return;
     }
 
     if (!opcoes.forcar && sessao.id) {
       const emCache = lerLembretesSessaoCache({
+        finalidade,
         sessaoId: sessao.id,
         planoConteudo: planoTerapeutico,
       });
       if (emCache) {
-        setLembretesSessao(emCache);
-        setLembretesErro("");
+        if (finalidade === "pre-sessao") {
+          setPreparacaoPlano(emCache);
+          setPreparacaoErro("");
+        } else {
+          setLembretesSeguimento(emCache);
+          setSeguimentoErro("");
+        }
         return;
       }
     }
 
-    setLembretesCarregando(true);
-    setLembretesErro("");
+    if (finalidade === "pre-sessao") {
+      setPreparacaoCarregando(true);
+      setPreparacaoErro("");
+    } else {
+      setSeguimentoCarregando(true);
+      setSeguimentoErro("");
+    }
 
     try {
       const resposta = await fetch("/api/plano-terapeutico/lembretes-sessao", {
@@ -449,30 +495,51 @@ export default function SessaoPage() {
           sessaoData: sessao.data || undefined,
           planoConteudo: planoTerapeutico,
           ultimaEvolucaoResumo: resumoUltimaEvolucaoAtual(),
+          finalidade,
         }),
       });
 
       const corpo = (await resposta.json()) as LembretesSessaoPlano & { erro?: string };
 
       if (!resposta.ok) {
-        setLembretesSessao(null);
-        setLembretesErro(corpo.erro || "Não foi possível gerar lembretes.");
+        if (finalidade === "pre-sessao") {
+          setPreparacaoPlano(null);
+          setPreparacaoErro(corpo.erro || "Não foi possível gerar sugestões.");
+        } else {
+          setLembretesSeguimento(null);
+          setSeguimentoErro(corpo.erro || "Não foi possível gerar lembretes.");
+        }
         return;
       }
 
-      setLembretesSessao(corpo);
+      if (finalidade === "pre-sessao") {
+        setPreparacaoPlano(corpo);
+      } else {
+        setLembretesSeguimento(corpo);
+      }
+
       if (sessao.id) {
         gravarLembretesSessaoCache({
+          finalidade,
           sessaoId: sessao.id,
           planoConteudo: planoTerapeutico,
           lembretes: corpo,
         });
       }
     } catch {
-      setLembretesSessao(null);
-      setLembretesErro("Falha de rede ao gerar lembretes.");
+      if (finalidade === "pre-sessao") {
+        setPreparacaoPlano(null);
+        setPreparacaoErro("Falha de rede ao gerar sugestões.");
+      } else {
+        setLembretesSeguimento(null);
+        setSeguimentoErro("Falha de rede ao gerar lembretes.");
+      }
     } finally {
-      setLembretesCarregando(false);
+      if (finalidade === "pre-sessao") {
+        setPreparacaoCarregando(false);
+      } else {
+        setSeguimentoCarregando(false);
+      }
     }
   }
 
@@ -763,6 +830,14 @@ export default function SessaoPage() {
     );
   }
 
+  const temPlanoTerapeutico = planoTerapeuticoTemConteudo(planoTerapeutico);
+  const mostrarSugestoesPlano =
+    preferencias.usarSugestaoPlanoNaSessao && temPlanoTerapeutico;
+  const mostrarBannerSeguimento =
+    mostrarSugestoesPlano &&
+    abaRegistro !== "plano-vigente" &&
+    abaRegistro !== "pre-sessao";
+
   return (
     <div className="session-detail-page">
       {!modoAnotacoes ? (
@@ -876,6 +951,20 @@ export default function SessaoPage() {
           <FlashMessage kind="success">{mensagem}</FlashMessage>
         ) : null}
         <div className="session-notes-workspace">
+          {mostrarBannerSeguimento ? (
+            <SessionPlanoLembretes
+              compacto
+              contexto="sessao"
+              temPlano={temPlanoTerapeutico}
+              lembretes={lembretesSeguimento}
+              carregando={seguimentoCarregando}
+              erro={seguimentoErro}
+              onVerPlano={() => setAbaRegistro("plano-vigente")}
+              onGerarComIa={() => void carregarSugestaoPlano("seguimento", { forcar: true })}
+              onResumoBasico={() => aplicarResumoBasico("seguimento")}
+              onRegenerar={() => void carregarSugestaoPlano("seguimento", { forcar: true })}
+            />
+          ) : null}
           <div className="session-notes-layout">
           <aside className="session-notes-sidebar" aria-label="Abas do registro da sessão">
             <button
@@ -928,15 +1017,14 @@ export default function SessaoPage() {
                   <p>Planeje a sessão. Sugestões do plano são opcionais — você escolhe se usa.</p>
                 ) : null}
               </div>
-              {abaRegistro === "pre-sessao" &&
-              planoTerapeuticoTemConteudo(planoTerapeutico) ? (
+              {abaRegistro === "pre-sessao" && temPlanoTerapeutico ? (
                 <label className="session-pre-sessao-ia-toggle context-prefs-check">
                   <input
                     type="checkbox"
-                    checked={preferencias.usarSugestaoPlanoPreSessao}
+                    checked={preferencias.usarSugestaoPlanoNaSessao}
                     onChange={(e) =>
                       void atualizarPreferencias(
-                        { usarSugestaoPlanoPreSessao: e.target.checked },
+                        { usarSugestaoPlanoNaSessao: e.target.checked },
                         { salvarNuvem: true }
                       )
                     }
@@ -982,16 +1070,22 @@ export default function SessaoPage() {
                 </p>
               ) : planoTerapeuticoTemConteudo(planoTerapeutico) ? (
                 <div className="session-plano-stack">
-                  <SessionPlanoLembretes
-                    contexto="sessao"
-                    temPlano={planoTerapeuticoTemConteudo(planoTerapeutico)}
-                    lembretes={lembretesSessao}
-                    carregando={lembretesCarregando}
-                    erro={lembretesErro}
-                    onGerarComIa={() => void carregarLembretesSessao({ forcar: true })}
-                    onResumoBasico={aplicarResumoBasicoLembretes}
-                    onRegenerar={() => void carregarLembretesSessao({ forcar: true })}
-                  />
+                  {mostrarSugestoesPlano ? (
+                    <SessionPlanoLembretes
+                      contexto="sessao"
+                      temPlano={temPlanoTerapeutico}
+                      lembretes={lembretesSeguimento}
+                      carregando={seguimentoCarregando}
+                      erro={seguimentoErro}
+                      onGerarComIa={() =>
+                        void carregarSugestaoPlano("seguimento", { forcar: true })
+                      }
+                      onResumoBasico={() => aplicarResumoBasico("seguimento")}
+                      onRegenerar={() =>
+                        void carregarSugestaoPlano("seguimento", { forcar: true })
+                      }
+                    />
+                  ) : null}
                   <div
                     className="session-plano-view rich-text-output"
                     dangerouslySetInnerHTML={{
@@ -1060,21 +1154,23 @@ export default function SessaoPage() {
                   placeholder="Orientações e encaminhamentos..."
                 />
               </div>
-            ) : abaRegistro === "pre-sessao" &&
-              preferencias.usarSugestaoPlanoPreSessao &&
-              planoTerapeuticoTemConteudo(planoTerapeutico) ? (
+            ) : abaRegistro === "pre-sessao" && mostrarSugestoesPlano ? (
               <div className="session-pre-sessao-stack">
                 <SessionPlanoLembretes
                   contexto="pre-sessao"
-                  temPlano={planoTerapeuticoTemConteudo(planoTerapeutico)}
-                  lembretes={lembretesSessao}
-                  carregando={lembretesCarregando}
-                  erro={lembretesErro}
+                  temPlano={temPlanoTerapeutico}
+                  lembretes={preparacaoPlano}
+                  carregando={preparacaoCarregando}
+                  erro={preparacaoErro}
                   onVerPlano={() => setAbaRegistro("plano-vigente")}
-                  onGerarComIa={() => void carregarLembretesSessao({ forcar: true })}
-                  onResumoBasico={aplicarResumoBasicoLembretes}
-                  onRegenerar={() => void carregarLembretesSessao({ forcar: true })}
-                  onInserirNoPreparo={inserirLembretesNoPreSessao}
+                  onGerarComIa={() =>
+                    void carregarSugestaoPlano("pre-sessao", { forcar: true })
+                  }
+                  onResumoBasico={() => aplicarResumoBasico("pre-sessao")}
+                  onRegenerar={() =>
+                    void carregarSugestaoPlano("pre-sessao", { forcar: true })
+                  }
+                  onInserirNoPreparo={inserirPreparacaoNoPreSessao}
                 />
                 <RichTextEditor
                   key={abaRegistro}

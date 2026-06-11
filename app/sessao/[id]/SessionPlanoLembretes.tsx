@@ -91,7 +91,11 @@ export default function SessionPlanoLembretes({
         aria-live="polite"
       >
         <strong>{titulo}</strong>
-        <p className="session-seguimento-muted">Gerando lembretes do plano...</p>
+        <p className="session-seguimento-muted">
+          {contexto === "pre-sessao"
+            ? "Gerando sugestões de preparo..."
+            : "Gerando lembretes do plano..."}
+        </p>
       </div>
     );
   }

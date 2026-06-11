@@ -1,11 +1,12 @@
 export const AJUDA_SEGUIMENTO_SESSAO = [
-  "Resumo automático: organiza o plano no seu navegador, sem enviar dados à internet.",
-  "Gerar com IA: envia trechos do plano (e, se existir, resumo da última evolução) à Vercel AI Gateway.",
-  "Nada é gerado ao abrir a sessão — você escolhe quando pedir sugestões.",
-  "Na aba Pré-sessão, use “Usar no preparo” só se quiser colar a sugestão no editor.",
-  "Desative as sugestões na pré-sessão em Minha clínica ou pelo toggle na própria aba.",
-  "Lembretes ficam em cache nesta aba do navegador enquanto o plano não mudar.",
-  "Regenerar força uma nova sugestão com IA, ignorando o cache.",
+  "Preparo (aba Pré-sessão): foco em abertura, revisão e pontos a checar antes da sessão.",
+  "Seguimento (anotações/plano): lembretes práticos para consultar durante o atendimento.",
+  "Resumo automático roda no navegador; Gerar com IA envia trechos do plano à Vercel AI Gateway.",
+  "Nada é gerado ao abrir — você escolhe quando pedir sugestões.",
+  "Use “Usar no preparo” só se quiser colar a sugestão no editor de pré-sessão.",
+  "Desative tudo com o toggle Sugestões do plano (Minha clínica ou na aba Pré-sessão).",
+  "O cache é por sessão e plano; regenerar ignora o cache.",
+  "A coluna Pré-sessão na agenda mostra o texto salvo — independente das sugestões de IA.",
 ] as const;
 
 export const AJUDA_PRIVACIDADE_IA = [

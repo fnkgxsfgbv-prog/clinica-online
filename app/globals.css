@@ -9195,6 +9195,10 @@ td {
   margin-bottom: 4px;
 }
 
+.conta-ia-prefs-hint {
+  margin: 0 0 8px;
+}
+
 .session-plano-stack {
   display: grid;
   gap: 14px;

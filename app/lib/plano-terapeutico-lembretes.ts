@@ -12,6 +12,8 @@ export type LembreteSeguimentoPlano = {
 
 export type ModoLembretesPlano = "ia" | "basico";
 
+export type FinalidadeSugestaoPlano = "pre-sessao" | "seguimento";
+
 export type LembretesSessaoPlano = {
   focoHoje: string;
   lembretes: LembreteSeguimentoPlano[];
@@ -179,6 +181,95 @@ export function gerarLembretesBasicos(planoHtml: string): LembretesSessaoPlano {
   };
 }
 
+export function gerarPreparacaoPreSessaoBasica(planoHtml: string): LembretesSessaoPlano {
+  const secoes = extrairSecoesPlanoHtml(planoHtml);
+  const lembretes: LembreteSeguimentoPlano[] = [];
+
+  const demanda = escolherSecao(secoes, ["demanda", "queixa", "motivo", "hipótese", "hipotese"]);
+  const objetivos = escolherSecao(secoes, [
+    "objetivo geral",
+    "objetivos gerais",
+    "objetivos específicos",
+    "objetivos especificos",
+    "objetivo",
+    "meta",
+  ]);
+  const procedimentos = escolherSecao(secoes, [
+    "procedimento",
+    "estratégia",
+    "estrategia",
+    "intervenção",
+    "intervencao",
+    "técnic",
+    "tecnic",
+  ]);
+
+  const focoHoje =
+    limitarTexto(demanda?.paragrafo || "", 180) ||
+    limitarTexto(objetivos?.paragrafo || "", 180) ||
+    limitarTexto(objetivos?.itens[0] || "", 180) ||
+    "Revisar o plano e definir tema de abertura da sessão.";
+
+  for (const item of (objetivos?.itens || []).slice(0, 3)) {
+    pushLembrete(lembretes, "meta", `Revisar: ${item}`);
+  }
+
+  for (const item of (procedimentos?.itens || []).slice(0, 2)) {
+    pushLembrete(lembretes, "tecnica", `Preparar: ${item}`);
+  }
+
+  if (procedimentos?.paragrafo && !procedimentos.itens.length) {
+    pushLembrete(lembretes, "tecnica", `Preparar: ${procedimentos.paragrafo}`);
+  }
+
+  pushLembrete(lembretes, "monitorar", "Checar continuidade desde a última sessão");
+
+  if (lembretes.length <= 1) {
+    for (const secao of secoes.slice(0, 3)) {
+      if (secao.itens.length) {
+        pushLembrete(lembretes, "meta", `Revisar: ${secao.itens[0]}`);
+      } else if (secao.paragrafo) {
+        pushLembrete(lembretes, "meta", secao.paragrafo);
+      }
+    }
+  }
+
+  return {
+    focoHoje,
+    lembretes: lembretes.slice(0, 6),
+    usouIa: false,
+    modo: "basico",
+  };
+}
+
+function textoPlanoParaPrompt(planoHtml: string) {
+  const secoes = extrairSecoesPlanoHtml(planoHtml);
+  return prepararTextoPlanoParaIa(
+    secoes
+      .map((secao) => {
+        const itens = secao.itens.length ? `\n- ${secao.itens.join("\n- ")}` : "";
+        return `${secao.titulo}\n${secao.paragrafo}${itens}`;
+      })
+      .join("\n\n")
+  );
+}
+
+function contextoPromptPlano({
+  sessaoData,
+  ultimaEvolucaoResumo,
+  textoPlano,
+}: {
+  sessaoData?: string;
+  ultimaEvolucaoResumo?: string;
+  textoPlano: string;
+}) {
+  const contextoSessao = sessaoData ? `Data da sessão: ${sessaoData}\n` : "";
+  const contextoEvolucao = ultimaEvolucaoResumo
+    ? `Resumo da última evolução (sem identificação):\n${ultimaEvolucaoResumo}\n\n`
+    : "";
+  return `${contextoSessao}${contextoEvolucao}Plano terapêutico:\n\n${textoPlano}`;
+}
+
 function parseRespostaIaLembretes(bruto: string): LembretesSessaoPlano | null {
   const limpo = bruto
     .replace(/^```json?\s*/i, "")
@@ -213,6 +304,70 @@ function parseRespostaIaLembretes(bruto: string): LembretesSessaoPlano | null {
   }
 }
 
+export async function gerarPreparacaoPreSessaoPlano({
+  planoHtml,
+  sessaoData,
+  ultimaEvolucaoResumo,
+  usarIaClinica = true,
+  somenteBasico = false,
+}: {
+  planoHtml: string;
+  sessaoData?: string;
+  ultimaEvolucaoResumo?: string;
+  usarIaClinica?: boolean;
+  somenteBasico?: boolean;
+}) {
+  if (somenteBasico || !iaClinicaAtiva(usarIaClinica)) {
+    return gerarPreparacaoPreSessaoBasica(planoHtml);
+  }
+
+  const textoPlano = textoPlanoParaPrompt(planoHtml);
+  const promptSistema = `Você apoia psicólogos a PREPARAR a sessão clínica antes do atendimento, com base no plano terapêutico.
+Regras:
+- Use SOMENTE informações do plano fornecido; não invente metas, técnicas ou diagnósticos.
+- Foque em preparo antecipado: tema de abertura, o que revisar, materiais ou pontos a checar antes de começar.
+- NÃO escreva roteiro para usar durante a sessão — isso é preparo prévio.
+- Responda APENAS JSON válido no formato:
+{"focoHoje":"string","lembretes":[{"tipo":"meta|tecnica|monitorar","texto":"string"}]}
+- focoHoje: 1 frase sobre como abrir/preparar esta sessão (máx. 180 caracteres).
+- lembretes: 3 a 6 itens, tipos permitidos: meta, tecnica, monitorar.
+- Não repita o focoHoje nos lembretes.
+- Linguagem clínica, objetiva, em português do Brasil.`;
+
+  try {
+    const bruto = await chamarModeloClinico({
+      temperature: 0.3,
+      responseFormat: "json_object",
+      messages: [
+        { role: "system", content: promptSistema },
+        {
+          role: "user",
+          content: contextoPromptPlano({
+            sessaoData,
+            ultimaEvolucaoResumo,
+            textoPlano,
+          }),
+        },
+      ],
+    });
+
+    const parseado = parseRespostaIaLembretes(bruto);
+    if (!parseado) {
+      return {
+        ...gerarPreparacaoPreSessaoBasica(planoHtml),
+        avisoIa: AVISO_IA_INDISPONIVEL,
+      };
+    }
+
+    return parseado;
+  } catch {
+    return {
+      ...gerarPreparacaoPreSessaoBasica(planoHtml),
+      avisoIa: AVISO_IA_INDISPONIVEL,
+    };
+  }
+}
+
 export async function gerarLembretesSessaoPlano({
   planoHtml,
   sessaoData,
@@ -230,15 +385,7 @@ export async function gerarLembretesSessaoPlano({
     return gerarLembretesBasicos(planoHtml);
   }
 
-  const secoes = extrairSecoesPlanoHtml(planoHtml);
-  const textoPlano = prepararTextoPlanoParaIa(
-    secoes
-      .map((secao) => {
-        const itens = secao.itens.length ? `\n- ${secao.itens.join("\n- ")}` : "";
-        return `${secao.titulo}\n${secao.paragrafo}${itens}`;
-      })
-      .join("\n\n")
-  );
+  const textoPlano = textoPlanoParaPrompt(planoHtml);
 
   const promptSistema = `Você apoia psicólogos durante sessões clínicas com lembretes práticos baseados no plano terapêutico.
 Regras:
@@ -251,11 +398,6 @@ Regras:
 - Não repita o focoHoje nos lembretes.
 - Linguagem clínica, objetiva, em português do Brasil.`;
 
-  const contextoSessao = sessaoData ? `Data da sessão: ${sessaoData}\n` : "";
-  const contextoEvolucao = ultimaEvolucaoResumo
-    ? `Resumo da última evolução (sem identificação):\n${ultimaEvolucaoResumo}\n\n`
-    : "";
-
   try {
     const bruto = await chamarModeloClinico({
       temperature: 0.3,
@@ -264,7 +406,11 @@ Regras:
         { role: "system", content: promptSistema },
         {
           role: "user",
-          content: `${contextoSessao}${contextoEvolucao}Plano terapêutico:\n\n${textoPlano}`,
+          content: contextoPromptPlano({
+            sessaoData,
+            ultimaEvolucaoResumo,
+            textoPlano,
+          }),
         },
       ],
     });
@@ -309,7 +455,7 @@ export function formatarLembretesHtmlPreSessao(lembretes: LembretesSessaoPlano) 
     )
     .join("");
 
-  return `<p><strong>Foco sugerido:</strong> ${escaparHtmlTexto(lembretes.focoHoje)}</p>${
+  return `<p><strong>Preparo sugerido:</strong> ${escaparHtmlTexto(lembretes.focoHoje)}</p>${
     itens ? `<ul>${itens}</ul>` : ""
   }`;
 }

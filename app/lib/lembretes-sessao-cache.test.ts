@@ -40,28 +40,34 @@ describe("lembretes-sessao-cache sessionStorage", () => {
     modo: "basico",
   };
 
-  it("grava e lê lembretes por sessão e hash do plano", () => {
+  it("grava e lê por finalidade", () => {
     const plano = "<h3>Objetivo</h3><p>Teste</p>";
     gravarLembretesSessaoCache({
+      finalidade: "pre-sessao",
       sessaoId: 42,
       planoConteudo: plano,
       lembretes,
     });
+    gravarLembretesSessaoCache({
+      finalidade: "seguimento",
+      sessaoId: 42,
+      planoConteudo: plano,
+      lembretes: { ...lembretes, focoHoje: "Durante" },
+    });
 
     expect(
       lerLembretesSessaoCache({
+        finalidade: "pre-sessao",
         sessaoId: 42,
         planoConteudo: plano,
-      })
-    ).toEqual(lembretes);
-  });
-
-  it("não encontra cache com plano diferente", () => {
+      })?.focoHoje
+    ).toBe("Foco");
     expect(
       lerLembretesSessaoCache({
+        finalidade: "seguimento",
         sessaoId: 42,
-        planoConteudo: "<p>outro plano</p>",
-      })
-    ).toBeNull();
+        planoConteudo: plano,
+      })?.focoHoje
+    ).toBe("Durante");
   });
 });

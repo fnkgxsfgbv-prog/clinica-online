@@ -52,9 +52,14 @@ describe("mesclarPreferencias", () => {
     expect(prefs.usarIaClinica).toBe(false);
   });
 
-  it("permite desligar sugestões na pré-sessão", () => {
+  it("permite desligar sugestões do plano na sessão", () => {
+    const prefs = mesclarPreferencias({ usarSugestaoPlanoNaSessao: false });
+    expect(prefs.usarSugestaoPlanoNaSessao).toBe(false);
+  });
+
+  it("migra preferência antiga de pré-sessão", () => {
     const prefs = mesclarPreferencias({ usarSugestaoPlanoPreSessao: false });
-    expect(prefs.usarSugestaoPlanoPreSessao).toBe(false);
+    expect(prefs.usarSugestaoPlanoNaSessao).toBe(false);
   });
 });
 
