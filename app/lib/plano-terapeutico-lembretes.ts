@@ -1,3 +1,5 @@
+import { iaNaNuvemDisponivel, resolverConfigOpenAi } from "./openai-config";
+
 export type TipoLembreteSeguimento = "foco" | "meta" | "tecnica" | "monitorar";
 
 export type LembreteSeguimentoPlano = {
@@ -216,10 +218,11 @@ export async function gerarLembretesSessaoPlano({
   pacienteNome?: string;
   sessaoData?: string;
 }) {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) {
+  if (!iaNaNuvemDisponivel()) {
     return gerarLembretesBasicos(planoHtml);
   }
+
+  const { apiKey, baseUrl, model } = resolverConfigOpenAi();
 
   const secoes = extrairSecoesPlanoHtml(planoHtml);
   const textoPlano = secoes
@@ -230,7 +233,6 @@ export async function gerarLembretesSessaoPlano({
     .join("\n\n")
     .slice(0, 12000);
 
-  const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
   const promptSistema = `Você apoia psicólogos durante sessões clínicas com lembretes práticos baseados no plano terapêutico.
 Regras:
 - Use SOMENTE informações do plano fornecido; não invente metas, técnicas ou diagnósticos.
@@ -245,7 +247,7 @@ Regras:
   const contextoPaciente = pacienteNome ? `Paciente: ${pacienteNome}\n` : "";
   const contextoSessao = sessaoData ? `Data da sessão: ${sessaoData}\n` : "";
 
-  const resposta = await fetch("https://api.openai.com/v1/chat/completions", {
+  const resposta = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,

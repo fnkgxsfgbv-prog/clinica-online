@@ -1,3 +1,5 @@
+import { iaNaNuvemDisponivel, resolverConfigOpenAi } from "./openai-config";
+
 function escaparHtml(texto: string) {
   return texto
     .replaceAll("&", "&amp;")
@@ -268,15 +270,14 @@ type RespostaOpenAi = {
 };
 
 export async function estruturarPlanoComIa(textoExtraido: string) {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) {
+  if (!iaNaNuvemDisponivel()) {
     return {
       html: estruturarPlanoBasico(textoExtraido),
       usouIa: false as const,
     };
   }
 
-  const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+  const { apiKey, baseUrl, model } = resolverConfigOpenAi();
   const textoNormalizado = normalizarTextoExtraidoPdf(textoExtraido);
   const promptSistema = `Você organiza planos terapêuticos clínicos em HTML simples para prontuário psicológico.
 Regras:
@@ -289,7 +290,7 @@ Regras:
 - Mantenha linguagem clínica fiel ao documento original.
 - Responda APENAS com o HTML.`;
 
-  const resposta = await fetch("https://api.openai.com/v1/chat/completions", {
+  const resposta = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
