@@ -15,6 +15,7 @@ for (const key of requiredPublicEnv) {
 }
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["unpdf"],
   experimental: {
     optimizePackageImports: ["moment", "react-big-calendar"],
   },

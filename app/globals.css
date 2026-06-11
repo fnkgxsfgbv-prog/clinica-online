@@ -9060,6 +9060,39 @@ td {
   gap: 16px;
 }
 
+.plano-terapeutico-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.plano-terapeutico-import-preview {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid rgba(94, 196, 183, 0.35);
+  border-radius: 10px;
+  background: rgba(94, 196, 183, 0.08);
+}
+
+.plano-terapeutico-import-preview strong {
+  color: #ffffff;
+}
+
+.plano-terapeutico-import-preview p {
+  margin: 6px 0 0;
+}
+
+.plano-terapeutico-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .plano-terapeutico-header strong {
   color: #ffffff;
   font-size: 16px;
@@ -9239,6 +9272,15 @@ td {
 
 [data-theme="light"] .plano-terapeutico-header strong,
 [data-theme="light"] .session-plano-panel strong {
+  color: #17212b;
+}
+
+[data-theme="light"] .plano-terapeutico-import-preview {
+  border-color: rgba(31, 143, 122, 0.25);
+  background: rgba(31, 143, 122, 0.08);
+}
+
+[data-theme="light"] .plano-terapeutico-import-preview strong {
   color: #17212b;
 }
 

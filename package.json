@@ -27,7 +27,7 @@
     "db:apply-documentos": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/010_paciente_documentos.sql && node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/013_paciente_documentos_storage_update.sql",
     "db:apply-anamnese": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/011_paciente_anamnese.sql && node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/012_anamnese_campos_json.sql && node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/014_anamnese_nome_formulario.sql",
     "db:apply-modelos": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/015_modelos_reutilizaveis.sql",
-    "db:apply-plano-terapeutico": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/019_paciente_plano_terapeutico.sql",
+    "db:apply-plano-terapeutico": "node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/019_paciente_plano_terapeutico.sql && node --env-file=.env.local scripts/run-supabase-sql-file.mjs supabase/migrations/020_plano_terapeutico_pdf.sql",
     "db:check-migrations": "node --env-file=.env.local scripts/check-supabase-migrations.mjs",
     "db:check-columns": "node --env-file=.env.local scripts/check-supabase-columns.mjs",
     "vercel:login": "npx --yes vercel@48.8.0 login",
@@ -52,7 +52,8 @@
     "next": "^16.2.6",
     "react": "19.2.4",
     "react-big-calendar": "^1.19.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "unpdf": "^1.6.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -135,6 +135,9 @@ export type PacientePlanoTerapeutico = {
   user_id?: string | null;
   paciente_id: number | string;
   conteudo?: string | null;
+  pdf_storage_path?: string | null;
+  pdf_nome_arquivo?: string | null;
+  pdf_importado_em?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 };
